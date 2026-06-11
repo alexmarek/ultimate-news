@@ -67,16 +67,25 @@ export default async function Home({
     grouped = { 'Search results': articles };
   } else {
     const skip = (page - 1) * PER_CATEGORY;
+    const BATCH = 50;
     const results = await Promise.all(
-      MAIN_CATEGORIES.map((cat) =>
-        prisma.article.findMany({
+      MAIN_CATEGORIES.map(async (cat) => {
+        const all = await prisma.article.findMany({
           where: { primaryArea: cat },
           orderBy: { publishedAt: 'desc' },
-          skip,
-          take: PER_CATEGORY,
+          take: BATCH,
           include: { source: true, cluster: true },
-        }) as Promise<ArticleWithRelations[]>
-      )
+        }) as ArticleWithRelations[];
+
+        const seen = new Set<string>();
+        const unique = all.filter((a) => {
+          if (seen.has(a.sourceId)) return false;
+          seen.add(a.sourceId);
+          return true;
+        });
+
+        return unique.slice(skip, skip + PER_CATEGORY);
+      })
     );
 
     for (let i = 0; i < MAIN_CATEGORIES.length; i++) {
@@ -85,7 +94,14 @@ export default async function Home({
     articles = results.flat();
 
     const counts = await Promise.all(
-      MAIN_CATEGORIES.map((cat) => prisma.article.count({ where: { primaryArea: cat } }))
+      MAIN_CATEGORIES.map(async (cat) => {
+        const sourcesWithArticles = await prisma.article.findMany({
+          where: { primaryArea: cat },
+          select: { sourceId: true },
+          distinct: ['sourceId'],
+        });
+        return sourcesWithArticles.length;
+      })
     );
     totalArticles = Math.max(...counts, 0);
   }
