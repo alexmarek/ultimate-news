@@ -8,13 +8,22 @@ import { ExternalLink, Newspaper } from 'lucide-react';
 interface NewsCardProps {
   article: Article & { source: Source };
   cluster: Cluster | null;
+  isRead?: boolean;
 }
 
-export default function NewsCard({ article, cluster }: NewsCardProps) {
+export default function NewsCard({ article, cluster, isRead }: NewsCardProps) {
   const timeAgo = formatDistanceToNow(article.publishedAt, { addSuffix: true });
 
   return (
-    <div className="bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow duration-200 overflow-hidden border border-gray-200 flex flex-col">
+    <div className={`relative bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow duration-200 overflow-hidden border border-gray-200 flex flex-col ${isRead ? 'opacity-60' : ''}`}>
+      {/* Read badge */}
+      {isRead && (
+        <div className="absolute top-3 right-3 z-10">
+          <span className="bg-stone-100 px-2 py-0.5 rounded-full text-[10px] font-medium text-stone-500">
+            Read
+          </span>
+        </div>
+      )}
       {/* Image */}
       {article.imageUrl && (
         <Link href={`/article/${article.id}`} className="relative h-48 w-full overflow-hidden block">

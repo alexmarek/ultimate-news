@@ -79,3 +79,19 @@ model Cluster {
   combinedSummary         String?
   articles                Article[]
 }
+
+model ArticleRead {
+  userId    String
+  articleId String
+  readAt    DateTime @default(now())
+
+  @@id([userId, articleId])
+}
+
+model ArticleSaved {
+  userId    String
+  articleId String
+  savedAt   DateTime @default(now())
+
+  @@id([userId, articleId])
+}

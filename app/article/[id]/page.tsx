@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { prisma } from '@/lib/db';
 import { Newspaper, ExternalLink, ArrowLeft } from 'lucide-react';
 import TimeAgo from '@/components/TimeAgo';
+import MarkRead from '@/components/MarkRead';
 
 function SourceInitial({ name }: { name: string }) {
   return (
@@ -280,6 +281,7 @@ export default async function ArticlePage({
         {/* Footer spacing */}
         <div className="h-16" />
       </div>
+      <MarkRead articleId={article.id} />
     </div>
   );
 }
