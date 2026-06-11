@@ -64,7 +64,7 @@ curl -X POST http://localhost:3000/api/images \
 | Variable | Description |
 |---|---|
 | `DATABASE_URL` | Database connection string |
-| `DIRECT_URL` | Direct connection (for Prisma migrations) |
+| `DATABASE_URL_UNPOOLED` | Direct connection (Neon auto-creates this) |
 | `INGEST_CRON_SECRET` | Shared secret to authenticate ingest requests |
 | `CRON_SECRET` | Vercel Cron Bearer token (matches ingest auth) |
 | `ANTHROPIC_API_KEY` | (optional) Anthropic API key for AI enrichment |
