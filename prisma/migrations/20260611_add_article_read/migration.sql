@@ -6,3 +6,6 @@ CREATE TABLE "ArticleRead" (
 
     CONSTRAINT "ArticleRead_pkey" PRIMARY KEY ("userId","articleId")
 );
+
+-- AddForeignKey
+ALTER TABLE "ArticleRead" ADD CONSTRAINT "ArticleRead_articleId_fkey" FOREIGN KEY ("articleId") REFERENCES "Article"("id") ON DELETE CASCADE ON UPDATE CASCADE;

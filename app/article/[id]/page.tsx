@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db';
 import { Newspaper, ExternalLink, ArrowLeft } from 'lucide-react';
 import TimeAgo from '@/components/TimeAgo';
 import MarkRead from '@/components/MarkRead';
+import ToggleSave from '@/components/ToggleSave';
 
 function SourceInitial({ name }: { name: string }) {
   return (
@@ -31,6 +32,10 @@ export default async function ArticlePage({
   });
 
   if (!article) notFound();
+
+  const isSaved = await prisma.articleSaved.count({
+    where: { userId: 'default', articleId: article.id },
+  }) > 0;
 
   const summaryParagraphs = article.summary?.split('\n').filter(Boolean) ?? [];
   const topics = article.topics ? article.topics.split(',') : [];
@@ -148,6 +153,7 @@ export default async function ArticlePage({
             )}
 
             {/* Read on source */}
+            <div className="flex items-center gap-3">
             <a
               href={article.canonicalUrl}
               target="_blank"
@@ -157,6 +163,8 @@ export default async function ArticlePage({
               Read on {article.source.name}
               <ExternalLink className="w-4 h-4" />
             </a>
+            <ToggleSave articleId={article.id} initialSaved={isSaved} variant="icon-label" />
+            </div>
           </div>
 
           {/* Right column — cluster panel */}

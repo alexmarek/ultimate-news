@@ -6,3 +6,6 @@ CREATE TABLE "ArticleSaved" (
 
     CONSTRAINT "ArticleSaved_pkey" PRIMARY KEY ("userId","articleId")
 );
+
+-- AddForeignKey
+ALTER TABLE "ArticleSaved" ADD CONSTRAINT "ArticleSaved_articleId_fkey" FOREIGN KEY ("articleId") REFERENCES "Article"("id") ON DELETE CASCADE ON UPDATE CASCADE;

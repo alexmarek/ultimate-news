@@ -5,6 +5,8 @@ import CategoryFilter from '@/components/CategoryFilter';
 import { Pagination } from '@/components/Pagination';
 import { prisma } from '@/lib/db';
 import { AREAS } from '@/lib/types';
+import Link from 'next/link';
+import { Bookmark } from 'lucide-react';
 import type { Article, Source, Cluster } from '@prisma/client';
 
 type ArticleWithRelations = Article & { source: Source; cluster: Cluster | null };
@@ -46,6 +48,14 @@ export default async function Home({
   });
   const readArticleIds = new Set(readArticles.map((r) => r.articleId));
   const isRead = (articleId: string) => readArticleIds.has(articleId);
+
+  const savedArticles = await prisma.articleSaved.findMany({
+    where: { userId: 'default' },
+    select: { articleId: true },
+  });
+  const savedArticleIds = new Set(savedArticles.map((s) => s.articleId));
+  const isSaved = (articleId: string) => savedArticleIds.has(articleId);
+
   const readFilter = hideRead && readArticleIds.size > 0
     ? { id: { notIn: [...readArticleIds] } }
     : {};
@@ -143,7 +153,16 @@ export default async function Home({
         <div className="container mx-auto px-4 py-6">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
+              <div className="flex items-center gap-4">
               <h1 className="text-3xl font-bold text-gray-900">Ultimate News</h1>
+              <Link
+                href="/saved"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-stone-600 hover:bg-stone-100 transition-colors"
+              >
+                <Bookmark className="w-4 h-4" />
+                Saved
+              </Link>
+              </div>
               <p className="text-gray-600 mt-1">Curated news from sources you care about</p>
             </div>
             <div className="w-full md:w-auto">
@@ -198,6 +217,7 @@ export default async function Home({
                       article={article}
                       cluster={article.cluster}
                       isRead={isRead(article.id)}
+                      initialSaved={isSaved(article.id)}
                     />
                   ))}
                 </div>

@@ -61,6 +61,8 @@ model Article {
   syndicatedFrom  String?
   cluster         Cluster? @relation(fields: [clusterId], references: [id])
   clusterId       String?
+  savedBy         ArticleSaved[]
+  readBy          ArticleRead[]
 }
 
 model Cluster {
@@ -83,7 +85,8 @@ model Cluster {
 model ArticleRead {
   userId    String
   articleId String
-  readAt    DateTime @default(now())
+  article   Article    @relation(fields: [articleId], references: [id])
+  readAt    DateTime   @default(now())
 
   @@id([userId, articleId])
 }
@@ -91,7 +94,8 @@ model ArticleRead {
 model ArticleSaved {
   userId    String
   articleId String
-  savedAt   DateTime @default(now())
+  article   Article    @relation(fields: [articleId], references: [id])
+  savedAt   DateTime   @default(now())
 
   @@id([userId, articleId])
 }

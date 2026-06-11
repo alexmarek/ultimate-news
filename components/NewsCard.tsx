@@ -4,14 +4,16 @@ import Link from 'next/link';
 import type { Article, Source, Cluster } from '@prisma/client';
 import { formatDistanceToNow } from 'date-fns';
 import { ExternalLink, Newspaper } from 'lucide-react';
+import ToggleSave from '@/components/ToggleSave';
 
 interface NewsCardProps {
   article: Article & { source: Source };
   cluster: Cluster | null;
   isRead?: boolean;
+  initialSaved?: boolean;
 }
 
-export default function NewsCard({ article, cluster, isRead }: NewsCardProps) {
+export default function NewsCard({ article, cluster, isRead, initialSaved }: NewsCardProps) {
   const timeAgo = formatDistanceToNow(article.publishedAt, { addSuffix: true });
 
   return (
@@ -104,6 +106,7 @@ export default function NewsCard({ article, cluster, isRead }: NewsCardProps) {
           </Link>
 
           <div className="flex items-center gap-3">
+            <ToggleSave articleId={article.id} initialSaved={initialSaved ?? false} />
             <a
               href={article.canonicalUrl}
               target="_blank"
