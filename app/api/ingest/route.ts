@@ -117,7 +117,17 @@ async function runIngest(sources: Awaited<ReturnType<typeof prisma.source.findMa
           content: item.content || undefined,
         });
 
-        const primaryArea = enrichment.areas[0]?.area || AREAS[0];
+        const topArea = enrichment.areas[0];
+        const confidenceThreshold = 0.65;
+        let primaryArea: string;
+        let lowConfidenceTag = false;
+
+        if (!topArea || topArea.confidence < confidenceThreshold || !AREAS.includes(topArea.area as never)) {
+          primaryArea = AREAS[0];
+          lowConfidenceTag = true;
+        } else {
+          primaryArea = topArea.area;
+        }
 
         await prisma.article.create({
           data: {
@@ -141,6 +151,7 @@ async function runIngest(sources: Awaited<ReturnType<typeof prisma.source.findMa
             imageUrl: imageUrl || null,
             isPaywalled: false,
             isWireOrigin: source.isWireService,
+            lowConfidenceTag,
           },
         });
 
