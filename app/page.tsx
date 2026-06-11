@@ -90,7 +90,9 @@ export default async function Home({
     );
 
     for (let i = 0; i < MAIN_CATEGORIES.length; i++) {
-      grouped[MAIN_CATEGORIES[i]] = results[i];
+      if (results[i].length > 0) {
+        grouped[MAIN_CATEGORIES[i]] = results[i];
+      }
     }
     articles = results.flat();
 
