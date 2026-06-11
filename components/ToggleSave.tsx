@@ -26,6 +26,10 @@ export default function ToggleSave({
         body: JSON.stringify({ articleId }),
       });
       const data = await res.json();
+      if (!res.ok || data.error) {
+        setSaved(wasSaved);
+        return;
+      }
       if (data.saved !== undefined) setSaved(data.saved);
     } catch {
       setSaved(wasSaved);

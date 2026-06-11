@@ -16,15 +16,34 @@ export default function SavedPage() {
 }
 
 async function SavedContent() {
-  const saved = await prisma.articleSaved.findMany({
-    where: { userId: USER_ID },
-    orderBy: { savedAt: 'desc' },
-    include: {
-      article: {
-        include: { source: true, cluster: { select: { totalSourceCount: true } } },
+  let saved: Array<{
+    userId: string;
+    articleId: string;
+    savedAt: Date;
+    article: {
+      id: string;
+      title: string;
+      primaryArea: string;
+      summary: string | null;
+      publishedAt: Date;
+      source: { id: string; name: string };
+      cluster: { totalSourceCount: number } | null;
+    };
+  }> = [];
+  let queryError = '';
+  try {
+    saved = await prisma.articleSaved.findMany({
+      where: { userId: USER_ID },
+      orderBy: { savedAt: 'desc' },
+      include: {
+        article: {
+          include: { source: true, cluster: { select: { totalSourceCount: true } } },
+        },
       },
-    },
-  });
+    });
+  } catch (e) {
+    queryError = e instanceof Error ? e.message : 'Database error';
+  }
 
   const articles = saved.map((s) => s.article);
 
@@ -41,14 +60,26 @@ async function SavedContent() {
       </header>
 
       <main className="container mx-auto px-4 py-8 max-w-3xl">
-        {articles.length === 0 ? (
+        {queryError && (
+          <div className="text-center py-16">
+            <p className="text-gray-500 mb-2">Could not load saved articles</p>
+            <p className="text-sm text-gray-400">{queryError}</p>
+            <p className="text-xs text-gray-400 mt-4">
+              Make sure the database migration for ArticleSaved has been applied.
+            </p>
+          </div>
+        )}
+
+        {!queryError && articles.length === 0 && (
           <div className="text-center py-16">
             <p className="text-gray-500">No saved articles yet.</p>
             <p className="text-sm text-gray-400 mt-1">
               Bookmark articles to read them later.
             </p>
           </div>
-        ) : (
+        )}
+
+        {!queryError && articles.length > 0 && (
           <div className="space-y-4">
             {articles.map((a) => (
               <div
