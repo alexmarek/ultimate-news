@@ -92,21 +92,21 @@ export default function NewsCard({ article, cluster }: NewsCardProps) {
 
         {/* Topics */}
         {article.topics && article.topics.length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-4">
+          <ul className="flex flex-wrap gap-1.5 mt-2">
             {article.topics.split(',').slice(0, 3).map((topic) => (
-              <span
+              <li
                 key={topic}
-                className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs font-medium"
+                className="px-2 py-0.5 rounded-full text-xs bg-[#D3BDB0]/30 dark:bg-[#D3BDB0]/15 text-stone-800 dark:text-stone-200 leading-none"
               >
                 {topic.trim()}
-              </span>
+              </li>
             ))}
             {article.topics.split(',').length > 3 && (
-              <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs">
+              <li className="px-2 py-0.5 rounded-full text-xs bg-[#D3BDB0]/30 dark:bg-[#D3BDB0]/15 text-stone-800 dark:text-stone-200 leading-none">
                 +{article.topics.split(',').length - 3}
-              </span>
+              </li>
             )}
-          </div>
+          </ul>
         )}
 
         {/* Actions */}
