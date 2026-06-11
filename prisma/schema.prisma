@@ -1,0 +1,78 @@
+// Simplified schema for local development with SQLite
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// For local SQLite development, change provider to "sqlite"
+// and url to "file:./dev.db"
+
+model Source {
+  id                    String   @id
+  name                  String
+  url                   String
+  feedUrl               String?
+  ingestStrategy        String
+  lang                  String
+  tier                  String
+  editorialIndependence String
+  isWireService         Boolean  @default(false)
+  contentKind           String   @default("news")
+  weight                Float    @default(0.75)
+  isActive              Boolean  @default(true)
+  lastFetchedAt         DateTime?
+  lastErrorAt           DateTime?
+  lastError             String?
+  consecutiveErrors     Int      @default(0)
+  articles              Article[]
+}
+
+model Article {
+  id              String   @id
+  source          Source   @relation(fields: [sourceId], references: [id])
+  sourceId        String
+  canonicalUrl    String   @unique
+  originalUrl     String
+  title           String
+  titleEn         String?
+  excerpt         String
+  content         String?
+  publishedAt     DateTime
+  fetchedAt       DateTime @default(now())
+  author          String?
+  lang            String
+  summary         String?
+  areas           String
+  primaryArea     String
+  areaConfidences String?
+  topics          String
+  entities        String
+  imageUrl        String?
+  imageAlt        String?
+  isPaywalled     Boolean  @default(false)
+  isWireOrigin    Boolean  @default(false)
+  syndicatedFrom  String?
+  cluster         Cluster? @relation(fields: [clusterId], references: [id])
+  clusterId       String?
+}
+
+model Cluster {
+  id                      String   @id @default(cuid())
+  representativeArticleId String
+  totalSourceCount        Int
+  independentSourceCount  Int
+  uniqueWireOriginCount   Int      @default(0)
+  hasIndependentVoice     Boolean
+  corroborationScore      Float
+  earliestPublishedAt     DateTime
+  latestPublishedAt       DateTime
+  areas                   String
+  primaryArea             String
+  sourcesAttributed       String
+  combinedSummary         String?
+  articles                Article[]
+}
