@@ -16,7 +16,7 @@ A curated news aggregator collecting articles from 23 sources across 6 categorie
 - **Next.js 15** (App Router)
 - **TypeScript**
 - **Tailwind CSS v4**
-- **Prisma ORM** (PostgreSQL in production, SQLite for local dev)
+- **Prisma ORM** (PostgreSQL — Neon free tier for production, Docker for local dev)
 - **Deployment**: Vercel
 
 ## Getting Started
@@ -25,10 +25,12 @@ A curated news aggregator collecting articles from 23 sources across 6 categorie
 # Install dependencies
 yarn install
 
+# Start PostgreSQL locally (requires Docker)
+docker run -d -p 5432:5432 -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=ultimatenews postgres
+
 # Set up environment
-cp .env.example .env.local
-# Edit .env.local — for local dev with SQLite use:
-#   DATABASE_URL="file:./dev.db"
+cp .env.example .env
+# Edit .env if your Postgres credentials differ
 
 # Generate Prisma client
 npx prisma generate
