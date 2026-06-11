@@ -22,6 +22,12 @@ function buildSearchWhere(query: string) {
   };
 }
 
+function categorySummary(articles: ArticleWithRelations[]): string {
+  if (articles.length === 0) return 'No recent stories.';
+  const headlines = articles.map((a) => a.title).join(' • ');
+  return headlines;
+}
+
 export default async function Home({
   searchParams,
 }: {
@@ -34,6 +40,7 @@ export default async function Home({
 
   let articles: ArticleWithRelations[];
   let totalArticles: number;
+  let grouped: Record<string, ArticleWithRelations[]> = {};
 
   if (category && category !== 'all') {
     const where: any = { primaryArea: category };
@@ -46,6 +53,7 @@ export default async function Home({
       include: { source: true, cluster: true },
     }) as ArticleWithRelations[];
     totalArticles = await prisma.article.count({ where });
+    grouped = { [category]: articles };
   } else if (query) {
     const where = buildSearchWhere(query);
     articles = await prisma.article.findMany({
@@ -56,6 +64,7 @@ export default async function Home({
       include: { source: true, cluster: true },
     }) as ArticleWithRelations[];
     totalArticles = await prisma.article.count({ where });
+    grouped = { 'Search results': articles };
   } else {
     const skip = (page - 1) * PER_CATEGORY;
     const results = await Promise.all(
@@ -69,6 +78,10 @@ export default async function Home({
         }) as Promise<ArticleWithRelations[]>
       )
     );
+
+    for (let i = 0; i < MAIN_CATEGORIES.length; i++) {
+      grouped[MAIN_CATEGORIES[i]] = results[i];
+    }
     articles = results.flat();
 
     const counts = await Promise.all(
@@ -79,6 +92,10 @@ export default async function Home({
 
   const itemsPerPage = category && category !== 'all' ? PER_PAGE : PER_CATEGORY;
   const totalPages = Math.ceil(totalArticles / itemsPerPage);
+  const isSectionView = !category && !query;
+  const gridClass = isSectionView
+    ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5'
+    : 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 min-[1200px]:grid-cols-4 gap-5';
 
   const dbCategories = await prisma.article.findMany({
     select: { primaryArea: true },
@@ -115,30 +132,47 @@ export default async function Home({
           </Suspense>
         </div>
 
-        <div className="mb-6">
-          <h2 className="text-2xl font-semibold text-gray-900">Latest Stories</h2>
-          <p className="text-gray-600 text-sm mt-2">
-            {category && category !== 'all'
-              ? `Page ${page} of ${totalPages} • ${category}`
-              : `Page ${page} of ${totalPages} • ${MAIN_CATEGORIES.length} per category`}
-          </p>
-        </div>
-
         {articles.length === 0 ? (
           <div className="text-center py-12">
             <div className="text-gray-400 mb-4">No stories yet. News will appear after the first ingest.</div>
             <div className="text-sm text-gray-500">Ingest runs every 12 hours to fetch fresh content.</div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 min-[1200px]:grid-cols-4 gap-5">
-            {articles.map((article) => (
-              <NewsCard
-                key={article.id}
-                article={article}
-                cluster={article.cluster}
-              />
+          <>
+            {Object.entries(grouped).map(([cat, catArticles]) => (
+              <section key={cat} className={isSectionView ? 'mb-10' : 'mb-6'}>
+                {isSectionView && (
+                  <div className="mb-4">
+                    <h2 className="text-lg font-semibold text-gray-900 uppercase tracking-wide">
+                      {cat}
+                    </h2>
+                    <p className="text-gray-500 text-sm mt-1 leading-relaxed line-clamp-2">
+                      {categorySummary(catArticles)}
+                    </p>
+                  </div>
+                )}
+                {!isSectionView && (
+                  <div className="mb-6">
+                    <h2 className="text-2xl font-semibold text-gray-900">Latest Stories</h2>
+                    <p className="text-gray-600 text-sm mt-2">
+                      {category && category !== 'all'
+                        ? `Page ${page} of ${totalPages} • ${category}`
+                        : `Page ${page} of ${totalPages}`}
+                    </p>
+                  </div>
+                )}
+                <div className={gridClass}>
+                  {catArticles.map((article) => (
+                    <NewsCard
+                      key={article.id}
+                      article={article}
+                      cluster={article.cluster}
+                    />
+                  ))}
+                </div>
+              </section>
             ))}
-          </div>
+          </>
         )}
 
         {totalPages > 1 && (

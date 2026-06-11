@@ -93,7 +93,7 @@ async function runIngest(sources: Awaited<ReturnType<typeof prisma.source.findMa
     try {
       const feed = await parser.parseURL(feedUrl);
 
-      for (const item of feed.items || []) {
+      for (const item of (feed.items || []).slice(0, 6)) {
         const rawUrl = item.link || item.guid || '';
         if (!rawUrl) continue;
 
