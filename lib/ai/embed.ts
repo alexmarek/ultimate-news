@@ -61,6 +61,39 @@ export async function embed(text: string): Promise<number[]> {
   return embedding;
 }
 
+export async function queryEmbed(text: string): Promise<number[]> {
+  const key = process.env.VOYAGE_API_KEY;
+  if (!key) throw new Error('VOYAGE_API_KEY not set');
+
+  const input = text.slice(0, 16_000);
+
+  const res = await fetch(VOYAGE_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${key}`,
+    },
+    body: JSON.stringify({
+      input: [input],
+      model: MODEL,
+      input_type: 'query',
+    }),
+    signal: AbortSignal.timeout(20_000),
+  });
+
+  if (!res.ok) {
+    const errBody = await res.text().catch(() => '');
+    throw new Error(`Voyage ${res.status}: ${errBody.slice(0, 300)}`);
+  }
+
+  const data = (await res.json()) as VoyageResponse;
+  const embedding = data.data?.[0]?.embedding;
+  if (!Array.isArray(embedding) || embedding.length !== EXPECTED_DIM) {
+    throw new Error(`Voyage returned unexpected embedding shape: ${embedding?.length ?? 'none'}`);
+  }
+  return embedding;
+}
+
 // ---------------------------------------------------------------------------
 // Cosine similarity — used by lib/dedup/cluster.ts. Inlined here so the
 // vector math has one canonical home.

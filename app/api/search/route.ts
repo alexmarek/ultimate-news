@@ -1,87 +1,139 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { queryEmbed, cosineSimilarity } from '@/lib/ai/embed';
 
-export async function GET(req: NextRequest) {
-  const searchParams = req.nextUrl.searchParams;
-  const q = searchParams.get('q') || '';
-  const category = searchParams.get('category') || '';
-  const page = parseInt(searchParams.get('page') || '1');
-  const limit = parseInt(searchParams.get('limit') || '20');
-  const skip = (page - 1) * limit;
+const TOP_K = 20;
+const MIN_QUERY_LENGTH = 3;
 
-  // Build where clause
-  const where: any = {};
+interface ScoredArticle {
+  article: {
+    id: string;
+    title: string;
+    excerpt: string;
+    summary: string | null;
+    publishedAt: Date;
+    primaryArea: string;
+    lang: string;
+    canonicalUrl: string;
+    source: { id: string; name: string; editorialIndependence: string };
+    cluster: { totalSourceCount: number } | null;
+  };
+  score: number;
+}
 
-  if (q) {
-    where.OR = [
-      { title: { contains: q, mode: 'insensitive' } },
-      { summary: { contains: q, mode: 'insensitive' } },
-      { topics: { has: q } },
-      { entities: { has: q } },
-      { source: { name: { contains: q, mode: 'insensitive' } } },
-    ];
-  }
+export async function POST(req: NextRequest) {
+  try {
+    const { query } = await req.json();
 
-  if (category && category !== 'all') {
-    where.primaryArea = category;
-  }
-
-  // Get articles with their clusters
-  const [articles, total] = await Promise.all([
-    prisma.article.findMany({
-      where,
-      include: {
-        source: true,
-        cluster: true,
-      },
-      orderBy: { publishedAt: 'desc' },
-      skip,
-      take: limit,
-    }),
-    prisma.article.count({ where }),
-  ]);
-
-  // Group by cluster for frontend
-  const clustersMap = new Map<string, any>();
-  articles.forEach((article) => {
-    if (article.clusterId && !clustersMap.has(article.clusterId)) {
-      clustersMap.set(article.clusterId, {
-        ...article.cluster,
-        articles: [article],
+    if (!query || typeof query !== 'string' || query.trim().length < MIN_QUERY_LENGTH) {
+      const articles = await prisma.article.findMany({
+        where: { embedding: { not: null } },
+        include: { source: true, cluster: { select: { totalSourceCount: true } } },
+        orderBy: { publishedAt: 'desc' },
+        take: TOP_K,
       });
-    } else if (article.clusterId) {
-      clustersMap.get(article.clusterId)!.articles.push(article);
-    } else {
-      // Article without cluster (shouldn't happen in production)
-      const clusterId = `single-${article.id}`;
-      clustersMap.set(clusterId, {
-        id: clusterId,
-        representativeArticleId: article.id,
-        totalSourceCount: 1,
-        independentSourceCount: article.source.editorialIndependence === 'independent' ? 1 : 0,
-        uniqueWireOriginCount: article.syndicatedFrom ? 1 : 0,
-        hasIndependentVoice: article.source.editorialIndependence === 'independent',
-        corroborationScore: 0.3, // Default low score for single source
-        earliestPublishedAt: article.publishedAt,
-        latestPublishedAt: article.publishedAt,
-        areas: article.areas,
-        primaryArea: article.primaryArea,
-        sourcesAttributed: [article.sourceId],
-        combinedSummary: article.summary,
-        articles: [article],
+
+      return NextResponse.json({
+        results: articles.map((a) => ({
+          id: a.id,
+          title: a.title,
+          excerpt: a.excerpt,
+          summary: a.summary,
+          publishedAt: a.publishedAt,
+          primaryArea: a.primaryArea,
+          lang: a.lang,
+          canonicalUrl: a.canonicalUrl,
+          source: { id: a.source.id, name: a.source.name, editorialIndependence: a.source.editorialIndependence },
+          cluster: a.cluster,
+          score: null,
+        })),
+        mode: 'recent',
       });
     }
-  });
 
-  const clusters = Array.from(clustersMap.values());
+    const trimmedQuery = query.trim();
 
-  return NextResponse.json({
-    clusters,
-    pagination: {
-      page,
-      limit,
-      total,
-      totalPages: Math.ceil(total / limit),
-    },
-  });
+    // Embed the query with input_type='query'
+    const queryVec = await queryEmbed(trimmedQuery);
+
+    // Load all articles with embeddings
+    const articles = await prisma.article.findMany({
+      where: { embedding: { not: null } },
+      include: { source: true, cluster: { select: { totalSourceCount: true } } },
+    });
+
+    // Compute cosine similarity for each
+    const scored: ScoredArticle[] = [];
+    for (const article of articles) {
+      if (!article.embedding) continue;
+      let embedding: number[];
+      try {
+        embedding = JSON.parse(article.embedding);
+      } catch {
+        continue;
+      }
+
+      if (!Array.isArray(embedding) || embedding.length === 0) continue;
+
+      const score = cosineSimilarity(queryVec, embedding);
+      scored.push({
+        article: {
+          id: article.id,
+          title: article.title,
+          excerpt: article.excerpt,
+          summary: article.summary,
+          publishedAt: article.publishedAt,
+          primaryArea: article.primaryArea,
+          lang: article.lang,
+          canonicalUrl: article.canonicalUrl,
+          source: { id: article.source.id, name: article.source.name, editorialIndependence: article.source.editorialIndependence },
+          cluster: article.cluster,
+        },
+        score,
+      });
+    }
+
+    // Sort by score descending, take top K
+    scored.sort((a, b) => b.score - a.score);
+    const top = scored.slice(0, TOP_K);
+
+    return NextResponse.json({
+      results: top.map(({ article, score }) => ({
+        ...article,
+        score: Math.round(score * 100) / 100,
+      })),
+      mode: 'semantic',
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+
+    // Voyage API key missing or API down — fallback to recent
+    try {
+      const articles = await prisma.article.findMany({
+        include: { source: true, cluster: { select: { totalSourceCount: true } } },
+        orderBy: { publishedAt: 'desc' },
+        take: TOP_K,
+      });
+
+      return NextResponse.json({
+        results: articles.map((a) => ({
+          id: a.id,
+          title: a.title,
+          excerpt: a.excerpt,
+          summary: a.summary,
+          publishedAt: a.publishedAt,
+          primaryArea: a.primaryArea,
+          lang: a.lang,
+          canonicalUrl: a.canonicalUrl,
+          source: { id: a.source.id, name: a.source.name, editorialIndependence: a.source.editorialIndependence },
+          cluster: a.cluster,
+          score: null,
+        })),
+        mode: 'fallback',
+        error: message,
+      });
+    } catch {
+      return NextResponse.json({ error: message }, { status: 500 });
+    }
+  }
 }

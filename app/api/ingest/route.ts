@@ -4,6 +4,7 @@ import Parser from 'rss-parser';
 import { extractImageFromRssItem } from '@/lib/ingest/extractImage';
 import { canonicalizeUrl, articleIdFromUrl } from '@/lib/ingest/canonicalize';
 import { enrichArticle } from '@/lib/ai/enrich-simple';
+import { embed } from '@/lib/ai/embed';
 import { AREAS } from '@/lib/types';
 import { discoverFeed } from '@/lib/ingest/discoverFeed';
 
@@ -129,6 +130,15 @@ async function runIngest(sources: Awaited<ReturnType<typeof prisma.source.findMa
           primaryArea = topArea.area;
         }
 
+        const embeddingText = [title, excerpt, enrichment.summary].filter(Boolean).join(' ');
+        let embeddingJson: string | null = null;
+        try {
+          const vec = await embed(embeddingText);
+          embeddingJson = JSON.stringify(vec);
+        } catch {
+          // Voyage unavailable — article stores without embedding
+        }
+
         await prisma.article.create({
           data: {
             id: articleId,
@@ -152,6 +162,7 @@ async function runIngest(sources: Awaited<ReturnType<typeof prisma.source.findMa
             isPaywalled: false,
             isWireOrigin: source.isWireService,
             lowConfidenceTag,
+            embedding: embeddingJson,
           },
         });
 

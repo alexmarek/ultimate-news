@@ -1,22 +1,19 @@
 'use client';
 
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { Search } from 'lucide-react';
 import { useState } from 'react';
 
 export default function SearchBar() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const [query, setQuery] = useState(searchParams.get('q') || '');
+  const [query, setQuery] = useState('');
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    const params = new URLSearchParams();
-    const category = searchParams.get('category');
-    if (query.trim()) params.set('q', query.trim());
-    if (category) params.set('category', category);
-    const qs = params.toString();
-    router.push(qs ? `/?${qs}` : '/');
+    const q = query.trim();
+    if (q) {
+      router.push(`/search?q=${encodeURIComponent(q)}`);
+    }
   };
 
   return (
@@ -30,7 +27,7 @@ export default function SearchBar() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           className="block w-full pl-10 pr-12 py-3 border border-gray-300 rounded-xl bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200"
-          placeholder="Search stories, topics, or sources..."
+          placeholder="Search across all sources..."
         />
         <button
           type="submit"

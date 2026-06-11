@@ -57,6 +57,7 @@ model Article {
   isPaywalled     Boolean  @default(false)
   isWireOrigin    Boolean  @default(false)
   lowConfidenceTag Boolean @default(false)
+  embedding       String?
   syndicatedFrom  String?
   cluster         Cluster? @relation(fields: [clusterId], references: [id])
   clusterId       String?
