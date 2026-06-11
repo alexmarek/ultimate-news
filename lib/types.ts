@@ -1,6 +1,20 @@
 // lib/types.ts
 // Shared type definitions for the ingest pipeline
 
+export const AREAS = [
+  'World',
+  'Politics',
+  'Tech',
+  'Business',
+  'Science',
+  'Culture',
+  'Music industry',
+  'CZ-local',
+  'Sport',
+] as const;
+
+export type Area = (typeof AREAS)[number];
+
 export interface RawArticle {
   url: string;
   title: string;

@@ -4,6 +4,7 @@ import Parser from 'rss-parser';
 import { extractImageFromRssItem } from '@/lib/ingest/extractImage';
 import { canonicalizeUrl, articleIdFromUrl } from '@/lib/ingest/canonicalize';
 import { enrichArticle } from '@/lib/ai/enrich-simple';
+import { AREAS } from '@/lib/types';
 import { discoverFeed } from '@/lib/ingest/discoverFeed';
 
 const parser = new Parser({
@@ -116,7 +117,7 @@ async function runIngest(sources: Awaited<ReturnType<typeof prisma.source.findMa
           content: item.content || undefined,
         });
 
-        const primaryArea = enrichment.areas[0]?.area || 'World';
+        const primaryArea = enrichment.areas[0]?.area || AREAS[0];
 
         await prisma.article.create({
           data: {

@@ -1,6 +1,8 @@
 // lib/ai/enrich-simple.ts
 // Simplified enrichment for development without AI dependencies
 
+import { AREAS, type Area } from '@/lib/types';
+
 interface EnrichInput {
   sourceName: string;
   sourceLang: string;
@@ -18,13 +20,16 @@ interface EnrichOutput {
   incomplete: boolean;
 }
 
-const topicPools: Record<string, string[]> = {
-  Music: ['metal', 'new album', 'tour', 'guitar', 'review', 'interview', 'festival', 'band', 'single', 'vinyl', 'heavy metal', 'stoner rock', 'doom', 'death metal', 'black metal', 'lineup', 'shows', 'recording', 'label news', 'gear'],
-  Technology: ['AI', 'startup', 'cybersecurity', 'software', 'hardware', 'privacy', 'innovation', 'cloud', 'data', 'regulation', 'mobile', 'gadgets', 'machine learning', 'automation', 'blockchain'],
-  Politics: ['election', 'legislation', 'congress', 'policy', 'government', 'regulation', 'diplomacy', 'campaign', 'voting', 'senate', 'reform', 'immigration', 'healthcare', 'budget', 'oversight'],
-  Business: ['markets', 'economy', 'trade', 'stocks', 'investment', 'banking', 'real estate', 'startups', 'retail', 'mergers', 'interest rates', 'inflation', 'supply chain', 'labor', 'consumer'],
-  Environment: ['climate', 'emissions', 'renewable', 'conservation', 'pollution', 'sustainability', 'wildlife', 'energy', 'carbon', 'green tech', 'environment', 'species', 'warming', 'ecosystem'],
+const topicPools: Record<Area, string[]> = {
   World: ['international', 'conflict', 'diplomacy', 'crisis', 'aid', 'summit', 'war', 'security', 'alliance', 'migration', 'trade war', 'sanctions', 'treaty', 'negotiations', 'human rights'],
+  Politics: ['election', 'legislation', 'congress', 'policy', 'government', 'regulation', 'diplomacy', 'campaign', 'voting', 'senate', 'reform', 'immigration', 'healthcare', 'budget', 'oversight'],
+  Tech: ['AI', 'startup', 'cybersecurity', 'software', 'hardware', 'privacy', 'innovation', 'cloud', 'data', 'regulation', 'mobile', 'gadgets', 'machine learning', 'automation', 'blockchain'],
+  Business: ['markets', 'economy', 'trade', 'stocks', 'investment', 'banking', 'real estate', 'startups', 'retail', 'mergers', 'interest rates', 'inflation', 'supply chain', 'labor', 'consumer'],
+  Science: ['research', 'discovery', 'study', 'space', 'medicine', 'biology', 'physics', 'chemistry', 'genetics', 'climate', 'breakthrough', 'NASA', 'experiment', 'peer-reviewed', 'journal'],
+  Culture: ['film', 'art', 'literature', 'theater', 'museum', 'exhibition', 'heritage', 'festival', 'fashion', 'architecture', 'design', 'media', 'pop culture', 'awards', 'review'],
+  'Music industry': ['metal', 'new album', 'tour', 'guitar', 'review', 'interview', 'festival', 'band', 'single', 'vinyl', 'heavy metal', 'stoner rock', 'doom', 'death metal', 'black metal', 'lineup', 'shows', 'recording', 'label news', 'gear'],
+  'CZ-local': ['Prague', 'Brno', 'Ostrava', 'parliament', 'government', 'municipal', 'regional', 'infrastructure', 'housing', 'education', 'healthcare', 'transport', 'elections', 'opinion', 'economy'],
+  Sport: ['football', 'hockey', 'tennis', 'championship', 'league', 'tournament', 'transfer', 'injury', 'playoffs', 'standings', 'ranking', 'Olympics', 'World Cup', 'match', 'score'],
 };
 
 const generalTopics = ['analysis', 'opinion', 'report', 'data', 'study', 'insight', 'editorial', 'feature', 'breaking', 'exclusive', 'investigation', 'commentary', 'trending', 'profile'];
@@ -43,10 +48,9 @@ export async function enrichArticle(input: EnrichInput): Promise<EnrichOutput> {
   const musicSources = ['Blabbermouth.net', 'MusicRadar', 'Guitar World'];
   const isMusic = musicSources.includes(input.sourceName);
 
-  const generalAreas = ['World', 'Technology', 'Environment', 'Politics', 'Business'];
-  const areas = isMusic
-    ? ['Music', ...generalAreas]
-    : generalAreas;
+  const areas: Area[] = isMusic
+    ? ['Music industry', ...AREAS.filter((a) => a !== 'Music industry')]
+    : [...AREAS];
 
   const areaIndex = isMusic
     ? Math.random() < 0.7 ? 0 : 1 + Math.floor(Math.random() * (areas.length - 1))

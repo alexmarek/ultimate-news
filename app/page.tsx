@@ -4,11 +4,12 @@ import SearchBar from '@/components/SearchBar';
 import CategoryFilter from '@/components/CategoryFilter';
 import { Pagination } from '@/components/Pagination';
 import { prisma } from '@/lib/db';
+import { AREAS } from '@/lib/types';
 import type { Article, Source, Cluster } from '@prisma/client';
 
 type ArticleWithRelations = Article & { source: Source; cluster: Cluster | null };
 
-const MAIN_CATEGORIES = ['World', 'Technology', 'Environment', 'Politics', 'Business', 'Music'];
+const MAIN_CATEGORIES = [...AREAS];
 const PER_PAGE = 18;
 const PER_CATEGORY = 3;
 
@@ -119,8 +120,8 @@ export default async function Home({
     take: 20,
   });
   const categoryNames = dbCategories.map((c) => c.primaryArea);
-  if (!categoryNames.includes('Music')) {
-    categoryNames.push('Music');
+  if (!categoryNames.includes('Music industry')) {
+    categoryNames.push('Music industry');
   }
 
   return (
