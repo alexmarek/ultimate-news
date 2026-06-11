@@ -1,8 +1,21 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { prisma } from '@/lib/db';
-import { Newspaper, ExternalLink, Users, Shield, ArrowLeft } from 'lucide-react';
+import { Newspaper, ExternalLink, ArrowLeft } from 'lucide-react';
 import TimeAgo from '@/components/TimeAgo';
+
+function SourceInitial({ name }: { name: string }) {
+  return (
+    <div className="w-6 h-6 rounded-full bg-stone-200 flex items-center justify-center flex-shrink-0">
+      <span className="text-[11px] font-semibold text-stone-500 leading-none">{name.charAt(0)}</span>
+    </div>
+  );
+}
+
+function sourceTypeLabel(editorialIndependence: string): string {
+  if (editorialIndependence === 'syndicate') return 'wire';
+  return editorialIndependence;
+}
 
 export default async function ArticlePage({
   params,
@@ -23,6 +36,23 @@ export default async function ArticlePage({
   const corroborationScore = article.cluster
     ? Math.round(article.cluster.corroborationScore * 100)
     : null;
+
+  const clusterArticles = article.clusterId
+    ? await prisma.article.findMany({
+        where: { clusterId: article.clusterId },
+        include: { source: true },
+        orderBy: [
+          { source: { weight: 'desc' } },
+          { publishedAt: 'desc' },
+        ],
+      })
+    : [];
+
+  const typeCounts: Record<string, number> = { wire: 0, national: 0, independent: 0 };
+  for (const ca of clusterArticles) {
+    const t = sourceTypeLabel(ca.source.editorialIndependence);
+    typeCounts[t] = (typeCounts[t] || 0) + 1;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -128,49 +158,117 @@ export default async function ArticlePage({
             </a>
           </div>
 
-          {/* Right column — cluster card */}
+          {/* Right column — cluster panel */}
           <div className="lg:col-span-1">
             {article.cluster ? (
-              <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
-                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
-                  Coverage
-                </h3>
+              <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
+                {/* Stats header */}
+                <div className="p-4 space-y-3">
+                  <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                    Coverage
+                  </h3>
 
-                <div className="flex items-center gap-2">
-                  <Users className="w-5 h-5 text-gray-400" />
-                  <span className="text-lg font-semibold text-gray-900">
-                    {article.cluster.totalSourceCount}
-                  </span>
-                  <span className="text-gray-600">
-                    {article.cluster.totalSourceCount === 1 ? 'source' : 'sources'} covering this story
-                  </span>
+                  <div className="space-y-1">
+                    <span className="text-4xl font-bold text-[#2B7878] leading-none">
+                      {article.cluster.totalSourceCount}
+                    </span>
+                    <p className="text-sm text-gray-600">
+                      {article.cluster.totalSourceCount === 1
+                        ? 'source covering this story'
+                        : 'sources covering this story'}
+                    </p>
+                  </div>
+
+                  {article.cluster.hasIndependentVoice && (
+                    <p className="text-sm font-medium text-[#8D165F]">
+                      {article.cluster.independentSourceCount} independent{' '}
+                      {article.cluster.independentSourceCount === 1 ? 'source' : 'sources'}
+                    </p>
+                  )}
+
+                  {article.cluster.totalSourceCount > 1 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {typeCounts.wire > 0 && (
+                        <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-stone-100 text-stone-600">
+                          {typeCounts.wire} wire
+                        </span>
+                      )}
+                      {typeCounts.national > 0 && (
+                        <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-stone-100 text-stone-600">
+                          {typeCounts.national} national
+                        </span>
+                      )}
+                      {typeCounts.independent > 0 && (
+                        <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-stone-100 text-stone-600">
+                          {typeCounts.independent} independent
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  {corroborationScore !== null && article.cluster.totalSourceCount > 1 && (
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-[11px] text-gray-400">Corroboration</span>
+                        <span className="text-[11px] font-medium text-gray-600">{corroborationScore}%</span>
+                      </div>
+                      <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-[#2B7878] rounded-full"
+                          style={{ width: `${corroborationScore}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
 
-                {article.cluster.hasIndependentVoice && (
-                  <div className="flex items-center gap-2">
-                    <Shield className="w-4 h-4 text-green-500" />
-                    <span className="text-sm text-green-600 font-medium">
-                      Independent coverage
-                    </span>
+                {/* Peer articles list */}
+                {clusterArticles.length <= 1 ? (
+                  <div className="p-4">
+                    <p className="text-sm text-gray-400">
+                      Only {article.source.name} is covering this story.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-gray-50">
+                    {clusterArticles.map((ca) => (
+                      <Link
+                        key={ca.id}
+                        href={`/article/${ca.id}`}
+                        className="block p-4 hover:bg-gray-50 transition-colors"
+                      >
+                        <div className="flex items-start gap-2.5">
+                          <SourceInitial name={ca.source.name} />
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center justify-between gap-2 mb-0.5">
+                              <span className="text-xs font-medium text-gray-700 truncate">
+                                {ca.source.name}
+                              </span>
+                              <span className="text-[11px] text-gray-400 flex-shrink-0">
+                                {new Date(ca.publishedAt).toLocaleDateString('en-US', {
+                                  month: 'short',
+                                  day: 'numeric',
+                                })}
+                              </span>
+                            </div>
+                            <h4 className="text-sm font-medium text-gray-900 leading-snug line-clamp-2 mb-0.5">
+                              {ca.title}
+                            </h4>
+                            {ca.excerpt && (
+                              <p className="text-xs text-gray-400 line-clamp-1">
+                                {ca.excerpt}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </Link>
+                    ))}
                   </div>
                 )}
-
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-xs text-gray-500">Corroboration score</span>
-                    <span className="text-xs font-medium text-gray-700">{corroborationScore}%</span>
-                  </div>
-                  <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-primary-500 rounded-full"
-                      style={{ width: `${corroborationScore}%` }}
-                    />
-                  </div>
-                </div>
               </div>
             ) : (
               <div className="bg-white rounded-xl border border-gray-200 p-5">
-                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
                   Coverage
                 </h3>
                 <p className="text-sm text-gray-400">Not clustered yet.</p>

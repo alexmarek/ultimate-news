@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import type { Article, Source, Cluster } from '@prisma/client';
 import { formatDistanceToNow } from 'date-fns';
-import { ExternalLink, Newspaper, Users, Shield } from 'lucide-react';
+import { ExternalLink, Newspaper } from 'lucide-react';
 
 interface NewsCardProps {
   article: Article & { source: Source };
@@ -12,7 +12,6 @@ interface NewsCardProps {
 
 export default function NewsCard({ article, cluster }: NewsCardProps) {
   const timeAgo = formatDistanceToNow(article.publishedAt, { addSuffix: true });
-  const corroborationScore = cluster ? Math.round(cluster.corroborationScore * 100) : 30;
 
   return (
     <div className="bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow duration-200 overflow-hidden border border-gray-200 flex flex-col">
@@ -46,51 +45,25 @@ export default function NewsCard({ article, cluster }: NewsCardProps) {
 
         {/* Title */}
         <Link href={`/article/${article.id}`} className="block">
-          <h3 className="text-lg font-bold text-gray-900 mb-3 line-clamp-2 hover:text-gray-600 transition-colors">
+          <h3 className={`text-lg font-bold text-gray-900 line-clamp-2 hover:text-gray-600 transition-colors ${cluster && cluster.totalSourceCount > 1 ? 'mb-1.5' : 'mb-3'}`}>
             {article.title}
           </h3>
         </Link>
+
+        {/* Cluster multi-source badge */}
+        {cluster && cluster.totalSourceCount > 1 && (
+          <Link href={`/article/${article.id}`} className="block mb-3">
+            <span className="inline-block text-xs font-medium text-[#2B7878]">
+              Covered by {cluster.totalSourceCount} sources
+            </span>
+          </Link>
+        )}
 
         {/* Summary */}
         {article.summary && (
           <p className="text-gray-600 mb-4 line-clamp-5 text-sm">
             {article.summary}
           </p>
-        )}
-
-        {/* Cluster stats */}
-        {cluster && (
-          <div className="space-y-3 mb-5 text-sm">
-            <div className="flex flex-wrap items-center gap-4">
-              <div className="flex items-center gap-1">
-                <Users className="w-4 h-4 text-gray-400" />
-                <span className="text-gray-700">
-                  {cluster.totalSourceCount} source{cluster.totalSourceCount !== 1 ? 's' : ''}
-                </span>
-              </div>
-
-              {cluster.hasIndependentVoice && (
-                <div className="flex items-center gap-1">
-                  <Shield className="w-4 h-4 text-green-500" />
-                  <span className="text-green-600 font-medium">Independent</span>
-                </div>
-              )}
-            </div>
-
-            <div className="flex items-center gap-2">
-              <div className="flex-1">
-                <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden max-w-xs">
-                  <div
-                    className="h-full bg-primary-500 rounded-full transition-all duration-300"
-                    style={{ width: `${corroborationScore}%` }}
-                  />
-                </div>
-              </div>
-              <span className="text-xs font-medium text-gray-700 whitespace-nowrap">
-                {corroborationScore}%
-              </span>
-            </div>
-          </div>
         )}
 
         {/* Topics */}
