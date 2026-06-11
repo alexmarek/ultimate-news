@@ -135,7 +135,7 @@ export default async function Home({
         {articles.length === 0 ? (
           <div className="text-center py-12">
             <div className="text-gray-400 mb-4">No stories yet. News will appear after the first ingest.</div>
-            <div className="text-sm text-gray-500">Ingest runs every 12 hours to fetch fresh content.</div>
+            <div className="text-sm text-gray-500">Ingest runs every 24 hours to fetch fresh content.</div>
           </div>
         ) : (
           <>
@@ -188,7 +188,7 @@ export default async function Home({
 
         <div className="mt-12 pt-8 border-t border-gray-200">
           <div className="max-w-2xl mx-auto text-center text-gray-600 text-sm">
-            <p>News updated every 12 hours</p>
+            <p>News updated every 24 hours</p>
             <p className="mt-2">Sources: BBC, Reuters, Associated Press, and more</p>
           </div>
         </div>
