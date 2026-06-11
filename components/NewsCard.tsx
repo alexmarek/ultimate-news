@@ -11,13 +11,14 @@ interface NewsCardProps {
   cluster: Cluster | null;
   isRead?: boolean;
   initialSaved?: boolean;
+  dataKbId?: string;
 }
 
-export default function NewsCard({ article, cluster, isRead, initialSaved }: NewsCardProps) {
+export default function NewsCard({ article, cluster, isRead, initialSaved, dataKbId }: NewsCardProps) {
   const timeAgo = formatDistanceToNow(article.publishedAt, { addSuffix: true });
 
   return (
-    <div className={`relative bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow duration-200 overflow-hidden border border-gray-200 flex flex-col ${isRead ? 'opacity-60' : ''}`}>
+    <div data-kb-id={dataKbId} className={`relative bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow duration-200 overflow-hidden border border-gray-200 flex flex-col ${isRead ? 'opacity-60' : ''}`}>
       {/* Read badge */}
       {isRead && (
         <div className="absolute top-3 right-3 z-10">

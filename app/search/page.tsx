@@ -5,6 +5,8 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Newspaper, ArrowLeft, Search, ExternalLink } from 'lucide-react';
 import TimeAgo from '@/components/TimeAgo';
+import { useKeyboardNav } from '@/components/useKeyboardNav';
+import HelpModal from '@/components/HelpModal';
 
 interface SearchResult {
   id: string;
@@ -27,6 +29,9 @@ export default function SearchPage() {
   const [mode, setMode] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  const articleIds = results.map((r) => r.id);
+  const { showHelp, setShowHelp } = useKeyboardNav(articleIds);
 
   useEffect(() => {
     async function doSearch() {
@@ -132,6 +137,7 @@ export default function SearchPage() {
               {results.map((r) => (
                 <div
                   key={r.id}
+                  data-kb-id={r.id}
                   className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-sm transition-shadow"
                 >
                   <div className="flex items-start gap-3">
@@ -181,6 +187,7 @@ export default function SearchPage() {
           </>
         )}
       </main>
+      <HelpModal open={showHelp} onClose={() => setShowHelp(false)} />
     </div>
   );
 }

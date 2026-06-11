@@ -7,6 +7,7 @@ import { prisma } from '@/lib/db';
 import { AREAS } from '@/lib/types';
 import Link from 'next/link';
 import { Bookmark } from 'lucide-react';
+import KeyboardNavWrapper from '@/components/KeyboardNavWrapper';
 import type { Article, Source, Cluster } from '@prisma/client';
 
 type ArticleWithRelations = Article & { source: Source; cluster: Cluster | null };
@@ -147,6 +148,8 @@ export default async function Home({
     categoryNames.push('Music industry');
   }
 
+  const allArticleIds = articles.map((a) => a.id);
+
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
@@ -188,6 +191,7 @@ export default async function Home({
           </div>
         ) : (
           <>
+            <KeyboardNavWrapper articleIds={allArticleIds}>
             {Object.entries(grouped).map(([cat, catArticles]) => (
               <section key={cat} className={isSectionView ? 'mb-10' : 'mb-6'}>
                 {isSectionView && (
@@ -218,11 +222,13 @@ export default async function Home({
                       cluster={article.cluster}
                       isRead={isRead(article.id)}
                       initialSaved={isSaved(article.id)}
+                      dataKbId={article.id}
                     />
                   ))}
                 </div>
               </section>
             ))}
+            </KeyboardNavWrapper>
           </>
         )}
 
