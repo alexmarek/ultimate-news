@@ -3,13 +3,14 @@
 // taxonomy: World News, Music, Sport, Business, Technology, Environment,
 // Positive News, Travel.
 //
-// Usage: npx tsx scripts/reclassify-articles.ts
-//
-// Dry-run mode (default): npx tsx scripts/reclassify-articles.ts --dry
-// Apply changes:          npx tsx scripts/reclassify-articles.ts --apply
+// Usage:
+//   npx tsx scripts/reclassify-articles.ts               (dry run, 50 articles)
+//   npx tsx scripts/reclassify-articles.ts --sample 10   (dry run, 10 articles)
+//   npx tsx scripts/reclassify-articles.ts --apply        (write changes, 50 articles)
+//   npx tsx scripts/reclassify-articles.ts --sample 10 --apply  (write, 10)
+//   npx tsx scripts/reclassify-articles.ts --all          (all articles)
 //
 // Requires DATABASE_URL and ANTHROPIC_API_KEY in .env.
-// Limits to 50 articles per run to avoid API costs spiraling.
 
 import { prisma } from '@/lib/db';
 import { AREAS } from '@/lib/types';
@@ -17,8 +18,12 @@ import Anthropic from '@anthropic-ai/sdk';
 import { ENRICH_PROMPT } from '@/lib/ai/prompts';
 
 const CONFIDENCE_THRESHOLD = 0.65;
-const BATCH_SIZE = 50;
+const DEFAULT_BATCH_SIZE = 50;
 const DRY_RUN = !process.argv.includes('--apply');
+const SAMPLE_INDEX = process.argv.indexOf('--sample');
+const SAMPLE = SAMPLE_INDEX !== -1 ? parseInt(process.argv[SAMPLE_INDEX + 1], 10) || 10 : null;
+const ALL = process.argv.includes('--all');
+const LIMIT = ALL ? undefined : (SAMPLE ?? DEFAULT_BATCH_SIZE);
 
 interface EnrichOutput {
   summary: string;
@@ -84,11 +89,12 @@ function resolveArea(enrichment: EnrichOutput): {
 async function main() {
   console.log(`Mode: ${DRY_RUN ? 'DRY RUN' : 'APPLY'}`);
   console.log(`Confidence threshold: ${CONFIDENCE_THRESHOLD}`);
-  console.log(`Canonical taxonomy: ${AREAS.join(', ')}\n`);
+  console.log(`Canonical taxonomy: ${AREAS.join(', ')}`);
+  console.log(`Limit: ${LIMIT ?? 'all'}\n`);
 
   const articles = await prisma.article.findMany({
     orderBy: { publishedAt: 'desc' },
-    take: BATCH_SIZE,
+    take: LIMIT,
     include: { source: true },
   });
 
@@ -96,6 +102,8 @@ async function main() {
 
   let updated = 0;
   let lowConf = 0;
+  let topicChanged = 0;
+  let areaChanged = 0;
 
   for (const article of articles) {
     try {
@@ -109,19 +117,28 @@ async function main() {
 
       const { primaryArea, lowConfidenceTag } = resolveArea(enrichment);
 
-      const changed =
+      const oldTopics = article.topics ? article.topics.split(',') : [];
+      const newTopics = enrichment.topics;
+      const hasTopicChange =
+        oldTopics.length !== newTopics.length ||
+        !oldTopics.every((t) => newTopics.includes(t));
+
+      const hasAreaChange =
         article.primaryArea !== primaryArea ||
         article.lowConfidenceTag !== lowConfidenceTag;
 
-      if (changed) {
+      if (hasAreaChange || hasTopicChange) {
+        if (hasAreaChange) areaChanged++;
+        if (hasTopicChange) topicChanged++;
         if (lowConfidenceTag) lowConf++;
 
-        console.log(
-          `  ${changed ? '✏️' : '✓'} ${article.title.slice(0, 60)}...`,
-        );
-        console.log(
-          `     Old: ${article.primaryArea} → New: ${primaryArea}${lowConfidenceTag ? ' (low confidence)' : ''}`,
-        );
+        console.log(`  ✏️  ${article.title.slice(0, 70)}...`);
+        if (hasAreaChange) {
+          console.log(`     Area: ${article.primaryArea} → ${primaryArea}${lowConfidenceTag ? ' (low confidence)' : ''}`);
+        }
+        if (hasTopicChange) {
+          console.log(`     Topics: [${oldTopics.join(', ')}] → [${newTopics.join(', ')}]`);
+        }
 
         if (!DRY_RUN) {
           await prisma.article.update({
@@ -149,7 +166,7 @@ async function main() {
   }
 
   console.log(
-    `\nDone. ${updated} articles would be${DRY_RUN ? ' (dry run)' : ''} updated, ${lowConf} low-confidence.`,
+    `\nDone. ${updated} articles would be${DRY_RUN ? ' (dry run)' : ''} updated (${areaChanged} area changes, ${topicChanged} topic changes), ${lowConf} low-confidence.`,
   );
 
   await prisma.$disconnect();

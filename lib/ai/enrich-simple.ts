@@ -1,5 +1,6 @@
 // lib/ai/enrich-simple.ts
-// Simplified enrichment for development without AI dependencies
+// Simplified enrichment for development without AI dependencies.
+// Uses source contentKind as area signal + title keywords for topic extraction.
 
 import { AREAS, type Area } from '@/lib/types';
 
@@ -20,18 +21,95 @@ interface EnrichOutput {
   incomplete: boolean;
 }
 
-const topicPools: Record<Area, string[]> = {
-  'World News': ['politics', 'diplomacy', 'conflict', 'election', 'policy', 'international', 'summit', 'war', 'security', 'alliance', 'migration', 'sanctions', 'treaty', 'negotiations', 'human rights'],
-  Music: ['new album', 'tour', 'guitar', 'review', 'interview', 'festival', 'band', 'single', 'vinyl', 'heavy metal', 'stoner rock', 'doom', 'death metal', 'lineup', 'shows', 'recording', 'label news', 'artist', 'song'],
-  Sport: ['football', 'hockey', 'tennis', 'championship', 'league', 'tournament', 'transfer', 'injury', 'playoffs', 'standings', 'ranking', 'Olympics', 'World Cup', 'match', 'score', 'F1', 'basketball', 'NHL'],
-  Business: ['markets', 'economy', 'trade', 'stocks', 'investment', 'banking', 'real estate', 'startups', 'retail', 'mergers', 'interest rates', 'inflation', 'supply chain', 'labor', 'consumer'],
-  Technology: ['AI', 'startup', 'cybersecurity', 'software', 'hardware', 'privacy', 'innovation', 'cloud', 'data', 'gadgets', 'machine learning', 'automation', 'blockchain', 'dev tools', 'open source'],
-  Environment: ['climate', 'emissions', 'renewable', 'conservation', 'pollution', 'sustainability', 'wildlife', 'energy', 'carbon', 'species', 'warming', 'ecosystem', 'biodiversity', 'ocean', 'green'],
-  'Positive News': ['breakthrough', 'recovery', 'community', 'innovation', 'hero', 'rescue', 'volunteer', 'fundraising', 'achievement', 'milestone', 'inspiration', 'healing', 'kindness', 'uplifting', 'hope'],
-  Travel: ['destination', 'hotel', 'restaurant', 'guide', 'trip', 'vacation', 'tourism', 'itinerary', 'flight', 'adventure', 'budget', 'cultural', 'explore', 'review', 'cuisine'],
+// Source contentKind → suggested area mapping
+const contentKindArea: Record<string, Area> = {
+  'technology': 'Technology',
+  'cybersecurity': 'Technology',
+  'ai-newsletter': 'Technology',
+  'business': 'Business',
+  'investigative': 'World News',
+  'news': 'World News',
+  'policy': 'World News',
+  'media': 'World News',
+  'local-news': 'World News',
+  'positive-news': 'Positive News',
+  'music-metal': 'Music',
+  'music-gear': 'Music',
+  'music': 'Music',
+  'sports': 'Sport',
+  'travel': 'Travel',
+  'environment': 'Environment',
+  'gaming': 'Technology',
 };
 
-const generalTopics = ['analysis', 'opinion', 'report', 'data', 'study', 'insight', 'editorial', 'feature', 'breaking', 'exclusive', 'investigation', 'commentary', 'trending', 'profile'];
+// Title keyword → area override (stronger signal than contentKind)
+function titleKeywordArea(title: string): Area | null {
+  const t = title.toLowerCase();
+
+  // Sport keywords
+  if (/\b(NHL|NBA|NFL|MLB|F1|UFC|tennis|grand slam|playoff|championship|league|tournament|match|goal|score|win|loss|overtime|semifinal|final|medal|Olympic|World Cup|biathlon|cycling|hockey|football|rugby|cricket|boxing|golf|basketball|transfer|signing|free agent)\b/.test(t)) {
+    return 'Sport';
+  }
+
+  // Music keywords
+  if (/\b(album|tour|single|band|concert|festival|guitar|bass|drum|vocal|singer|song|EP|vinyl|label|signing|Grammy|Billboard|Spotify)\b/.test(t)) {
+    return 'Music';
+  }
+
+  // Technology keywords (only if the article IS primarily about tech)
+  if (/\b(AI|artificial intelligence|ChatGPT|OpenAI|machine learning|cyber|hack|vulnerability|ransomware|malware|app|software|hardware|chip|processor|robot|drone|startup)\b/.test(t)) {
+    return 'Technology';
+  }
+
+  // Travel keywords
+  if (/\b(hotel|restaurant|destination|travel|trip|vacation|tourist|guide|itinerary|flight|airline)\b/.test(t)) {
+    return 'Travel';
+  }
+
+  // Environment keywords
+  if (/\b(climate|carbon|emissions|renewable|solar|wind|conservation|wildlife|species|biodiversity|pollution|ocean|reef)\b/.test(t)) {
+    return 'Environment';
+  }
+
+  return null;
+}
+
+function extractTopicsFromText(title: string, excerpt: string): string[] {
+  const text = (title + ' ' + excerpt).toLowerCase();
+  const words = text.split(/[^a-zA-Z0-9]+/).filter((w) => w.length > 3);
+  const wordFreq = new Map<string, number>();
+  for (const w of words) {
+    wordFreq.set(w, (wordFreq.get(w) || 0) + 1);
+  }
+
+  const stopWords = new Set([
+    'this', 'that', 'with', 'from', 'they', 'have', 'been', 'were', 'their',
+    'about', 'which', 'when', 'what', 'more', 'than', 'over', 'into', 'also',
+    'after', 'before', 'would', 'could', 'these', 'those', 'there', 'very',
+  ]);
+
+  // Multi-word phrases: adjacent capitalized or significant words
+  const phrases: string[] = [];
+  const titleWords = title.split(/[^a-zA-Z0-9\u00C0-\u024F]+/).filter((w) => w.length > 1);
+  for (let i = 0; i < titleWords.length - 1; i++) {
+    const phrase = titleWords.slice(i, i + 2).join(' ');
+    if (phrase.length > 5 && !stopWords.has(phrase.toLowerCase().split(' ')[0])) {
+      phrases.push(phrase);
+    }
+  }
+
+  // Get top single words by frequency
+  const sorted = [...wordFreq.entries()]
+    .filter(([w]) => !stopWords.has(w) && w.length > 3)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([w]) => w);
+
+  // Combine phrases + top words, take up to 3
+  const result = [...new Set([...phrases, ...sorted])].slice(0, 3);
+
+  return result.length > 0 ? result : [];
+}
 
 const sourceEntities: Record<string, string[]> = {
   'Blabbermouth.net': ['Moonspell', 'Metallica', 'Slipknot', 'Cradle of Filth', 'Arch Enemy', 'Gojira'],
@@ -46,38 +124,55 @@ const sourceEntities: Record<string, string[]> = {
   'Lonely Planet': ['UNESCO', 'National Geographic', 'Tripadvisor', 'Airbnb', 'Booking'],
 };
 
+// Source name → contentKind for area hinting
+const sourceContentKind: Record<string, string> = {
+  'Wired': 'technology',
+  'Good News Network': 'positive-news',
+  'The Week': 'news',
+  'Quartz': 'business',
+  'One Useful Thing': 'ai-newsletter',
+  "Fodor's Travel": 'travel',
+  'ProPublica': 'investigative',
+  'NPR': 'news',
+  'Deutsche Welle': 'news',
+  'NHK World Japan': 'news',
+  'The Hacker News': 'cybersecurity',
+  'Bayreuther Tagblatt': 'local-news',
+  'Sport.cz': 'sports',
+  'Aktuálně.cz': 'news',
+  'Blabbermouth.net': 'music-metal',
+  'MusicRadar': 'music-gear',
+  'BBC Sport': 'sports',
+  'Inside Climate News': 'environment',
+  'Stereogum': 'music',
+  'Lonely Planet': 'travel',
+};
+
 export async function enrichArticle(input: EnrichInput): Promise<EnrichOutput> {
-  const musicSources = ['Blabbermouth.net', 'MusicRadar', 'Stereogum'];
-  const isMusic = musicSources.includes(input.sourceName);
+  // 1. Determine area: title keywords > source contentKind > random
+  const keywordArea = titleKeywordArea(input.title);
+  const kindArea = contentKindArea[sourceContentKind[input.sourceName]] as Area | undefined;
+  let selectedArea: Area;
 
-  const areas: Area[] = isMusic
-    ? ['Music', ...AREAS.filter((a) => a !== 'Music')]
-    : [...AREAS];
-
-  const areaIndex = isMusic
-    ? Math.random() < 0.7 ? 0 : 1 + Math.floor(Math.random() * (areas.length - 1))
-    : Math.floor(Math.random() * areas.length);
-
-  const selectedArea = areas[areaIndex];
-  const pool = topicPools[selectedArea] || generalTopics;
-  const chosen: string[] = [];
-  const used = new Set<number>();
-
-  while (chosen.length < 3 && used.size < pool.length) {
-    const i = Math.floor(Math.random() * pool.length);
-    if (!used.has(i)) {
-      used.add(i);
-      chosen.push(pool[i]);
-    }
+  if (keywordArea) {
+    selectedArea = keywordArea;
+  } else if (kindArea) {
+    selectedArea = kindArea;
+  } else {
+    selectedArea = AREAS[Math.floor(Math.random() * AREAS.length)];
   }
 
+  // 2. Extract topics from actual text (title + excerpt)
+  const topics = extractTopicsFromText(input.title, input.excerpt);
+
+  // 3. Entities from source-specific list or generic
   const entities = sourceEntities[input.sourceName] || ['Global Organization', 'Expert Analysis', 'Industry Leader'];
   const pick = (arr: string[]) => arr[Math.floor(Math.random() * arr.length)];
 
   return {
     summary: input.excerpt || input.content?.replace(/<[^>]*>/g, '').slice(0, 400) || '',
-    areas: [{ area: selectedArea, confidence: 0.8 }],
-    topics: chosen,
+    areas: [{ area: selectedArea, confidence: keywordArea ? 0.85 : kindArea ? 0.7 : 0.5 }],
+    topics,
     entities: [pick(entities), pick(entities)],
     titleEn: input.sourceLang === 'en' ? null : input.title,
     incomplete: false,
