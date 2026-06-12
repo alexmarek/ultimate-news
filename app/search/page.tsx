@@ -44,11 +44,10 @@ export default function SearchPage() {
           body: JSON.stringify({ query }),
         });
         const data = await res.json();
-        if (data.error) {
+        setResults(data.results || []);
+        setMode(data.mode || '');
+        if (data.error && (!data.results || data.results.length === 0)) {
           setError(data.error);
-        } else {
-          setResults(data.results || []);
-          setMode(data.mode || '');
         }
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Search failed');
@@ -114,7 +113,9 @@ export default function SearchPage() {
             </p>
             <p className="text-body-md text-[var(--text-faint)]">
               {query.length >= 3
-                ? 'Try different keywords.'
+                ? mode === 'no-embeddings'
+                  ? 'Semantic search is warming up — embeddings are being generated for existing articles.'
+                  : 'Try different keywords.'
                 : 'Search requires at least 3 characters.'}
             </p>
           </div>
@@ -129,6 +130,7 @@ export default function SearchPage() {
                   {results.length} {results.length === 1 ? 'result' : 'results'}
                   {mode === 'semantic' && ' • semantic search'}
                   {mode === 'recent' && ' • showing recent'}
+                  {mode === 'no-embeddings' && ' • embeddings pending'}
                 </p>
               </div>
             )}

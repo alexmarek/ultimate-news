@@ -53,6 +53,8 @@ export async function POST(req: NextRequest) {
 
     const trimmedQuery = query.trim();
 
+    console.log(`[search] query="${trimmedQuery}"`);
+
     // Embed the query with input_type='query'
     const queryVec = await queryEmbed(trimmedQuery);
 
@@ -61,6 +63,34 @@ export async function POST(req: NextRequest) {
       where: { embedding: { not: null } },
       include: { source: true, cluster: { select: { totalSourceCount: true } } },
     });
+
+    console.log(`[search] candidate articles with embeddings: ${articles.length}`);
+
+    if (articles.length === 0) {
+      // No embeddings stored — fall back to recent articles
+      const recent = await prisma.article.findMany({
+        include: { source: true, cluster: { select: { totalSourceCount: true } } },
+        orderBy: { publishedAt: 'desc' },
+        take: TOP_K,
+      });
+      console.log(`[search] no embeddings stored, returning ${recent.length} recent articles`);
+      return NextResponse.json({
+        results: recent.map((a) => ({
+          id: a.id,
+          title: a.title,
+          excerpt: a.excerpt,
+          summary: a.summary,
+          publishedAt: a.publishedAt,
+          primaryArea: a.primaryArea,
+          lang: a.lang,
+          canonicalUrl: a.canonicalUrl,
+          source: { id: a.source.id, name: a.source.name, editorialIndependence: a.source.editorialIndependence },
+          cluster: a.cluster,
+          score: null,
+        })),
+        mode: 'no-embeddings',
+      });
+    }
 
     // Compute cosine similarity for each
     const scored: ScoredArticle[] = [];
@@ -93,9 +123,13 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    console.log(`[search] scored: ${scored.length}, max similarity: ${scored.length > 0 ? Math.max(...scored.map(s => s.score)).toFixed(4) : 'N/A'}`);
+
     // Sort by score descending, take top K
     scored.sort((a, b) => b.score - a.score);
     const top = scored.slice(0, TOP_K);
+
+    console.log(`[search] returning ${top.length} results`);
 
     return NextResponse.json({
       results: top.map(({ article, score }) => ({
