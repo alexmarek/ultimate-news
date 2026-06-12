@@ -5,12 +5,10 @@
 // is small enough that the raw call is more transparent and one fewer dep.
 //
 // Model: voyage-3-lite
-//   - 1024-dim output
+//   - 512-dim output
 //   - 32k token context
 //   - input_type='document' (vs 'query') — yields better retrieval pairing
-//     when later querying with 'query' embeddings, but we currently only
-//     embed documents and compute cosine across them, so it's the right
-//     choice for both ingest and any future search use.
+//     when later querying with 'query' embeddings.
 //
 // Cost: free tier covers our projected volume easily. Negligible per article.
 //
@@ -18,7 +16,6 @@
 
 const VOYAGE_URL = 'https://api.voyageai.com/v1/embeddings';
 const MODEL = 'voyage-3-lite';
-const EXPECTED_DIM = 1024;
 
 interface VoyageResponse {
   data: Array<{ embedding: number[]; index: number }>;
@@ -30,8 +27,6 @@ export async function embed(text: string): Promise<number[]> {
   const key = process.env.VOYAGE_API_KEY;
   if (!key) throw new Error('VOYAGE_API_KEY not set');
 
-  // Trim to a sane length — Voyage handles 32k tokens but most articles
-  // give us their best signal in the first ~4000 chars.
   const input = text.slice(0, 16_000);
 
   const res = await fetch(VOYAGE_URL, {
@@ -55,7 +50,7 @@ export async function embed(text: string): Promise<number[]> {
 
   const data = (await res.json()) as VoyageResponse;
   const embedding = data.data?.[0]?.embedding;
-  if (!Array.isArray(embedding) || embedding.length !== EXPECTED_DIM) {
+  if (!Array.isArray(embedding) || embedding.length === 0) {
     throw new Error(`Voyage returned unexpected embedding shape: ${embedding?.length ?? 'none'}`);
   }
   return embedding;
@@ -88,7 +83,7 @@ export async function queryEmbed(text: string): Promise<number[]> {
 
   const data = (await res.json()) as VoyageResponse;
   const embedding = data.data?.[0]?.embedding;
-  if (!Array.isArray(embedding) || embedding.length !== EXPECTED_DIM) {
+  if (!Array.isArray(embedding) || embedding.length === 0) {
     throw new Error(`Voyage returned unexpected embedding shape: ${embedding?.length ?? 'none'}`);
   }
   return embedding;
@@ -96,11 +91,11 @@ export async function queryEmbed(text: string): Promise<number[]> {
 
 // ---------------------------------------------------------------------------
 // Cosine similarity — used by lib/dedup/cluster.ts. Inlined here so the
-// vector math has one canonical home.
+// vector math has one canonical home. Runtime-checked for dimension mismatch.
 // ---------------------------------------------------------------------------
 export function cosineSimilarity(a: number[], b: number[]): number {
   if (a.length !== b.length) {
-    throw new Error(`cosineSimilarity: dim mismatch ${a.length} vs ${b.length}`);
+    throw new Error(`cosineSimilarity: dim mismatch (query: ${a.length}d, article: ${b.length}d). Run scripts/reembed-articles.ts to normalize stored embeddings.`);
   }
   let dot = 0;
   let normA = 0;
