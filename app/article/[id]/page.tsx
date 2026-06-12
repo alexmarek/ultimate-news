@@ -56,9 +56,53 @@ export default async function ArticlePage({
     : [];
 
   const typeCounts: Record<string, number> = { wire: 0, national: 0, independent: 0 };
+  const wireOrigin: typeof clusterArticles = [];
+  const syndicated: typeof clusterArticles = [];
+  const independent: typeof clusterArticles = [];
   for (const ca of clusterArticles) {
     const t = sourceTypeLabel(ca.source.editorialIndependence);
     typeCounts[t] = (typeCounts[t] || 0) + 1;
+    if (ca.source.isWireService || ca.source.editorialIndependence === 'syndicate') {
+      wireOrigin.push(ca);
+    } else if (ca.source.editorialIndependence === 'national') {
+      syndicated.push(ca);
+    } else {
+      independent.push(ca);
+    }
+  }
+
+  function SourceArticleCard({ ca }: { ca: (typeof clusterArticles)[number] }) {
+    return (
+      <Link
+        href={`/article/${ca.id}`}
+        className="block p-4 hover:bg-[var(--surface)] transition-colors"
+      >
+        <div className="flex items-start gap-2.5">
+          <SourceInitial name={ca.source.name} />
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center justify-between gap-2 mb-0.5">
+              <span className="text-body-sm font-medium text-[var(--text-body)] truncate">
+                {ca.source.name}
+              </span>
+              <span className="text-body-sm text-[var(--text-faint)] flex-shrink-0">
+                {new Date(ca.publishedAt).toLocaleDateString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                })}
+              </span>
+            </div>
+            <h4 className="font-serif text-headline-sm font-medium text-[var(--text)] line-clamp-2 mb-0.5">
+              {ca.title}
+            </h4>
+            {ca.excerpt && (
+              <p className="text-body-sm text-[var(--text-faint)] line-clamp-1">
+                {ca.excerpt}
+              </p>
+            )}
+          </div>
+        </div>
+      </Link>
+    );
   }
 
   return (
@@ -240,39 +284,67 @@ export default async function ArticlePage({
                     </p>
                   </div>
                 ) : (
-                  <div className="divide-y divide-[var(--border)]">
-                    {clusterArticles.map((ca) => (
-                      <Link
-                        key={ca.id}
-                        href={`/article/${ca.id}`}
-                        className="block p-4 hover:bg-[var(--surface)] transition-colors"
-                      >
-                        <div className="flex items-start gap-2.5">
-                          <SourceInitial name={ca.source.name} />
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center justify-between gap-2 mb-0.5">
-                              <span className="text-body-sm font-medium text-[var(--text-body)] truncate">
-                                {ca.source.name}
-                              </span>
-                              <span className="text-body-sm text-[var(--text-faint)] flex-shrink-0">
-                                {new Date(ca.publishedAt).toLocaleDateString('en-US', {
-                                  month: 'short',
-                                  day: 'numeric',
-                                })}
-                              </span>
-                            </div>
-                            <h4 className="font-serif text-headline-sm font-medium text-[var(--text)] line-clamp-2 mb-0.5">
-                              {ca.title}
-                            </h4>
-                            {ca.excerpt && (
-                              <p className="text-body-sm text-[var(--text-faint)] line-clamp-1">
-                                {ca.excerpt}
-                              </p>
-                            )}
-                          </div>
+                  <div>
+                    {wireOrigin.length > 0 && (
+                      <div>
+                        <div className="px-4 pt-3 pb-1 flex items-center gap-1.5">
+                          <span className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">
+                            Originating wire
+                          </span>
+                          <span
+                            className="text-[var(--text-faint)] cursor-help"
+                            title="Original reporting from a wire service (Reuters, AP, AFP). Other outlets syndicate this story — it appears verbatim across many sites."
+                          >
+                            &#9432;
+                          </span>
                         </div>
-                      </Link>
-                    ))}
+                        <div className="divide-y divide-[var(--border)]">
+                          {wireOrigin.map((ca) => (
+                            <SourceArticleCard key={ca.id} ca={ca} />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {syndicated.length > 0 && (
+                      <div>
+                        <div className="px-4 pt-3 pb-1 flex items-center gap-1.5">
+                          <span className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">
+                            Syndicated coverage
+                          </span>
+                          <span
+                            className="text-[var(--text-faint)] cursor-help"
+                            title="These outlets republished the wire story without independent reporting. The content is identical or near-identical to the original wire."
+                          >
+                            &#9432;
+                          </span>
+                        </div>
+                        <div className="divide-y divide-[var(--border)]">
+                          {syndicated.map((ca) => (
+                            <SourceArticleCard key={ca.id} ca={ca} />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {independent.length > 0 && (
+                      <div>
+                        <div className="px-4 pt-3 pb-1 flex items-center gap-1.5">
+                          <span className="text-[11px] font-semibold text-[var(--accent-2)] uppercase tracking-wide">
+                            Independent reporting
+                          </span>
+                          <span
+                            className="text-[var(--text-faint)] cursor-help"
+                            title="These outlets produced their own original reporting on this story. Independent voices provide corroboration and reduce reliance on wire syndication."
+                          >
+                            &#9432;
+                          </span>
+                        </div>
+                        <div className="divide-y divide-[var(--border)]">
+                          {independent.map((ca) => (
+                            <SourceArticleCard key={ca.id} ca={ca} />
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
