@@ -36,15 +36,18 @@ const generalTopics = ['analysis', 'opinion', 'report', 'data', 'study', 'insigh
 const sourceEntities: Record<string, string[]> = {
   'Blabbermouth.net': ['Moonspell', 'Metallica', 'Slipknot', 'Cradle of Filth', 'Arch Enemy', 'Gojira'],
   'MusicRadar': ['Fender', 'Gibson', 'Neural DSP', 'IK Multimedia', 'Universal Audio'],
-  'Guitar World': ['Ibanez', 'ESP', 'BC Rich', 'Jackson', 'PRS', 'Marshall'],
   'The Hacker News': ['CISA', 'FBI', 'Microsoft', 'Google', 'Cloudflare'],
   'Wired': ['OpenAI', 'Google', 'Apple', 'Meta', 'The Pentagon'],
   'NPR': ['Congress', 'White House', 'Supreme Court', 'FDA', 'CDC'],
   'DW': ['EU', 'NATO', 'Bundestag', 'European Commission', 'UN'],
+  'BBC Sport': ['Premier League', 'Champions League', 'Wimbledon', 'Six Nations', 'Olympics'],
+  'Inside Climate News': ['IPCC', 'NOAA', 'EPA', 'COP', 'Green Climate Fund'],
+  'Stereogum': ['Pitchfork', 'Coachella', 'Grammy', 'Billboard', 'Spotify'],
+  'Lonely Planet': ['UNESCO', 'National Geographic', 'Tripadvisor', 'Airbnb', 'Booking'],
 };
 
 export async function enrichArticle(input: EnrichInput): Promise<EnrichOutput> {
-  const musicSources = ['Blabbermouth.net', 'MusicRadar', 'Guitar World'];
+  const musicSources = ['Blabbermouth.net', 'MusicRadar', 'Stereogum'];
   const isMusic = musicSources.includes(input.sourceName);
 
   const areas: Area[] = isMusic
