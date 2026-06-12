@@ -30,14 +30,14 @@ export default function Pagination({ currentPage, totalPages, query, category }:
       {currentPage > 1 && (
         <Link
           href={createUrl(currentPage - 1)}
-          className="px-3 py-2 rounded-lg text-body-md font-medium bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 transition-colors duration-200"
+          className="px-3 py-2 rounded-lg text-body-md font-medium bg-[var(--surface-elevated)] text-[var(--text-body)] hover:bg-[var(--surface)] border border-[var(--border)] transition-colors duration-200"
         >
           Previous
         </Link>
       )}
       {pages.map((page, i) => (
         i > 0 && pages[i] - pages[i - 1] > 1 ? (
-          <span key={`dots-${i}`} className="px-2 py-2 text-gray-400 text-body-md">…</span>
+          <span key={`dots-${i}`} className="px-2 py-2 text-[var(--text-faint)] text-body-md">…</span>
         ) : null
       ))}
       {pages.map((page) => (
@@ -46,8 +46,8 @@ export default function Pagination({ currentPage, totalPages, query, category }:
           href={createUrl(page)}
           className={`px-3 py-2 rounded-lg text-body-md font-medium transition-colors duration-200 ${
             page === currentPage
-              ? 'bg-primary-500 text-gray-900 shadow-sm cursor-default pointer-events-none'
-              : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 cursor-pointer'
+              ? 'bg-[var(--accent)] text-[var(--surface-elevated)] shadow-sm cursor-default pointer-events-none'
+              : 'bg-[var(--surface-elevated)] text-[var(--text-body)] hover:bg-[var(--surface)] border border-[var(--border)] cursor-pointer'
           }`}
         >
           {page}
@@ -56,7 +56,7 @@ export default function Pagination({ currentPage, totalPages, query, category }:
       {currentPage < totalPages && (
         <Link
           href={createUrl(currentPage + 1)}
-          className="px-3 py-2 rounded-lg text-body-md font-medium bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 transition-colors duration-200"
+          className="px-3 py-2 rounded-lg text-body-md font-medium bg-[var(--surface-elevated)] text-[var(--text-body)] hover:bg-[var(--surface)] border border-[var(--border)] transition-colors duration-200"
         >
           Next
         </Link>

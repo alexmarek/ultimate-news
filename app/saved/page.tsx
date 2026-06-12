@@ -9,7 +9,7 @@ const USER_ID = 'default';
 
 export default function SavedPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-gray-50 flex items-center justify-center text-gray-400">Loading...</div>}>
+    <Suspense fallback={<div className="min-h-screen bg-[var(--bg)] flex items-center justify-center text-[var(--text-faint)]">Loading...</div>}>
       <SavedContent />
     </Suspense>
   );
@@ -48,23 +48,23 @@ async function SavedContent() {
   const articles = saved.map((s) => s.article);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
+    <div className="min-h-screen bg-[var(--bg)]">
+      <header className="bg-[var(--surface-elevated)] border-b border-[var(--border)] sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4">
-          <Link href="/" className="inline-flex items-center gap-1.5 text-body-md text-gray-500 hover:text-gray-700">
+          <Link href="/" className="inline-flex items-center gap-1.5 text-body-md text-[var(--text-muted)] hover:text-[var(--text)]">
             <ArrowLeft className="w-4 h-4" />
             Back to news
           </Link>
-          <h1 className="font-serif text-headline-lg font-semibold text-gray-900 mt-2">Saved articles</h1>
+          <h1 className="font-serif text-headline-lg font-semibold text-[var(--text)] mt-2">Saved articles</h1>
         </div>
       </header>
 
       <main className="container mx-auto px-4 py-8 max-w-3xl">
         {queryError && (
           <div className="text-center py-16">
-            <p className="text-gray-500 mb-2">Could not load saved articles</p>
-            <p className="text-body-md text-gray-400">{queryError}</p>
-            <p className="text-body-sm text-gray-400 mt-4">
+            <p className="text-[var(--text-muted)] mb-2">Could not load saved articles</p>
+            <p className="text-body-md text-[var(--text-faint)]">{queryError}</p>
+            <p className="text-body-sm text-[var(--text-faint)] mt-4">
               Make sure the database migration for ArticleSaved has been applied.
             </p>
           </div>
@@ -72,8 +72,8 @@ async function SavedContent() {
 
         {!queryError && articles.length === 0 && (
           <div className="text-center py-16">
-            <p className="text-gray-500">No saved articles yet.</p>
-            <p className="text-body-md text-gray-400 mt-1">
+            <p className="text-[var(--text-muted)]">No saved articles yet.</p>
+            <p className="text-body-md text-[var(--text-faint)] mt-1">
               Bookmark articles to read them later.
             </p>
           </div>
@@ -84,22 +84,22 @@ async function SavedContent() {
             {articles.map((a) => (
               <div
                 key={a.id}
-                className="bg-white rounded-xl border border-gray-200 p-4"
+                className="bg-[var(--surface-elevated)] rounded-xl border border-[var(--border)] p-4"
               >
                 <div className="flex items-start gap-3">
                   <div className="flex-1 min-w-0">
                     <Link
                       href={`/?category=${encodeURIComponent(a.primaryArea)}`}
-                      className="inline-block px-2 py-0.5 rounded-full text-body-sm font-medium bg-[#D3BDB0]/30 text-stone-700 mb-1.5"
+                      className="inline-block px-2 py-0.5 rounded-full text-body-sm font-medium bg-[var(--accent-warm)]/30 text-[var(--text)] mb-1.5"
                     >
                       {a.primaryArea}
                     </Link>
                     <Link href={`/article/${a.id}`} className="block">
-                      <h2 className="font-serif text-headline-md font-semibold text-gray-900 mb-1 hover:text-gray-600 transition-colors">
+                      <h2 className="font-serif text-headline-md font-semibold text-[var(--text)] mb-1 hover:text-[var(--text-body)] transition-colors">
                         {a.title}
                       </h2>
                     </Link>
-                    <div className="flex items-center gap-3 text-body-sm text-gray-500">
+                    <div className="flex items-center gap-3 text-body-sm text-[var(--text-muted)]">
                       <div className="flex items-center gap-1">
                         <Newspaper className="w-3.5 h-3.5" />
                         <span>{a.source.name}</span>
@@ -107,7 +107,7 @@ async function SavedContent() {
                       <TimeAgo date={a.publishedAt} />
                     </div>
                     {a.summary && (
-                      <p className="text-body-md text-gray-600 line-clamp-2 mt-1">
+                      <p className="text-body-md text-[var(--text-body)] line-clamp-2 mt-1">
                         {a.summary}
                       </p>
                     )}

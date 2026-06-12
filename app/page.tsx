@@ -151,22 +151,22 @@ export default async function Home({
   const allArticleIds = articles.map((a) => a.id);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
+    <div className="min-h-screen bg-[var(--bg)]">
+      <header className="bg-[var(--surface-elevated)] border-b border-[var(--border)] sticky top-0 z-50">
         <div className="container mx-auto px-4 py-6">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
               <div className="flex items-center gap-4">
-              <h1 className="font-serif text-display-3 font-bold text-gray-900">Ultimate News</h1>
+              <h1 className="font-serif text-display-3 font-bold text-[var(--text)]">Ultimate News</h1>
               <Link
                 href="/saved"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-body-md font-medium text-stone-600 hover:bg-stone-100 transition-colors"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-body-md font-medium text-[var(--text-body)] hover:bg-[var(--surface)] transition-colors"
               >
                 <Bookmark className="w-4 h-4" />
                 Saved
               </Link>
               </div>
-              <p className="text-gray-600 mt-1">Curated news from sources you care about</p>
+              <p className="text-[var(--text-body)] mt-1">Curated news from sources you care about</p>
             </div>
             <div className="w-full md:w-auto">
               <Suspense>
@@ -186,8 +186,8 @@ export default async function Home({
 
         {articles.length === 0 ? (
           <div className="text-center py-12">
-            <div className="text-gray-400 mb-4">No stories yet. News will appear after the first ingest.</div>
-            <div className="text-sm text-gray-500">Ingest runs every 24 hours to fetch fresh content.</div>
+            <div className="text-[var(--text-faint)] mb-4">No stories yet. News will appear after the first ingest.</div>
+            <div className="text-body-md text-[var(--text-muted)]">Ingest runs every 24 hours to fetch fresh content.</div>
           </div>
         ) : (
           <>
@@ -196,18 +196,18 @@ export default async function Home({
               <section key={cat} className={isSectionView ? 'mb-10' : 'mb-6'}>
                 {isSectionView && (
                   <div className="mb-4">
-                    <h2 className="font-serif text-headline-md font-semibold text-gray-900 uppercase tracking-wide">
+                    <h2 className="font-serif text-headline-md font-semibold text-[var(--text)] uppercase tracking-wide">
                       {cat}
                     </h2>
-                    <p className="text-gray-500 text-body-md mt-1 line-clamp-2">
+                    <p className="text-[var(--text-muted)] text-body-md mt-1 line-clamp-2">
                       {categorySummary(catArticles)}
                     </p>
                   </div>
                 )}
                 {!isSectionView && (
                   <div className="mb-6">
-                    <h2 className="font-serif text-display-3 font-semibold text-gray-900">Latest Stories</h2>
-                    <p className="text-gray-600 text-body-md mt-2">
+                    <h2 className="font-serif text-display-3 font-semibold text-[var(--text)]">Latest Stories</h2>
+                    <p className="text-[var(--text-body)] text-body-md mt-2">
                       {category && category !== 'all'
                         ? `Page ${page} of ${totalPages} • ${category}`
                         : `Page ${page} of ${totalPages}`}
@@ -243,8 +243,8 @@ export default async function Home({
           </div>
         )}
 
-        <div className="mt-12 pt-8 border-t border-gray-200">
-          <div className="max-w-2xl mx-auto text-center text-gray-600 text-body-md">
+        <div className="mt-12 pt-8 border-t border-[var(--border)]">
+          <div className="max-w-2xl mx-auto text-center text-[var(--text-body)] text-body-md">
             <p>News updated every 24 hours</p>
             <p className="mt-2">Sources: BBC, Reuters, Associated Press, and more</p>
           </div>

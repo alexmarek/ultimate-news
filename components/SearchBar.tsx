@@ -20,18 +20,18 @@ export default function SearchBar() {
     <form onSubmit={handleSearch} className="w-full">
       <div className="relative">
         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-          <Search className="h-5 w-5 text-gray-400" />
+          <Search className="h-5 w-5 text-[var(--text-faint)]" />
         </div>
         <input
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          className="block w-full pl-10 pr-12 py-3 border border-gray-300 rounded-xl bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200"
+          className="block w-full pl-10 pr-12 py-3 border border-[var(--border-strong)] rounded-xl bg-[var(--surface-elevated)] text-[var(--text)] placeholder-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent transition-all duration-200"
           placeholder="Search across all sources..."
         />
         <button
           type="submit"
-          className="absolute inset-y-0 right-0 pr-3 flex items-center text-primary-600 hover:text-primary-700 transition-colors duration-200 cursor-pointer"
+          className="absolute inset-y-0 right-0 pr-3 flex items-center text-[var(--accent)] hover:opacity-80 transition-colors duration-200 cursor-pointer"
         >
           <Search className="h-5 w-5" />
         </button>
