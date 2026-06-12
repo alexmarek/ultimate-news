@@ -21,15 +21,14 @@ interface EnrichOutput {
 }
 
 const topicPools: Record<Area, string[]> = {
-  World: ['international', 'conflict', 'diplomacy', 'crisis', 'aid', 'summit', 'war', 'security', 'alliance', 'migration', 'trade war', 'sanctions', 'treaty', 'negotiations', 'human rights'],
-  Politics: ['election', 'legislation', 'congress', 'policy', 'government', 'regulation', 'diplomacy', 'campaign', 'voting', 'senate', 'reform', 'immigration', 'healthcare', 'budget', 'oversight'],
-  Tech: ['AI', 'startup', 'cybersecurity', 'software', 'hardware', 'privacy', 'innovation', 'cloud', 'data', 'regulation', 'mobile', 'gadgets', 'machine learning', 'automation', 'blockchain'],
+  'World News': ['politics', 'diplomacy', 'conflict', 'election', 'policy', 'international', 'summit', 'war', 'security', 'alliance', 'migration', 'sanctions', 'treaty', 'negotiations', 'human rights'],
+  Music: ['new album', 'tour', 'guitar', 'review', 'interview', 'festival', 'band', 'single', 'vinyl', 'heavy metal', 'stoner rock', 'doom', 'death metal', 'lineup', 'shows', 'recording', 'label news', 'artist', 'song'],
+  Sport: ['football', 'hockey', 'tennis', 'championship', 'league', 'tournament', 'transfer', 'injury', 'playoffs', 'standings', 'ranking', 'Olympics', 'World Cup', 'match', 'score', 'F1', 'basketball', 'NHL'],
   Business: ['markets', 'economy', 'trade', 'stocks', 'investment', 'banking', 'real estate', 'startups', 'retail', 'mergers', 'interest rates', 'inflation', 'supply chain', 'labor', 'consumer'],
-  Science: ['research', 'discovery', 'study', 'space', 'medicine', 'biology', 'physics', 'chemistry', 'genetics', 'climate', 'breakthrough', 'NASA', 'experiment', 'peer-reviewed', 'journal'],
-  Culture: ['film', 'art', 'literature', 'theater', 'museum', 'exhibition', 'heritage', 'festival', 'fashion', 'architecture', 'design', 'media', 'pop culture', 'awards', 'review'],
-  'Music industry': ['metal', 'new album', 'tour', 'guitar', 'review', 'interview', 'festival', 'band', 'single', 'vinyl', 'heavy metal', 'stoner rock', 'doom', 'death metal', 'black metal', 'lineup', 'shows', 'recording', 'label news', 'gear'],
-  'CZ-local': ['Prague', 'Brno', 'Ostrava', 'parliament', 'government', 'municipal', 'regional', 'infrastructure', 'housing', 'education', 'healthcare', 'transport', 'elections', 'opinion', 'economy'],
-  Sport: ['football', 'hockey', 'tennis', 'championship', 'league', 'tournament', 'transfer', 'injury', 'playoffs', 'standings', 'ranking', 'Olympics', 'World Cup', 'match', 'score'],
+  Technology: ['AI', 'startup', 'cybersecurity', 'software', 'hardware', 'privacy', 'innovation', 'cloud', 'data', 'gadgets', 'machine learning', 'automation', 'blockchain', 'dev tools', 'open source'],
+  Environment: ['climate', 'emissions', 'renewable', 'conservation', 'pollution', 'sustainability', 'wildlife', 'energy', 'carbon', 'species', 'warming', 'ecosystem', 'biodiversity', 'ocean', 'green'],
+  'Positive News': ['breakthrough', 'recovery', 'community', 'innovation', 'hero', 'rescue', 'volunteer', 'fundraising', 'achievement', 'milestone', 'inspiration', 'healing', 'kindness', 'uplifting', 'hope'],
+  Travel: ['destination', 'hotel', 'restaurant', 'guide', 'trip', 'vacation', 'tourism', 'itinerary', 'flight', 'adventure', 'budget', 'cultural', 'explore', 'review', 'cuisine'],
 };
 
 const generalTopics = ['analysis', 'opinion', 'report', 'data', 'study', 'insight', 'editorial', 'feature', 'breaking', 'exclusive', 'investigation', 'commentary', 'trending', 'profile'];
@@ -49,7 +48,7 @@ export async function enrichArticle(input: EnrichInput): Promise<EnrichOutput> {
   const isMusic = musicSources.includes(input.sourceName);
 
   const areas: Area[] = isMusic
-    ? ['Music industry', ...AREAS.filter((a) => a !== 'Music industry')]
+    ? ['Music', ...AREAS.filter((a) => a !== 'Music')]
     : [...AREAS];
 
   const areaIndex = isMusic

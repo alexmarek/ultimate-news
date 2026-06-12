@@ -1,6 +1,7 @@
 // scripts/reclassify-articles.ts
-// One-off script to re-enrich existing articles with the new confidence
-// threshold and classification prompt.
+// One-off script to re-enrich existing articles against the new 8-category
+// taxonomy: World News, Music, Sport, Business, Technology, Environment,
+// Positive News, Travel.
 //
 // Usage: npx tsx scripts/reclassify-articles.ts
 //
@@ -82,7 +83,8 @@ function resolveArea(enrichment: EnrichOutput): {
 
 async function main() {
   console.log(`Mode: ${DRY_RUN ? 'DRY RUN' : 'APPLY'}`);
-  console.log(`Confidence threshold: ${CONFIDENCE_THRESHOLD}\n`);
+  console.log(`Confidence threshold: ${CONFIDENCE_THRESHOLD}`);
+  console.log(`Canonical taxonomy: ${AREAS.join(', ')}\n`);
 
   const articles = await prisma.article.findMany({
     orderBy: { publishedAt: 'desc' },

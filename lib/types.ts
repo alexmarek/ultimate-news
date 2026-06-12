@@ -2,15 +2,14 @@
 // Shared type definitions for the ingest pipeline
 
 export const AREAS = [
-  'World',
-  'Politics',
-  'Tech',
-  'Business',
-  'Science',
-  'Culture',
-  'Music industry',
-  'CZ-local',
+  'World News',
+  'Music',
   'Sport',
+  'Business',
+  'Technology',
+  'Environment',
+  'Positive News',
+  'Travel',
 ] as const;
 
 export type Area = (typeof AREAS)[number];

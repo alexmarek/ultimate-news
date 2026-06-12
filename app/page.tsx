@@ -150,9 +150,6 @@ export default async function Home({
     take: 20,
   });
   const categoryNames = dbCategories.map((c) => c.primaryArea);
-  if (!categoryNames.includes('Music industry')) {
-    categoryNames.push('Music industry');
-  }
 
   const allArticleIds = articles.map((a) => a.id);
 
