@@ -67,12 +67,14 @@ export default async function Home({
     ? { cluster: { independentSourceCount: { gt: 0 } } }
     : {};
 
+  const feedFilter = { isInDailyFeed: true };
+
   let articles: ArticleWithRelations[];
   let totalArticles: number;
   let grouped: Record<string, ArticleWithRelations[]> = {};
 
   if (category && category !== 'all') {
-    const where: any = { primaryArea: category, ...readFilter, ...independentFilter };
+    const where: any = { primaryArea: category, ...readFilter, ...independentFilter, ...feedFilter };
     if (query) Object.assign(where, buildSearchWhere(query));
     articles = await prisma.article.findMany({
       where,
@@ -84,7 +86,7 @@ export default async function Home({
     totalArticles = await prisma.article.count({ where });
     grouped = { [category]: articles };
   } else if (query) {
-    const where = { ...buildSearchWhere(query), ...readFilter, ...independentFilter };
+    const where = { ...buildSearchWhere(query), ...readFilter, ...independentFilter, ...feedFilter };
     articles = await prisma.article.findMany({
       where,
       orderBy: { publishedAt: 'desc' },
@@ -100,7 +102,7 @@ export default async function Home({
     const results = await Promise.all(
       MAIN_CATEGORIES.map(async (cat) => {
         const all = await prisma.article.findMany({
-          where: { primaryArea: cat, ...readFilter, ...independentFilter },
+          where: { primaryArea: cat, ...readFilter, ...independentFilter, ...feedFilter },
           orderBy: { publishedAt: 'desc' },
           take: BATCH,
           include: { source: true, cluster: true },
@@ -127,7 +129,7 @@ export default async function Home({
     const counts = await Promise.all(
       MAIN_CATEGORIES.map(async (cat) => {
         const sourcesWithArticles = await prisma.article.findMany({
-          where: { primaryArea: cat, ...readFilter, ...independentFilter },
+          where: { primaryArea: cat, ...readFilter, ...independentFilter, ...feedFilter },
           select: { sourceId: true },
           distinct: ['sourceId'],
         });
@@ -145,6 +147,7 @@ export default async function Home({
     : 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 min-[1200px]:grid-cols-4 gap-5';
 
   const dbCategories = await prisma.article.findMany({
+    where: { isInDailyFeed: true },
     select: { primaryArea: true },
     distinct: ['primaryArea'],
     take: 20,
@@ -153,19 +156,20 @@ export default async function Home({
 
   const allArticleIds = articles.map((a) => a.id);
 
-  const diversityTotalArticles = await prisma.article.count({ where: { clusterId: { not: null } } });
+  const diversityTotalArticles = await prisma.article.count({ where: { isInDailyFeed: true, clusterId: { not: null } } });
   const diversitySources = await prisma.article.findMany({
+    where: { isInDailyFeed: true },
     select: { sourceId: true },
     distinct: ['sourceId'],
   });
   const diversityIndependent = await prisma.article.count({
-    where: { cluster: { independentSourceCount: { gt: 0 } } },
+    where: { isInDailyFeed: true, cluster: { independentSourceCount: { gt: 0 } } },
   });
   const diversityWire = await prisma.article.count({
-    where: { source: { editorialIndependence: 'syndicate' } },
+    where: { isInDailyFeed: true, source: { editorialIndependence: 'syndicate' } },
   });
   const diversitySingle = await prisma.article.count({
-    where: { OR: [{ clusterId: null }, { cluster: { totalSourceCount: 1 } }] },
+    where: { isInDailyFeed: true, OR: [{ clusterId: null }, { cluster: { totalSourceCount: 1 } }] },
   });
 
   return (

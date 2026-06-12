@@ -3,10 +3,13 @@ import { prisma } from '@/lib/db';
 import Parser from 'rss-parser';
 import { extractImageFromRssItem } from '@/lib/ingest/extractImage';
 import { canonicalizeUrl, articleIdFromUrl } from '@/lib/ingest/canonicalize';
-import { enrichArticle } from '@/lib/ai/enrich-simple';
+import { enrichArticle } from '@/lib/ai/enrich';
 import { embed } from '@/lib/ai/embed';
 import { AREAS } from '@/lib/types';
+import { DAILY_FEED_TARGETS } from '@/lib/config/dailyFeed';
+import { selectForDailyFeed } from '@/lib/ingest/selectForDailyFeed';
 import { discoverFeed } from '@/lib/ingest/discoverFeed';
+import { recomputeClusters } from '@/lib/dedup/cluster';
 
 const parser = new Parser({
   customFields: {
@@ -20,19 +23,7 @@ const parser = new Parser({
   },
 });
 
-// Category targets: how many articles to keep per category each ingest
-const CATEGORY_TARGETS: Record<string, number> = {
-  'World News': 10,
-  'Music': 4,
-  'Sport': 4,
-  'Business': 4,
-  'Technology': 10,
-  'Environment': 6,
-  'Positive News': 6,
-  'Travel': 4,
-};
-
-const PER_SOURCE_FETCH = 15; // Fetch more than needed so we have variety to pick from
+const PER_SOURCE_FETCH = 30; // Daily ingest needs larger catch-up window
 
 async function getFeedUrl(source: { id: string; feedUrl: string | null; url: string }): Promise<string | null> {
   if (source.feedUrl) return source.feedUrl;
@@ -222,58 +213,9 @@ async function runIngest(sources: Awaited<ReturnType<typeof prisma.source.findMa
     }
   }
 
-  // --- Phase 2: per-category selection with source variety ---
-  const byCategory = new Map<string, typeof allNewArticles>();
-  for (const a of allNewArticles) {
-    const cat = a.primaryArea;
-    if (!byCategory.has(cat)) byCategory.set(cat, []);
-    byCategory.get(cat)!.push(a);
-  }
-
-  const selected: typeof allNewArticles = [];
-  const selectedIds = new Set<string>();
-  const summaryLines: string[] = [];
-
-  for (const area of AREAS) {
-    const target = CATEGORY_TARGETS[area] ?? 4;
-    const pool = (byCategory.get(area) || []).filter((a) => !selectedIds.has(a.articleId));
-    if (pool.length === 0) continue;
-
-    // Group by source, sort each group by source weight desc
-    const bySource = new Map<string, typeof pool>();
-    for (const a of pool) {
-      if (!bySource.has(a.sourceId)) bySource.set(a.sourceId, []);
-      bySource.get(a.sourceId)!.push(a);
-    }
-
-    // Source-specific focus: Sport.cz prioritises Czech football/tennis
-    const sourceEntries = [...bySource.entries()];
-    // Round-robin: take 1 from each source, repeat until target
-    const picked: typeof pool = [];
-    let round = 0;
-    while (picked.length < target && sourceEntries.length > 0) {
-      for (const [, articles] of sourceEntries) {
-        if (picked.length >= target) break;
-        if (round < articles.length) {
-          picked.push(articles[round]);
-        }
-      }
-      round++;
-      if (round >= Math.max(...sourceEntries.map(([, a]) => a.length))) break;
-    }
-
-    for (const a of picked) {
-      if (selectedIds.has(a.articleId)) continue;
-      selected.push(a);
-      selectedIds.add(a.articleId);
-    }
-
-    summaryLines.push(`  ${area}: ${picked.length}/${target} from ${bySource.size} source(s)`);
-  }
-
-  // --- Phase 3: write selected articles to DB ---
+  // --- Phase 2: write ALL new articles to DB (isInDailyFeed=false initially) ---
   let written = 0;
-  for (const a of selected) {
+  for (const a of allNewArticles) {
     await prisma.article.create({
       data: {
         id: a.articleId,
@@ -298,20 +240,101 @@ async function runIngest(sources: Awaited<ReturnType<typeof prisma.source.findMa
         isWireOrigin: a.isWireOrigin,
         lowConfidenceTag: a.lowConfidenceTag,
         embedding: a.embedding,
+        isInDailyFeed: false,
       },
     });
     written++;
   }
 
-  console.log('[ingest] category summary:');
-  for (const line of summaryLines) console.log(line);
-  console.log(`[ingest] wrote ${written}/${totalCreated} enriched articles across ${byCategory.size} categories`);
+  // --- Phase 3: select daily feed from last 24h ---
+  const sinceDate = new Date();
+  sinceDate.setHours(sinceDate.getHours() - 24);
+
+  const recentArticles = await prisma.article.findMany({
+    where: { publishedAt: { gte: sinceDate } },
+    select: {
+      id: true,
+      canonicalUrl: true,
+      primaryArea: true,
+      sourceId: true,
+      publishedAt: true,
+    },
+    orderBy: { publishedAt: 'desc' },
+  });
+
+  const candidates = recentArticles.map((a) => ({
+    articleId: a.id,
+    canonicalUrl: a.canonicalUrl,
+    primaryArea: a.primaryArea,
+    sourceId: a.sourceId,
+    publishedAt: a.publishedAt,
+  }));
+
+  const { selected: dailySelection, categoryFill, deduped } = selectForDailyFeed(candidates, DAILY_FEED_TARGETS);
+
+  // Set isInDailyFeed=true on selected articles
+  const selectedIds = dailySelection.map((s) => s.articleId);
+  if (selectedIds.length > 0) {
+    await prisma.article.updateMany({
+      where: { id: { in: selectedIds } },
+      data: { isInDailyFeed: true },
+    });
+  }
+
+  // Roll off articles older than 36h
+  const rolloffDate = new Date();
+  rolloffDate.setHours(rolloffDate.getHours() - 36);
+  await prisma.article.updateMany({
+    where: { publishedAt: { lte: rolloffDate }, isInDailyFeed: true },
+    data: { isInDailyFeed: false },
+  });
+
+  // Set isInDailyFeed=false for unselected articles in the past 24h
+  const unselectedIds = recentArticles
+    .filter((a) => !selectedIds.includes(a.id))
+    .map((a) => a.id);
+  if (unselectedIds.length > 0) {
+    await prisma.article.updateMany({
+      where: { id: { in: unselectedIds } },
+      data: { isInDailyFeed: false },
+    });
+  }
+
+  console.log('[ingest] daily feed:');
+  for (const [area, report] of Object.entries(categoryFill)) {
+    console.log(`  ${area}: ${report.selected}/${report.target}${report.reason ? ` (${report.reason})` : ''}`);
+  }
+  console.log(`[ingest] wrote ${written}/${totalCreated} articles, ${selectedIds.length} in daily feed, ${deduped} deduped`);
+
+  // --- Phase 4: clustering ---
+  let clusterResult = null;
+  try {
+    clusterResult = await recomputeClusters();
+    console.log(`[ingest] clustering: ${clusterResult.totalClusters} clusters, ${clusterResult.multiSourceClusters} multi-source`);
+  } catch (e) {
+    console.error('[ingest] clustering failed:', e instanceof Error ? e.message : String(e));
+  }
+
+  const sourceReport = sources.map((s) => {
+    const fromSource = allNewArticles.filter((a) => a.sourceId === s.id);
+    return {
+      sourceId: s.id,
+      name: s.name,
+      fetched: fromSource.length,
+      new: fromSource.length,
+    };
+  });
 
   return NextResponse.json({
-    total_fetched: totalFetched,
-    enriched: totalCreated,
+    totalFetched,
+    totalNew: totalCreated,
+    totalEnriched: totalCreated,
+    totalSelected: selectedIds.length,
     written,
-    source_errors: sourceErrors,
-    summary: summaryLines,
+    sourceErrors,
+    categoryFill,
+    deduped,
+    clusters: clusterResult,
+    sources: sourceReport,
   });
 }
