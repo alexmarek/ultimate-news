@@ -66,8 +66,11 @@ export default function NewsCard({ article, cluster, isRead, initialSaved, dataK
         {/* Cluster multi-source badge */}
         {cluster && cluster.totalSourceCount > 1 && (
           <Link href={`/article/${article.id}`} className="block mb-3">
-            <span className="inline-block text-body-sm font-medium text-[var(--accent-3)]">
+            <span className="inline-flex items-center gap-1.5 text-body-sm font-medium text-[var(--accent-3)]">
               Covered by {cluster.totalSourceCount} sources
+              {cluster.hasIndependentVoice && (
+                <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent-2)]" />
+              )}
             </span>
           </Link>
         )}

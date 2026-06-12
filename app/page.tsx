@@ -36,12 +36,13 @@ function categorySummary(articles: ArticleWithRelations[]): string {
 export default async function Home({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; category?: string; page?: string; hideRead?: string }>;
+  searchParams: Promise<{ q?: string; category?: string; page?: string; hideRead?: string; independentOnly?: string }>;
 }) {
   const params = await searchParams;
   const query = params.q || '';
   const category = params.category || '';
   const hideRead = params.hideRead === '1';
+  const independentOnly = params.independentOnly === '1';
   const page = Math.max(1, parseInt(params.page || '1', 10) || 1);
 
   const readArticles = await prisma.articleRead.findMany({
@@ -62,12 +63,16 @@ export default async function Home({
     ? { id: { notIn: [...readArticleIds] } }
     : {};
 
+  const independentFilter = independentOnly
+    ? { cluster: { independentSourceCount: { gt: 0 } } }
+    : {};
+
   let articles: ArticleWithRelations[];
   let totalArticles: number;
   let grouped: Record<string, ArticleWithRelations[]> = {};
 
   if (category && category !== 'all') {
-    const where: any = { primaryArea: category, ...readFilter };
+    const where: any = { primaryArea: category, ...readFilter, ...independentFilter };
     if (query) Object.assign(where, buildSearchWhere(query));
     articles = await prisma.article.findMany({
       where,
@@ -79,7 +84,7 @@ export default async function Home({
     totalArticles = await prisma.article.count({ where });
     grouped = { [category]: articles };
   } else if (query) {
-    const where = { ...buildSearchWhere(query), ...readFilter };
+    const where = { ...buildSearchWhere(query), ...readFilter, ...independentFilter };
     articles = await prisma.article.findMany({
       where,
       orderBy: { publishedAt: 'desc' },
@@ -95,7 +100,7 @@ export default async function Home({
     const results = await Promise.all(
       MAIN_CATEGORIES.map(async (cat) => {
         const all = await prisma.article.findMany({
-          where: { primaryArea: cat, ...readFilter },
+          where: { primaryArea: cat, ...readFilter, ...independentFilter },
           orderBy: { publishedAt: 'desc' },
           take: BATCH,
           include: { source: true, cluster: true },
@@ -122,7 +127,7 @@ export default async function Home({
     const counts = await Promise.all(
       MAIN_CATEGORIES.map(async (cat) => {
         const sourcesWithArticles = await prisma.article.findMany({
-          where: { primaryArea: cat, ...readFilter },
+          where: { primaryArea: cat, ...readFilter, ...independentFilter },
           select: { sourceId: true },
           distinct: ['sourceId'],
         });
