@@ -1,9 +1,28 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,600;0,8..60,700;1,8..60,400;1,8..60,500&display=swap');
 @import 'tailwindcss';
 
 @theme {
-  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
-  --font-serif: 'Source Serif 4', Georgia, serif;
+  --font-sans: var(--font-ibm-plex-sans), system-ui, -apple-system, sans-serif;
+  --font-serif: var(--font-source-serif-4), Georgia, serif;
+
+  --text-display-1: 48px;
+  --text-display-1--line-height: 52px;
+  --text-display-2: 36px;
+  --text-display-2--line-height: 40px;
+  --text-display-3: 28px;
+  --text-display-3--line-height: 32px;
+  --text-headline-lg: 22px;
+  --text-headline-lg--line-height: 26px;
+  --text-headline-md: 18px;
+  --text-headline-md--line-height: 22px;
+  --text-headline-sm: 15px;
+  --text-headline-sm--line-height: 19px;
+  --text-body-lg: 17px;
+  --text-body-lg--line-height: 26px;
+  --text-body-md: 15px;
+  --text-body-md--line-height: 24px;
+  --text-body-sm: 13px;
+  --text-body-sm--line-height: 18px;
+
   --color-primary-50: #fbfde7;
   --color-primary-100: #f7fccf;
   --color-primary-200: #eff8a0;
@@ -32,7 +51,6 @@
 body {
   background-color: var(--color-background);
   color: var(--color-foreground);
-  font-family: var(--font-sans);
 }
 
 .kb-focused {

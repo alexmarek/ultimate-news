@@ -5,6 +5,7 @@ import type { Article, Source, Cluster } from '@prisma/client';
 import { formatDistanceToNow } from 'date-fns';
 import { ExternalLink, Newspaper } from 'lucide-react';
 import ToggleSave from '@/components/ToggleSave';
+import ArticleImage from '@/components/ArticleImage';
 
 interface NewsCardProps {
   article: Article & { source: Source };
@@ -29,14 +30,14 @@ export default function NewsCard({ article, cluster, isRead, initialSaved, dataK
       )}
       {/* Image */}
       {article.imageUrl && (
-        <Link href={`/article/${article.id}`} className="relative h-48 w-full overflow-hidden block">
-          <img
+        <Link href={`/article/${article.id}`} className="block relative">
+          <ArticleImage
             src={`/api/img?url=${encodeURIComponent(article.imageUrl)}`}
             alt={article.imageAlt || article.title}
-            className="w-full h-full object-cover"
+            sourceName={article.source.name}
           />
-          <div className="absolute top-3 left-3">
-            <span className="bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-medium text-gray-800">
+          <div className="absolute top-3 left-3 z-10">
+            <span className="bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-body-sm font-medium text-gray-800">
               {article.primaryArea}
             </span>
           </div>
@@ -48,16 +49,16 @@ export default function NewsCard({ article, cluster, isRead, initialSaved, dataK
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2 min-w-0">
             <Newspaper className="w-4 h-4 text-gray-400 flex-shrink-0" />
-            <span className="text-sm font-medium text-gray-700 truncate">
+            <span className="text-body-md font-medium text-gray-700 truncate">
               {article.source.name}
             </span>
           </div>
-          <span className="text-sm text-gray-500 flex-shrink-0 ml-2">{timeAgo}</span>
+          <span className="text-body-md text-gray-500 flex-shrink-0 ml-2">{timeAgo}</span>
         </div>
 
         {/* Title */}
         <Link href={`/article/${article.id}`} className="block">
-          <h3 className={`text-lg font-bold text-gray-900 line-clamp-2 hover:text-gray-600 transition-colors ${cluster && cluster.totalSourceCount > 1 ? 'mb-1.5' : 'mb-3'}`}>
+          <h3 className={`font-serif text-headline-md font-semibold text-gray-900 line-clamp-2 hover:text-gray-600 transition-colors ${cluster && cluster.totalSourceCount > 1 ? 'mb-1.5' : 'mb-3'}`}>
             {article.title}
           </h3>
         </Link>
@@ -65,7 +66,7 @@ export default function NewsCard({ article, cluster, isRead, initialSaved, dataK
         {/* Cluster multi-source badge */}
         {cluster && cluster.totalSourceCount > 1 && (
           <Link href={`/article/${article.id}`} className="block mb-3">
-            <span className="inline-block text-xs font-medium text-[#2B7878]">
+            <span className="inline-block text-body-sm font-medium text-[#2B7878]">
               Covered by {cluster.totalSourceCount} sources
             </span>
           </Link>
@@ -73,7 +74,7 @@ export default function NewsCard({ article, cluster, isRead, initialSaved, dataK
 
         {/* Summary */}
         {article.summary && (
-          <p className="text-gray-600 mb-4 line-clamp-5 text-sm">
+          <p className="text-gray-600 mb-4 line-clamp-5 text-body-md">
             {article.summary}
           </p>
         )}
@@ -84,13 +85,13 @@ export default function NewsCard({ article, cluster, isRead, initialSaved, dataK
             {article.topics.split(',').slice(0, 3).map((topic) => (
               <li
                 key={topic}
-                className="px-2 py-0.5 rounded-full text-xs bg-stone-100 dark:bg-stone-700 text-stone-700 dark:text-stone-200 leading-none"
+                className="px-2 py-0.5 rounded-full text-body-sm bg-stone-100 dark:bg-stone-700 text-stone-700 dark:text-stone-200 leading-none"
               >
                 {topic.trim()}
               </li>
             ))}
             {article.topics.split(',').length > 3 && (
-              <li className="px-2 py-0.5 rounded-full text-xs bg-stone-100 dark:bg-stone-700 text-stone-700 dark:text-stone-200 leading-none">
+              <li className="px-2 py-0.5 rounded-full text-body-sm bg-stone-100 dark:bg-stone-700 text-stone-700 dark:text-stone-200 leading-none">
                 +{article.topics.split(',').length - 3}
               </li>
             )}
@@ -101,7 +102,7 @@ export default function NewsCard({ article, cluster, isRead, initialSaved, dataK
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-4 border-t border-gray-100 mt-auto">
           <Link
             href={`/article/${article.id}`}
-            className="inline-flex items-center justify-center sm:justify-start gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors duration-200 text-sm font-medium"
+            className="inline-flex items-center justify-center sm:justify-start gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors duration-200 text-body-md font-medium"
           >
             Read summary
           </Link>
@@ -112,12 +113,12 @@ export default function NewsCard({ article, cluster, isRead, initialSaved, dataK
               href={article.canonicalUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 transition-colors"
+              className="inline-flex items-center gap-1 text-body-sm text-gray-400 hover:text-gray-600 transition-colors"
             >
               <ExternalLink className="w-3.5 h-3.5" />
               {article.source.name}
             </a>
-            <div className="text-xs text-gray-500">
+            <div className="text-body-sm text-gray-500">
               {article.lang.toUpperCase()} • {article.source.editorialIndependence}
             </div>
           </div>

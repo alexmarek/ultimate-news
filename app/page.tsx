@@ -2,7 +2,7 @@ import { Suspense } from 'react';
 import NewsCard from '@/components/NewsCard';
 import SearchBar from '@/components/SearchBar';
 import CategoryFilter from '@/components/CategoryFilter';
-import { Pagination } from '@/components/Pagination';
+import Pagination from '@/components/Pagination';
 import { prisma } from '@/lib/db';
 import { AREAS } from '@/lib/types';
 import Link from 'next/link';
@@ -157,10 +157,10 @@ export default async function Home({
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
               <div className="flex items-center gap-4">
-              <h1 className="text-3xl font-bold text-gray-900">Ultimate News</h1>
+              <h1 className="font-serif text-display-3 font-bold text-gray-900">Ultimate News</h1>
               <Link
                 href="/saved"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-stone-600 hover:bg-stone-100 transition-colors"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-body-md font-medium text-stone-600 hover:bg-stone-100 transition-colors"
               >
                 <Bookmark className="w-4 h-4" />
                 Saved
@@ -196,18 +196,18 @@ export default async function Home({
               <section key={cat} className={isSectionView ? 'mb-10' : 'mb-6'}>
                 {isSectionView && (
                   <div className="mb-4">
-                    <h2 className="text-lg font-semibold text-gray-900 uppercase tracking-wide">
+                    <h2 className="font-serif text-headline-md font-semibold text-gray-900 uppercase tracking-wide">
                       {cat}
                     </h2>
-                    <p className="text-gray-500 text-sm mt-1 leading-relaxed line-clamp-2">
+                    <p className="text-gray-500 text-body-md mt-1 line-clamp-2">
                       {categorySummary(catArticles)}
                     </p>
                   </div>
                 )}
                 {!isSectionView && (
                   <div className="mb-6">
-                    <h2 className="text-2xl font-semibold text-gray-900">Latest Stories</h2>
-                    <p className="text-gray-600 text-sm mt-2">
+                    <h2 className="font-serif text-display-3 font-semibold text-gray-900">Latest Stories</h2>
+                    <p className="text-gray-600 text-body-md mt-2">
                       {category && category !== 'all'
                         ? `Page ${page} of ${totalPages} • ${category}`
                         : `Page ${page} of ${totalPages}`}
@@ -244,7 +244,7 @@ export default async function Home({
         )}
 
         <div className="mt-12 pt-8 border-t border-gray-200">
-          <div className="max-w-2xl mx-auto text-center text-gray-600 text-sm">
+          <div className="max-w-2xl mx-auto text-center text-gray-600 text-body-md">
             <p>News updated every 24 hours</p>
             <p className="mt-2">Sources: BBC, Reuters, Associated Press, and more</p>
           </div>

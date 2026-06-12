@@ -18,6 +18,10 @@ export async function GET(req: NextRequest) {
     const contentType = response.headers.get('content-type') || 'image/jpeg';
     const buffer = await response.arrayBuffer();
 
+    if (buffer.byteLength === 0) {
+      return NextResponse.json({ error: 'Empty image' }, { status: 404 });
+    }
+
     return new NextResponse(buffer, {
       headers: {
         'Content-Type': contentType,

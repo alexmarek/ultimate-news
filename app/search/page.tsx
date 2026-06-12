@@ -3,7 +3,7 @@
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Newspaper, ArrowLeft, Search, ExternalLink } from 'lucide-react';
+import { Newspaper, ArrowLeft, Search } from 'lucide-react';
 import TimeAgo from '@/components/TimeAgo';
 import { useKeyboardNav } from '@/components/useKeyboardNav';
 import HelpModal from '@/components/HelpModal';
@@ -103,7 +103,7 @@ export default function SearchPage() {
         ) : error ? (
           <div className="text-center py-16">
             <p className="text-gray-500 mb-2">Search unavailable</p>
-            <p className="text-sm text-gray-400">{error}</p>
+            <p className="text-body-md text-gray-400">{error}</p>
           </div>
         ) : results.length === 0 ? (
           <div className="text-center py-16">
@@ -112,7 +112,7 @@ export default function SearchPage() {
                 ? `No results for "${query}"`
                 : 'No articles yet.'}
             </p>
-            <p className="text-sm text-gray-400">
+            <p className="text-body-md text-gray-400">
               {query.length >= 3
                 ? 'Try different keywords.'
                 : 'Search requires at least 3 characters.'}
@@ -122,10 +122,10 @@ export default function SearchPage() {
           <>
             {query && (
               <div className="mb-6">
-                <h1 className="text-xl font-semibold text-gray-900">
+                <h1 className="font-serif text-headline-lg font-semibold text-gray-900">
                   {mode === 'recent' ? 'Recent articles' : `Results for "${query}"`}
                 </h1>
-                <p className="text-sm text-gray-500 mt-1">
+                <p className="text-body-md text-gray-500 mt-1">
                   {results.length} {results.length === 1 ? 'result' : 'results'}
                   {mode === 'semantic' && ' • semantic search'}
                   {mode === 'recent' && ' • showing recent'}
@@ -142,30 +142,27 @@ export default function SearchPage() {
                 >
                   <div className="flex items-start gap-3">
                     <div className="flex-1 min-w-0">
-                      {/* Area badge */}
                       <div className="flex items-center gap-2 mb-1.5">
                         <Link
                           href={`/?category=${encodeURIComponent(r.primaryArea)}`}
-                          className="inline-block px-2 py-0.5 rounded-full text-[11px] font-medium bg-[#D3BDB0]/30 text-stone-700"
+                          className="inline-block px-2 py-0.5 rounded-full text-body-sm font-medium bg-[#D3BDB0]/30 text-stone-700"
                         >
                           {r.primaryArea}
                         </Link>
                         {r.score !== null && (
-                          <span className="text-[11px] text-gray-400">
+                          <span className="text-body-sm text-gray-400">
                             {Math.round(r.score * 100)}% match
                           </span>
                         )}
                       </div>
 
-                      {/* Headline */}
                       <Link href={`/article/${r.id}`} className="block">
-                        <h2 className="text-base font-semibold text-gray-900 leading-snug mb-1 hover:text-gray-600 transition-colors">
+                        <h2 className="font-serif text-headline-md font-semibold text-gray-900 mb-1 hover:text-gray-600 transition-colors">
                           {r.title}
                         </h2>
                       </Link>
 
-                      {/* Source + time */}
-                      <div className="flex items-center gap-3 text-xs text-gray-500 mb-2">
+                      <div className="flex items-center gap-3 text-body-sm text-gray-500 mb-2">
                         <div className="flex items-center gap-1">
                           <Newspaper className="w-3.5 h-3.5" />
                           <span>{r.source.name}</span>
@@ -173,9 +170,8 @@ export default function SearchPage() {
                         <TimeAgo date={r.publishedAt} />
                       </div>
 
-                      {/* Summary excerpt */}
                       {(r.summary || r.excerpt) && (
-                        <p className="text-sm text-gray-600 line-clamp-2">
+                        <p className="text-body-md text-gray-600 line-clamp-2">
                           {r.summary || r.excerpt}
                         </p>
                       )}

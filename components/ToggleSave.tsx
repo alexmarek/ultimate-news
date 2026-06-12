@@ -40,7 +40,7 @@ export default function ToggleSave({
     return (
       <button
         onClick={toggle}
-        className={`inline-flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium transition-colors ${
+        className={`inline-flex items-center gap-1.5 px-2 py-1 rounded text-body-sm font-medium transition-colors ${
           saved
             ? 'bg-yellow-100 text-yellow-700'
             : 'bg-stone-100 text-stone-500 hover:bg-stone-200'
