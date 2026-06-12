@@ -8,6 +8,7 @@ import { AREAS } from '@/lib/types';
 import Link from 'next/link';
 import { Bookmark } from 'lucide-react';
 import KeyboardNavWrapper from '@/components/KeyboardNavWrapper';
+import ThemeToggle from '@/components/ThemeToggle';
 import type { Article, Source, Cluster } from '@prisma/client';
 
 type ArticleWithRelations = Article & { source: Source; cluster: Cluster | null };
@@ -165,6 +166,7 @@ export default async function Home({
                 <Bookmark className="w-4 h-4" />
                 Saved
               </Link>
+              <ThemeToggle />
               </div>
               <p className="text-[var(--text-body)] mt-1">Curated news from sources you care about</p>
             </div>
