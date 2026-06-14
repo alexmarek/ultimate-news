@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
   return runIngest(sources);
 }
 
-async function runIngest(sources: Awaited<ReturnType<typeof prisma.source.findMany>>) {
+export async function runIngest(sources: Awaited<ReturnType<typeof prisma.source.findMany>>) {
   let totalFetched = 0;
   let totalCreated = 0;
   let sourceErrors = 0;

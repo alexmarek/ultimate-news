@@ -1,39 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/db';
+import { runIngest } from '@/app/api/ingest/route';
 
-// This endpoint is called by Vercel Cron to trigger the ingest
-// It's a simple wrapper that calls the actual ingest endpoint
+// Called by Vercel Cron at 10:00 UTC daily.
+// Only Vercel's internal scheduler can hit this endpoint.
 
-export async function GET(req: NextRequest) {
-  const authHeader = req.headers.get('authorization');
-
-  // Verify the cron secret
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
+export async function GET(_req: NextRequest) {
   try {
-    // Construct URL to the ingest endpoint
-    const baseUrl = process.env.VERCEL_URL
-      ? `https://${process.env.VERCEL_URL}`
-      : process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const sources = await prisma.source.findMany({ where: { isActive: true } });
+    const result = await runIngest(sources);
 
-    const ingestUrl = `${baseUrl}/api/ingest`;
-
-    // Call the ingest endpoint
-    const response = await fetch(ingestUrl, {
-      method: 'POST',
-      headers: {
-        'x-cron-secret': process.env.INGEST_CRON_SECRET || '',
-      },
-    });
-
-    const result = await response.json();
-
-    return NextResponse.json({
-      success: response.ok,
-      status: response.status,
-      result,
-    });
+    return NextResponse.json({ success: true, ...result });
   } catch (error) {
     return NextResponse.json({
       success: false,
