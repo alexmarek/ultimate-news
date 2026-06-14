@@ -222,9 +222,10 @@ export async function runIngest(sources: Awaited<ReturnType<typeof prisma.source
   // --- Phase 2: write ALL new articles to DB (isInDailyFeed=false initially) ---
   let written = 0;
   for (const a of allNewArticles) {
-    await prisma.article.create({
-      data: {
-        id: a.articleId,
+    try {
+      await prisma.article.create({
+        data: {
+          id: a.articleId,
         sourceId: a.sourceId,
         canonicalUrl: a.canonicalUrl,
         originalUrl: a.originalUrl,
@@ -249,6 +250,12 @@ export async function runIngest(sources: Awaited<ReturnType<typeof prisma.source
         isInDailyFeed: false,
       },
     });
+    } catch (e: unknown) {
+      if (e && typeof e === 'object' && 'code' in e && (e as { code: string }).code === 'P2002') {
+        continue;
+      }
+      throw e;
+    }
     written++;
   }
 
