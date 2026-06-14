@@ -179,7 +179,7 @@ export default async function Home({
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
               <div className="flex items-center gap-4">
-              <h1 className="font-serif text-display-3 font-bold text-[var(--text)]">Ultimate News</h1>
+              <Link href="/" className="font-serif text-display-3 font-bold text-[var(--text)] hover:text-[var(--text-body)] transition-colors">Ultimate News</Link>
               <Link
                 href="/saved"
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-body-md font-medium text-[var(--text-body)] hover:bg-[var(--surface)] transition-colors"

@@ -19,6 +19,9 @@ const sourceSerif4 = Source_Serif_4({
 export const metadata: Metadata = {
   title: 'Ultimate News',
   description: 'Curated news from sources you care about',
+  icons: {
+    icon: '/favicon.svg',
+  },
 };
 
 export default function RootLayout({
