@@ -81,6 +81,12 @@ export async function POST(req: NextRequest) {
 }
 
 export async function runIngest(sources: Awaited<ReturnType<typeof prisma.source.findMany>>) {
+  // Wipe all existing articles and clusters for a fresh daily feed
+  await prisma.articleRead.deleteMany();
+  await prisma.articleSaved.deleteMany();
+  await prisma.cluster.deleteMany();
+  await prisma.article.deleteMany();
+
   let totalFetched = 0;
   let totalCreated = 0;
   let sourceErrors = 0;
