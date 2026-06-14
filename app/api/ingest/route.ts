@@ -91,6 +91,8 @@ export async function runIngest(sources: Awaited<ReturnType<typeof prisma.source
   let totalCreated = 0;
   let sourceErrors = 0;
 
+  const seenArticleIds = new Set<string>();
+
   const allNewArticles: Array<{
     articleId: string;
     sourceId: string;
@@ -170,6 +172,9 @@ export async function runIngest(sources: Awaited<ReturnType<typeof prisma.source
         } catch {
           // Voyage unavailable
         }
+
+        if (seenArticleIds.has(articleId)) continue;
+        seenArticleIds.add(articleId);
 
         allNewArticles.push({
           articleId,
