@@ -2,15 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { runIngest } from '@/app/api/ingest/route';
 
-// Called by Vercel Cron at 10:00 UTC daily.
-// Only Vercel's internal scheduler can hit this endpoint.
+// Called by Vercel Cron at 08:00 UTC (10:00 CEST) daily.
 
 export async function GET(_req: NextRequest) {
   try {
     const sources = await prisma.source.findMany({ where: { isActive: true } });
-    const result = await runIngest(sources);
-
-    return NextResponse.json({ success: true, ...result });
+    return runIngest(sources);
   } catch (error) {
     return NextResponse.json({
       success: false,
