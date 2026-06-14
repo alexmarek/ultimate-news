@@ -264,12 +264,8 @@ export async function runIngest(sources: Awaited<ReturnType<typeof prisma.source
     written++;
   }
 
-  // --- Phase 3: select daily feed from last 24h ---
-  const sinceDate = new Date();
-  sinceDate.setHours(sinceDate.getHours() - 24);
-
+  // --- Phase 3: select daily feed from all articles (wipe ensures they're all fresh) ---
   const recentArticles = await prisma.article.findMany({
-    where: { publishedAt: { gte: sinceDate } },
     select: {
       id: true,
       canonicalUrl: true,
@@ -296,25 +292,6 @@ export async function runIngest(sources: Awaited<ReturnType<typeof prisma.source
     await prisma.article.updateMany({
       where: { id: { in: selectedIds } },
       data: { isInDailyFeed: true },
-    });
-  }
-
-  // Roll off articles older than 36h
-  const rolloffDate = new Date();
-  rolloffDate.setHours(rolloffDate.getHours() - 36);
-  await prisma.article.updateMany({
-    where: { publishedAt: { lte: rolloffDate }, isInDailyFeed: true },
-    data: { isInDailyFeed: false },
-  });
-
-  // Set isInDailyFeed=false for unselected articles in the past 24h
-  const unselectedIds = recentArticles
-    .filter((a) => !selectedIds.includes(a.id))
-    .map((a) => a.id);
-  if (unselectedIds.length > 0) {
-    await prisma.article.updateMany({
-      where: { id: { in: unselectedIds } },
-      data: { isInDailyFeed: false },
     });
   }
 
