@@ -33,7 +33,6 @@ export function selectForDailyFeed(
   let deduped = 0;
 
   for (const [area, target] of Object.entries(targets)) {
-    // Filter candidates for this category, sort by publishedAt DESC
     const pool = candidates
       .filter((c) => c.primaryArea === area)
       .sort((a, b) => b.publishedAt.getTime() - a.publishedAt.getTime());
@@ -57,22 +56,17 @@ export function selectForDailyFeed(
     }
 
     const sourceEntries = [...bySource.entries()];
-    const maxPerSource = Math.max(1, Math.ceil(target * 0.6));
 
-    // Round-robin: take 1 from each source per round, cap per source
+    // Round-robin: take 1 from each source per round, stop at target
     const picked: Candidate[] = [];
-    const sourceCounts: Record<string, number> = {};
     let round = 0;
 
     while (picked.length < target) {
       let added = false;
-      for (const [sourceId, articles] of sourceEntries) {
+      for (const [, articles] of sourceEntries) {
         if (picked.length >= target) break;
-        const soFar = sourceCounts[sourceId] || 0;
-        if (soFar >= maxPerSource) continue;
         if (round < articles.length) {
           picked.push(articles[round]);
-          sourceCounts[sourceId] = soFar + 1;
           added = true;
         }
       }
@@ -80,22 +74,7 @@ export function selectForDailyFeed(
       if (!added) break;
     }
 
-    // Fill remaining slots from any source with available articles
-    if (picked.length < target) {
-      for (const [, articles] of sourceEntries) {
-        if (picked.length >= target) break;
-        const used = new Set(picked.map((p) => p.articleId));
-        for (const c of articles) {
-          if (picked.length >= target) break;
-          if (!used.has(c.articleId)) {
-            picked.push(c);
-            sourceCounts[c.sourceId] = (sourceCounts[c.sourceId] || 0) + 1;
-          }
-        }
-      }
-    }
-
-    // Deduplicate against seen URLs (defensive)
+    // Deduplicate against seen URLs
     const deduped_picked: Candidate[] = [];
     for (const c of picked) {
       if (seenUrls.has(c.canonicalUrl)) {
@@ -121,7 +100,7 @@ export function selectForDailyFeed(
       reason: shortfall > 0
         ? pool.length < target
           ? `Only ${pool.length} candidates available`
-          : 'Selection capped by source variety or dedup'
+          : `Round-robin exhausted (${bySource.size} source(s))`
         : undefined,
       sources: sourceReport,
     };
