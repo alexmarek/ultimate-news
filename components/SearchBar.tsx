@@ -27,7 +27,7 @@ export default function SearchBar() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           className="block w-full pl-10 pr-12 py-3 border border-[var(--border-strong)] rounded-xl bg-[var(--surface-elevated)] text-[var(--text)] placeholder-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent transition-all duration-200"
-          placeholder="Search across all sources..."
+          placeholder="Find news"
         />
         <button
           type="submit"
