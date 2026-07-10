@@ -4,7 +4,6 @@ import SearchBar from '@/components/SearchBar';
 import CategoryFilter from '@/components/CategoryFilter';
 import Pagination from '@/components/Pagination';
 import { prisma } from '@/lib/db';
-import { AREAS } from '@/lib/types';
 import Link from 'next/link';
 import { Bookmark } from 'lucide-react';
 import KeyboardNavWrapper from '@/components/KeyboardNavWrapper';
@@ -13,24 +12,16 @@ import type { Article, Source, Cluster } from '@prisma/client';
 
 type ArticleWithRelations = Article & { source: Source; cluster: Cluster | null };
 
-const MAIN_CATEGORIES = [...AREAS];
-const PER_PAGE = 18;
-const PER_CATEGORY = 3;
+const PER_PAGE = 12;
 
 function buildSearchWhere(query: string) {
   return {
     OR: [
-      { title: { contains: query } },
-      { summary: { contains: query } },
-      { excerpt: { contains: query } },
+      { title: { contains: query, mode: 'insensitive' } },
+      { summary: { contains: query, mode: 'insensitive' } },
+      { excerpt: { contains: query, mode: 'insensitive' } },
     ],
   };
-}
-
-function categorySummary(articles: ArticleWithRelations[]): string {
-  if (articles.length === 0) return 'No recent stories.';
-  const headlines = articles.map((a) => a.title).join(' • ');
-  return headlines;
 }
 
 export default async function Home({
@@ -76,78 +67,36 @@ export default async function Home({
 
   let articles: ArticleWithRelations[];
   let totalArticles: number;
-  let grouped: Record<string, ArticleWithRelations[]> = {};
 
+  const where: any = { ...readFilter, ...independentFilter, ...feedFilter };
   if (category && category !== 'all') {
-    const where: any = { primaryArea: category, ...readFilter, ...independentFilter, ...feedFilter };
-    if (query) Object.assign(where, buildSearchWhere(query));
-    articles = await prisma.article.findMany({
-      where,
-      orderBy: { publishedAt: 'desc' },
-      skip: (page - 1) * PER_PAGE,
-      take: PER_PAGE,
-      include: { source: true, cluster: true },
-    }) as ArticleWithRelations[];
-    totalArticles = await prisma.article.count({ where });
-    grouped = { [category]: articles };
-  } else if (query) {
-    const where = { ...buildSearchWhere(query), ...readFilter, ...independentFilter, ...feedFilter };
-    articles = await prisma.article.findMany({
-      where,
-      orderBy: { publishedAt: 'desc' },
-      skip: (page - 1) * PER_PAGE,
-      take: PER_PAGE,
-      include: { source: true, cluster: true },
-    }) as ArticleWithRelations[];
-    totalArticles = await prisma.article.count({ where });
-    grouped = { 'Search results': articles };
-  } else {
-    const skip = (page - 1) * PER_CATEGORY;
-    const BATCH = 50;
-    const results = await Promise.all(
-      MAIN_CATEGORIES.map(async (cat) => {
-        const all = await prisma.article.findMany({
-          where: { primaryArea: cat, ...readFilter, ...independentFilter, ...feedFilter },
-          orderBy: { publishedAt: 'desc' },
-          take: BATCH,
-          include: { source: true, cluster: true },
-        }) as ArticleWithRelations[];
-
-        const seen = new Set<string>();
-        const unique = all.filter((a) => {
-          if (seen.has(a.sourceId)) return false;
-          seen.add(a.sourceId);
-          return true;
-        });
-
-        return unique.slice(skip, skip + PER_CATEGORY);
-      })
-    );
-
-    for (let i = 0; i < MAIN_CATEGORIES.length; i++) {
-      if (results[i].length > 0) {
-        grouped[MAIN_CATEGORIES[i]] = results[i];
-      }
-    }
-    articles = results.flat();
-
-    const counts = await Promise.all(
-      MAIN_CATEGORIES.map(async (cat) => {
-        const sourcesWithArticles = await prisma.article.findMany({
-          where: { primaryArea: cat, ...readFilter, ...independentFilter, ...feedFilter },
-          select: { sourceId: true },
-          distinct: ['sourceId'],
-        });
-        return sourcesWithArticles.length;
-      })
-    );
-    totalArticles = Math.max(...counts, 0);
+    where.primaryArea = category;
+  }
+  if (query) {
+    Object.assign(where, buildSearchWhere(query));
   }
 
-  const itemsPerPage = category && category !== 'all' ? PER_PAGE : PER_CATEGORY;
-  const totalPages = Math.ceil(totalArticles / itemsPerPage);
-  const isSectionView = !category && !query;
-  const gridClass = 'columns-2 lg:columns-4 gap-5 [column-fill:balance]';
+  articles = await prisma.article.findMany({
+    where,
+    orderBy: { publishedAt: 'desc' },
+    skip: (page - 1) * PER_PAGE,
+    take: PER_PAGE,
+    include: { source: true, cluster: true },
+  }) as ArticleWithRelations[];
+
+  totalArticles = await prisma.article.count({ where });
+
+  const feedTitle = category && category !== 'all'
+    ? category
+    : query
+      ? `Search: ${query}`
+      : 'Daily Feed';
+
+  const grouped = { [feedTitle]: articles };
+
+  const totalPages = Math.ceil(totalArticles / PER_PAGE);
+  const isSectionView = false; // Always render unified paginated archive view
+  const gridClass = 'grid grid-cols-2 lg:grid-cols-4 gap-5 items-start';
 
   const dbCategories = await prisma.article.findMany({
     where: { isInDailyFeed: true },
@@ -205,27 +154,25 @@ export default async function Home({
 
       <main className="container mx-auto px-4 py-8">
         {/* Editorial diversity widget */}
-        {isSectionView && (
-          <div className="mb-6 px-4 py-3 bg-[var(--surface)] rounded-lg border border-[var(--border)]">
-            <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-body-sm text-[var(--text-muted)]">
-              <span>
-                <strong className="text-[var(--text-body)]">{diversityTotalArticles}</strong> stories
-              </span>
-              <span>
-                from <strong className="text-[var(--text-body)]">{diversitySources.length}</strong> sources
-              </span>
-              <span className="text-[var(--accent-2)]">
-                &mdash; <strong>{diversityIndependent}</strong> with independent voices
-              </span>
-              <span>
-                <strong>{diversityWire}</strong> wire-syndicated
-              </span>
-              <span>
-                <strong>{diversitySingle}</strong> single-source
-              </span>
-            </div>
+        <div className="mb-6 px-4 py-3 bg-[var(--surface)] rounded-lg border border-[var(--border)]">
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-body-sm text-[var(--text-muted)]">
+            <span>
+              <strong className="text-[var(--text-body)]">{diversityTotalArticles}</strong> stories
+            </span>
+            <span>
+              from <strong className="text-[var(--text-body)]">{diversitySources.length}</strong> sources
+            </span>
+            <span className="text-[var(--accent-2)]">
+              &mdash; <strong>{diversityIndependent}</strong> with independent voices
+            </span>
+            <span>
+              <strong>{diversityWire}</strong> wire-syndicated
+            </span>
+            <span>
+              <strong>{diversitySingle}</strong> single-source
+            </span>
           </div>
-        )}
+        </div>
 
         <div className="mb-8">
           <Suspense>

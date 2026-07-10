@@ -84,7 +84,7 @@ export default function NewsCard({ article, cluster, isRead, initialSaved, dataK
 
         {/* Topics */}
         {article.topics && article.topics.length > 0 && (
-          <ul className="flex flex-wrap gap-1.5 mt-2">
+          <ul className="flex flex-wrap gap-1.5 mt-3 mb-4">
             {article.topics.split(',').slice(0, 3).map((topic) => (
               <li
                 key={topic}
@@ -102,29 +102,15 @@ export default function NewsCard({ article, cluster, isRead, initialSaved, dataK
         )}
 
         {/* Actions */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-4 border-t border-[var(--border)] mt-auto">
+        <div className="flex items-center justify-between pt-4 border-t border-[var(--border)] mt-auto">
           <Link
             href={`/article/${article.id}`}
-            className="inline-flex items-center justify-center sm:justify-start gap-2 px-4 py-2 bg-[var(--text)] text-[var(--surface-elevated)] rounded-lg hover:bg-[var(--accent)] transition-colors duration-200 text-body-md font-medium"
+            className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-[var(--text)] text-[var(--surface-elevated)] rounded-lg hover:bg-[var(--accent)] transition-colors duration-200 text-body-md font-medium"
           >
             Read summary
           </Link>
 
-          <div className="flex items-center gap-3">
-            <ToggleSave articleId={article.id} initialSaved={initialSaved ?? false} />
-            <a
-              href={article.canonicalUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-body-sm text-[var(--text-faint)] hover:text-[var(--text)] transition-colors"
-            >
-              <ExternalLink className="w-3.5 h-3.5" />
-              {article.source.name}
-            </a>
-            <div className="text-body-sm text-[var(--text-muted)]">
-              {article.lang.toUpperCase()} • {article.source.editorialIndependence}
-            </div>
-          </div>
+          <ToggleSave articleId={article.id} initialSaved={initialSaved ?? false} />
         </div>
       </div>
     </div>
