@@ -43,11 +43,17 @@ export function useKeyboardNav(articleIds: string[]) {
 
   const markReadFocused = useCallback(() => {
     if (focusedId) {
-      fetch('/api/read', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ articleId: focusedId }),
-      });
+      const COOKIE_NAME = 'read_articles';
+      const match = document.cookie.match(new RegExp(`(^| )${COOKIE_NAME}=([^;]+)`));
+      let ids: string[] = [];
+      if (match) {
+        try { ids = JSON.parse(decodeURIComponent(match[2])); } catch {}
+      }
+      if (!ids.includes(focusedId)) {
+        ids.push(focusedId);
+        const trimmed = ids.slice(-200);
+        document.cookie = `${COOKIE_NAME}=${encodeURIComponent(JSON.stringify(trimmed))}; path=/; max-age=${60 * 60 * 24 * 365}; SameSite=Lax`;
+      }
     }
   }, [focusedId]);
 

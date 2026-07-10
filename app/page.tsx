@@ -4,6 +4,7 @@ import SearchBar from '@/components/SearchBar';
 import CategoryFilter from '@/components/CategoryFilter';
 import Pagination from '@/components/Pagination';
 import { prisma } from '@/lib/db';
+import { cookies } from 'next/headers';
 import Link from 'next/link';
 import { Bookmark } from 'lucide-react';
 import KeyboardNavWrapper from '@/components/KeyboardNavWrapper';
@@ -28,20 +29,24 @@ function buildSearchWhere(query: string) {
 export default async function Home({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; category?: string; page?: string; hideRead?: string; independentOnly?: string }>;
+  searchParams: Promise<{ q?: string; category?: string; page?: string; hideRead?: string }>;
 }) {
   const params = await searchParams;
   const query = params.q || '';
   const category = params.category || '';
   const hideRead = params.hideRead === '1';
-  const independentOnly = params.independentOnly === '1';
   const page = Math.max(1, parseInt(params.page || '1', 10) || 1);
 
-  const readArticles = await prisma.articleRead.findMany({
-    where: { userId: 'default' },
-    select: { articleId: true },
-  });
-  const readArticleIds = new Set(readArticles.map((r) => r.articleId));
+  // Read article IDs from cookie (per-user, no DB needed)
+  const cookieStore = await cookies();
+  let readArticleIds = new Set<string>();
+  try {
+    const raw = cookieStore.get('read_articles')?.value;
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) readArticleIds = new Set(parsed);
+    }
+  } catch {}
   const isRead = (articleId: string) => readArticleIds.has(articleId);
 
   const savedArticles = await prisma.articleSaved.findMany({
@@ -55,21 +60,12 @@ export default async function Home({
     ? { id: { notIn: [...readArticleIds] } }
     : {};
 
-  const independentFilter = independentOnly
-    ? {
-        OR: [
-          { source: { editorialIndependence: 'independent' } },
-          { cluster: { independentSourceCount: { gt: 0 } } }
-        ]
-      }
-    : {};
-
   const feedFilter = { isInDailyFeed: true };
 
   let articles: ArticleWithRelations[];
   let totalArticles: number;
 
-  const where: any = { ...readFilter, ...independentFilter, ...feedFilter };
+  const where: any = { ...readFilter, ...feedFilter };
   if (category && category !== 'all') {
     where.primaryArea = category;
   }
