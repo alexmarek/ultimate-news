@@ -105,22 +105,6 @@ export default async function Home({
 
   const allArticleIds = articles.map((a) => a.id);
 
-  const diversityTotalArticles = await prisma.article.count({ where: { isInDailyFeed: true, clusterId: { not: null } } });
-  const diversitySources = await prisma.article.findMany({
-    where: { isInDailyFeed: true },
-    select: { sourceId: true },
-    distinct: ['sourceId'],
-  });
-  const diversityIndependent = await prisma.article.count({
-    where: { isInDailyFeed: true, cluster: { independentSourceCount: { gt: 0 } } },
-  });
-  const diversityWire = await prisma.article.count({
-    where: { isInDailyFeed: true, source: { editorialIndependence: 'syndicate' } },
-  });
-  const diversitySingle = await prisma.article.count({
-    where: { isInDailyFeed: true, OR: [{ clusterId: null }, { cluster: { totalSourceCount: 1 } }] },
-  });
-
   return (
     <div className="min-h-screen bg-[var(--bg)]">
       <header className="bg-[var(--surface-elevated)] border-b border-[var(--border)] sticky top-0 z-50">
@@ -150,26 +134,6 @@ export default async function Home({
       </header>
 
       <main className="container mx-auto px-4 py-8">
-        {/* Editorial diversity widget */}
-        <div className="mb-6 px-4 py-3 bg-[var(--surface)] rounded-lg border border-[var(--border)]">
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-body-sm text-[var(--text-muted)]">
-            <span>
-              <strong className="text-[var(--text-body)]">{diversityTotalArticles}</strong> stories
-            </span>
-            <span>
-              from <strong className="text-[var(--text-body)]">{diversitySources.length}</strong> sources
-            </span>
-            <span className="text-[var(--accent-2)]">
-              &mdash; <strong>{diversityIndependent}</strong> with independent voices
-            </span>
-            <span>
-              <strong>{diversityWire}</strong> wire-syndicated
-            </span>
-            <span>
-              <strong>{diversitySingle}</strong> single-source
-            </span>
-          </div>
-        </div>
 
         <div className="mb-8">
           <Suspense>
