@@ -205,14 +205,12 @@ export default async function ArticlePage({
                 <h2 className="text-body-sm font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-3">
                   Article Extract
                 </h2>
-                <div 
-                  className="text-body-md text-[var(--text-body)] leading-relaxed space-y-4 max-w-none prose dark:prose-invert"
-                  dangerouslySetInnerHTML={{ 
-                    __html: article.content.length > 2500 
-                      ? article.content.slice(0, 2500) + '...'
-                      : article.content 
-                  }}
-                />
+                <p className="text-body-md text-[var(--text-body)] leading-relaxed max-w-none">
+                  {(() => {
+                    const clean = article.content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+                    return clean.length > 1500 ? clean.slice(0, 1500) + '...' : clean;
+                  })()}
+                </p>
               </div>
             )}
 
