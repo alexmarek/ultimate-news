@@ -162,7 +162,7 @@ async function main() {
         data: { lastFetchedAt: new Date(), consecutiveErrors: 0, lastError: null },
       });
 
-      console.log(`  ${source.name}: ${sourceCreated} new (${feed.items?.length || 0} fetched)`);
+      console.log(`  ${source.name}: ${sourceCreated} loaded (quota: ${config.limit})`);
     } catch (err) {
       console.error(`  ${source.name}: ERROR — ${err instanceof Error ? err.message : String(err)}`);
       await prisma.source.update({

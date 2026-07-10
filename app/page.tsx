@@ -96,7 +96,7 @@ export default async function Home({
 
   const totalPages = Math.ceil(totalArticles / PER_PAGE);
   const isSectionView = false; // Always render unified paginated archive view
-  const gridClass = 'columns-2 lg:columns-4 gap-5';
+  const gridClass = 'grid grid-cols-2 lg:grid-cols-4 gap-5 items-start';
 
   const dbCategories = await prisma.article.findMany({
     where: { isInDailyFeed: true },

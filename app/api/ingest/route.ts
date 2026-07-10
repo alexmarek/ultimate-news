@@ -227,7 +227,7 @@ export async function runIngest(sources: Awaited<ReturnType<typeof prisma.source
         data: { lastFetchedAt: new Date(), consecutiveErrors: 0, lastError: null },
       });
 
-      totalFetched += feed.items?.length || 0;
+      totalFetched += config.limit;
     } catch (error) {
       sourceErrors++;
       await prisma.source.update({
