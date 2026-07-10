@@ -7,6 +7,7 @@ import { prisma } from '@/lib/db';
 import Link from 'next/link';
 import { Bookmark } from 'lucide-react';
 import KeyboardNavWrapper from '@/components/KeyboardNavWrapper';
+import MasonryGrid from '@/components/MasonryGrid';
 import ThemeToggle from '@/components/ThemeToggle';
 import type { Article, Source, Cluster } from '@prisma/client';
 
@@ -96,7 +97,7 @@ export default async function Home({
 
   const totalPages = Math.ceil(totalArticles / PER_PAGE);
   const isSectionView = false; // Always render unified paginated archive view
-  const gridClass = 'grid grid-cols-2 lg:grid-cols-4 gap-5 items-start';
+  const gridClass = '';
 
   const dbCategories = await prisma.article.findMany({
     where: { isInDailyFeed: true },
@@ -207,7 +208,7 @@ export default async function Home({
                     </p>
                   </div>
                 )}
-                <div className={gridClass}>
+                <MasonryGrid>
                   {catArticles.map((article) => (
                     <NewsCard
                       key={article.id}
@@ -218,7 +219,7 @@ export default async function Home({
                       dataKbId={article.id}
                     />
                   ))}
-                </div>
+                </MasonryGrid>
               </section>
             ))}
             </KeyboardNavWrapper>

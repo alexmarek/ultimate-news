@@ -19,7 +19,7 @@ export default function NewsCard({ article, cluster, isRead, initialSaved, dataK
   const timeAgo = formatDistanceToNow(article.publishedAt, { addSuffix: true });
 
   return (
-    <div data-kb-id={dataKbId} className={`break-inside-avoid inline-block w-full mb-5 relative bg-[var(--surface-elevated)] rounded-xl shadow-md hover:shadow-lg transition-shadow duration-200 overflow-hidden border border-[var(--border)] flex flex-col ${isRead ? 'opacity-60' : ''}`}>
+    <div data-kb-id={dataKbId} className={`relative bg-[var(--surface-elevated)] rounded-xl shadow-md hover:shadow-lg transition-shadow duration-200 overflow-hidden border border-[var(--border)] flex flex-col ${isRead ? 'opacity-60' : ''}`}>
       {/* Read badge */}
       {isRead && (
         <div className="absolute top-3 right-3 z-10">
