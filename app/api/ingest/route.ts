@@ -6,12 +6,14 @@ import { canonicalizeUrl, articleIdFromUrl } from '@/lib/ingest/canonicalize';
 import { enrichArticle } from '@/lib/ai/enrich';
 import { embed } from '@/lib/ai/embed';
 import { AREAS } from '@/lib/types';
-import { DAILY_FEED_TARGETS } from '@/lib/config/dailyFeed';
-import { selectForDailyFeed } from '@/lib/ingest/selectForDailyFeed';
+import { SOURCE_CONFIGS, DAILY_FEED_TARGETS } from '@/lib/config/dailyFeed';
 import { discoverFeed } from '@/lib/ingest/discoverFeed';
 import { recomputeClusters } from '@/lib/dedup/cluster';
 
 const parser = new Parser({
+  headers: {
+    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  },
   customFields: {
     item: [
       'media:content',
@@ -22,8 +24,6 @@ const parser = new Parser({
     ],
   },
 });
-
-const PER_SOURCE_FETCH = 30; // Daily ingest needs larger catch-up window
 
 async function getFeedUrl(source: { id: string; feedUrl: string | null; url: string }): Promise<string | null> {
   if (source.feedUrl) return source.feedUrl;
@@ -40,27 +40,31 @@ async function getFeedUrl(source: { id: string; feedUrl: string | null; url: str
 async function seedSources() {
   const sources = [
     { id: 'propublica', name: 'ProPublica', url: 'https://www.propublica.org', feedUrl: 'https://www.propublica.org/feeds/propublica/main', ingestStrategy: 'rss', lang: 'en', tier: 'tier-1', editorialIndependence: 'independent', isWireService: false, contentKind: 'investigative', weight: 1.0, isActive: true },
-    { id: 'npr', name: 'NPR', url: 'https://www.npr.org', feedUrl: 'https://feeds.npr.org/1001/rss.xml', ingestStrategy: 'rss', lang: 'en', tier: 'tier-1', editorialIndependence: 'independent', isWireService: false, contentKind: 'news', weight: 0.95, isActive: true },
     { id: 'dw', name: 'Deutsche Welle', url: 'https://www.dw.com/en/top-stories/s-9097', feedUrl: 'https://rss.dw.com/rdf/rss-en-all', ingestStrategy: 'rss', lang: 'en', tier: 'tier-1', editorialIndependence: 'independent', isWireService: false, contentKind: 'news', weight: 0.9, isActive: true },
-    { id: 'blabbermouth', name: 'Blabbermouth.net', url: 'https://blabbermouth.net', feedUrl: 'https://blabbermouth.net/feed', ingestStrategy: 'rss', lang: 'en', tier: 'tier-2', editorialIndependence: 'independent', isWireService: false, contentKind: 'music-metal', weight: 0.7, isActive: true },
-    { id: 'musicradar', name: 'MusicRadar', url: 'https://www.musicradar.com', feedUrl: 'https://www.musicradar.com/feeds/all', ingestStrategy: 'rss', lang: 'en', tier: 'tier-2', editorialIndependence: 'independent', isWireService: false, contentKind: 'music-gear', weight: 0.7, isActive: true },
-    { id: 'sport-cz', name: 'Sport.cz', url: 'https://www.sport.cz', feedUrl: null, ingestStrategy: 'rss', lang: 'cs', tier: 'tier-2', editorialIndependence: 'national', isWireService: false, contentKind: 'sports', weight: 0.7, isActive: true },
     { id: 'wired', name: 'Wired', url: 'https://www.wired.com', feedUrl: 'https://www.wired.com/feed/rss', ingestStrategy: 'rss', lang: 'en', tier: 'tier-1', editorialIndependence: 'independent', isWireService: false, contentKind: 'technology', weight: 1.0, isActive: true },
-    { id: 'oneusefulthing', name: 'One Useful Thing', url: 'https://www.oneusefulthing.org', feedUrl: 'https://www.oneusefulthing.org/feed', ingestStrategy: 'rss', lang: 'en', tier: 'tier-2', editorialIndependence: 'independent', isWireService: false, contentKind: 'ai-newsletter', weight: 0.85, isActive: true },
     { id: 'thehackernews', name: 'The Hacker News', url: 'https://thehackernews.com', feedUrl: 'https://feeds.feedburner.com/TheHackersNews', ingestStrategy: 'rss', lang: 'en', tier: 'tier-2', editorialIndependence: 'independent', isWireService: false, contentKind: 'cybersecurity', weight: 0.8, isActive: true },
-    { id: 'insideclimatenews', name: 'Inside Climate News', url: 'https://insideclimatenews.org', feedUrl: null, ingestStrategy: 'rss', lang: 'en', tier: 'tier-2', editorialIndependence: 'independent', isWireService: false, contentKind: 'environment', weight: 0.85, isActive: true },
-    { id: 'bbc-future-planet', name: 'BBC Future Planet', url: 'https://www.bbc.com/future-planet', feedUrl: null, ingestStrategy: 'rss', lang: 'en', tier: 'tier-1', editorialIndependence: 'independent', isWireService: false, contentKind: 'environment', weight: 0.85, isActive: true },
+    { id: 'insideclimatenews', name: 'Inside Climate News', url: 'https://insideclimatenews.org', feedUrl: 'https://insideclimatenews.org/feed/', ingestStrategy: 'rss', lang: 'en', tier: 'tier-2', editorialIndependence: 'independent', isWireService: false, contentKind: 'environment', weight: 0.85, isActive: true },
+    { id: 'bbc-future-planet', name: 'BBC Future Planet', url: 'https://www.bbc.com/future-planet', feedUrl: 'https://feeds.bbci.co.uk/news/science_and_environment/rss.xml', ingestStrategy: 'rss', lang: 'en', tier: 'tier-1', editorialIndependence: 'independent', isWireService: false, contentKind: 'environment', weight: 0.85, isActive: true },
     { id: 'goodnewsnetwork', name: 'Good News Network', url: 'https://www.goodnewsnetwork.org', feedUrl: 'https://www.goodnewsnetwork.org/feed/', ingestStrategy: 'rss', lang: 'en', tier: 'tier-2', editorialIndependence: 'independent', isWireService: false, contentKind: 'positive-news', weight: 0.8, isActive: true },
-    { id: 'smiley-movement', name: 'Smiley Movement', url: 'https://smileymovement.org', feedUrl: null, ingestStrategy: 'rss', lang: 'en', tier: 'tier-2', editorialIndependence: 'independent', isWireService: false, contentKind: 'positive-news', weight: 0.75, isActive: true },
     { id: 'qz', name: 'Quartz', url: 'https://qz.com', feedUrl: 'https://qz.com/feed', ingestStrategy: 'rss', lang: 'en', tier: 'tier-1', editorialIndependence: 'independent', isWireService: false, contentKind: 'business', weight: 0.9, isActive: true },
-    { id: 'yahoo-finance', name: 'Yahoo Finance', url: 'https://finance.yahoo.com', feedUrl: null, ingestStrategy: 'rss', lang: 'en', tier: 'tier-1', editorialIndependence: 'independent', isWireService: false, contentKind: 'business', weight: 0.85, isActive: true },
-    { id: 'fodors', name: "Fodor's Travel", url: 'https://www.fodors.com', feedUrl: 'https://www.fodors.com/feed', ingestStrategy: 'rss', lang: 'en', tier: 'tier-2', editorialIndependence: 'independent', isWireService: false, contentKind: 'travel', weight: 0.75, isActive: true },
-    { id: 'lonelyplanet', name: 'Lonely Planet', url: 'https://www.lonelyplanet.com', feedUrl: null, ingestStrategy: 'rss', lang: 'en', tier: 'tier-2', editorialIndependence: 'independent', isWireService: false, contentKind: 'travel', weight: 0.8, isActive: true },
+    { id: 'budgettraveller', name: 'Budget Traveller', url: 'https://budgettraveller.org/blog/', feedUrl: 'https://budgettraveller.org/feed/', ingestStrategy: 'rss', lang: 'en', tier: 'tier-2', editorialIndependence: 'independent', isWireService: false, contentKind: 'travel', weight: 0.8, isActive: true },
+    { id: 'bemytravelmuse', name: 'Be My Travel Muse', url: 'https://www.bemytravelmuse.com/archives/', feedUrl: 'https://www.bemytravelmuse.com/feed/', ingestStrategy: 'rss', lang: 'en', tier: 'tier-2', editorialIndependence: 'independent', isWireService: false, contentKind: 'travel', weight: 0.8, isActive: true },
   ];
 
   for (const s of sources) {
-    await prisma.source.create({ data: s });
+    await prisma.source.upsert({
+      where: { id: s.id },
+      create: s,
+      update: { isActive: true },
+    });
   }
+
+  // Deactivate others
+  const keepIds = sources.map(s => s.id);
+  await prisma.source.updateMany({
+    where: { id: { notIn: keepIds } },
+    data: { isActive: false },
+  });
 }
 
 export async function POST(req: NextRequest) {
@@ -92,6 +96,7 @@ export async function runIngest(sources: Awaited<ReturnType<typeof prisma.source
   let sourceErrors = 0;
 
   const seenArticleIds = new Set<string>();
+  const activeSources = sources.filter((s) => s.id in SOURCE_CONFIGS);
 
   const allNewArticles: Array<{
     articleId: string;
@@ -119,17 +124,38 @@ export async function runIngest(sources: Awaited<ReturnType<typeof prisma.source
     embedding: string | null;
   }> = [];
 
-  // --- Phase 1: fetch all sources, enrich all new articles ---
-  for (const source of sources) {
+  // --- Phase 1: fetch, enrich, and map categories deterministically ---
+  for (const source of activeSources) {
+    const config = SOURCE_CONFIGS[source.id];
     if (source.ingestStrategy !== 'rss') continue;
 
     const feedUrl = await getFeedUrl(source);
     if (!feedUrl) continue;
 
     try {
-      const feed = await parser.parseURL(feedUrl);
+      let feed: any;
+      if (source.id === 'insideclimatenews') {
+        const jsonUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feedUrl)}`;
+        const res = await fetch(jsonUrl);
+        if (!res.ok) throw new Error(`rss2json failed with status ${res.status}`);
+        const data = await res.json();
+        if (data.status !== 'ok') throw new Error(`rss2json error: ${data.message || 'unknown'}`);
+        feed = {
+          items: (data.items || []).map((item: any) => ({
+            link: item.link,
+            guid: item.guid || item.link,
+            pubDate: item.pubDate,
+            contentSnippet: item.description,
+            summary: item.description,
+            title: item.title,
+            content: item.content || item.description,
+          }))
+        };
+      } else {
+        feed = await parser.parseURL(feedUrl);
+      }
 
-      for (const item of (feed.items || []).slice(0, PER_SOURCE_FETCH)) {
+      for (const item of (feed.items || []).slice(0, config.limit)) {
         const rawUrl = item.link || item.guid || '';
         if (!rawUrl) continue;
 
@@ -152,17 +178,8 @@ export async function runIngest(sources: Awaited<ReturnType<typeof prisma.source
           content: item.content || undefined,
         });
 
-        const topArea = enrichment.areas[0];
-        const confidenceThreshold = 0.65;
-        let primaryArea: string;
-        let lowConfidenceTag = false;
-
-        if (!topArea || topArea.confidence < confidenceThreshold || !AREAS.includes(topArea.area as never)) {
-          primaryArea = AREAS[0];
-          lowConfidenceTag = true;
-        } else {
-          primaryArea = topArea.area;
-        }
+        // Determine category deterministically based on our SOURCE_CONFIGS matrix
+        const primaryArea = config.category;
 
         const embeddingText = [title, excerpt, enrichment.summary].filter(Boolean).join(' ');
         let embeddingJson: string | null = null;
@@ -193,7 +210,7 @@ export async function runIngest(sources: Awaited<ReturnType<typeof prisma.source
           primaryArea,
           areas: enrichment.areas.map((a) => a.area).join(','),
           areaConfidences: JSON.stringify(enrichment.areas),
-          lowConfidenceTag,
+          lowConfidenceTag: false,
           summary: enrichment.summary,
           topics: enrichment.topics.join(','),
           entities: enrichment.entities.join(','),
@@ -224,37 +241,37 @@ export async function runIngest(sources: Awaited<ReturnType<typeof prisma.source
     }
   }
 
-  // --- Phase 2: write ALL new articles to DB (isInDailyFeed=false initially) ---
+  // --- Phase 2: write all fetched articles to DB directly with isInDailyFeed=true ---
   let written = 0;
   for (const a of allNewArticles) {
     try {
       await prisma.article.create({
         data: {
           id: a.articleId,
-        sourceId: a.sourceId,
-        canonicalUrl: a.canonicalUrl,
-        originalUrl: a.originalUrl,
-        title: a.title,
-        titleEn: a.titleEn,
-        excerpt: a.excerpt,
-        content: a.content,
-        publishedAt: a.publishedAt,
-        author: a.author,
-        lang: a.lang,
-        summary: a.summary,
-        areas: a.areas,
-        primaryArea: a.primaryArea,
-        areaConfidences: a.areaConfidences,
-        topics: a.topics,
-        entities: a.entities,
-        imageUrl: a.imageUrl,
-        isPaywalled: false,
-        isWireOrigin: a.isWireOrigin,
-        lowConfidenceTag: a.lowConfidenceTag,
-        embedding: a.embedding,
-        isInDailyFeed: false,
-      },
-    });
+          sourceId: a.sourceId,
+          canonicalUrl: a.canonicalUrl,
+          originalUrl: a.originalUrl,
+          title: a.title,
+          titleEn: a.titleEn,
+          excerpt: a.excerpt,
+          content: a.content,
+          publishedAt: a.publishedAt,
+          author: a.author,
+          lang: a.lang,
+          summary: a.summary,
+          areas: a.areas,
+          primaryArea: a.primaryArea,
+          areaConfidences: a.areaConfidences,
+          topics: a.topics,
+          entities: a.entities,
+          imageUrl: a.imageUrl,
+          isPaywalled: false,
+          isWireOrigin: a.isWireOrigin,
+          lowConfidenceTag: a.lowConfidenceTag,
+          embedding: a.embedding,
+          isInDailyFeed: true,
+        },
+      });
     } catch (e: unknown) {
       if (e && typeof e === 'object' && 'code' in e && (e as { code: string }).code === 'P2002') {
         continue;
@@ -264,42 +281,19 @@ export async function runIngest(sources: Awaited<ReturnType<typeof prisma.source
     written++;
   }
 
-  // --- Phase 3: select daily feed from all articles (wipe ensures they're all fresh) ---
-  const recentArticles = await prisma.article.findMany({
-    select: {
-      id: true,
-      canonicalUrl: true,
-      primaryArea: true,
-      sourceId: true,
-      publishedAt: true,
-    },
-    orderBy: { publishedAt: 'desc' },
-  });
-
-  const candidates = recentArticles.map((a) => ({
-    articleId: a.id,
-    canonicalUrl: a.canonicalUrl,
-    primaryArea: a.primaryArea,
-    sourceId: a.sourceId,
-    publishedAt: a.publishedAt,
-  }));
-
-  const { selected: dailySelection, categoryFill, deduped } = selectForDailyFeed(candidates, DAILY_FEED_TARGETS);
-
-  // Set isInDailyFeed=true on selected articles
-  const selectedIds = dailySelection.map((s) => s.articleId);
-  if (selectedIds.length > 0) {
-    await prisma.article.updateMany({
-      where: { id: { in: selectedIds } },
-      data: { isInDailyFeed: true },
-    });
+  // --- Phase 3: compute clean statistics report for output ---
+  const categoryFill: Record<string, any> = {};
+  for (const [area, target] of Object.entries(DAILY_FEED_TARGETS)) {
+    const count = allNewArticles.filter((a) => a.primaryArea === area).length;
+    categoryFill[area] = {
+      target,
+      selected: count,
+      shortfall: Math.max(0, target - count),
+      sources: {},
+    };
   }
 
-  console.log('[ingest] daily feed:');
-  for (const [area, report] of Object.entries(categoryFill)) {
-    console.log(`  ${area}: ${report.selected}/${report.target}${report.reason ? ` (${report.reason})` : ''}`);
-  }
-  console.log(`[ingest] wrote ${written}/${totalCreated} articles, ${selectedIds.length} in daily feed, ${deduped} deduped`);
+  console.log('[ingest] daily feed written directly per source limits:', written);
 
   // --- Phase 4: clustering ---
   let clusterResult = null;
@@ -310,7 +304,7 @@ export async function runIngest(sources: Awaited<ReturnType<typeof prisma.source
     console.error('[ingest] clustering failed:', e instanceof Error ? e.message : String(e));
   }
 
-  const sourceReport = sources.map((s) => {
+  const sourceReport = activeSources.map((s) => {
     const fromSource = allNewArticles.filter((a) => a.sourceId === s.id);
     return {
       sourceId: s.id,
@@ -324,11 +318,11 @@ export async function runIngest(sources: Awaited<ReturnType<typeof prisma.source
     totalFetched,
     totalNew: totalCreated,
     totalEnriched: totalCreated,
-    totalSelected: selectedIds.length,
+    totalSelected: written,
     written,
     sourceErrors,
     categoryFill,
-    deduped,
+    deduped: 0,
     clusters: clusterResult,
     sources: sourceReport,
   });

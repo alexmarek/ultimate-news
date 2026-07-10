@@ -154,13 +154,15 @@ export default async function ArticlePage({
 
         {/* Hero image */}
         {article.imageUrl && (
-          <ArticleImage
-            src={`/api/img?url=${encodeURIComponent(article.imageUrl)}`}
-            alt={article.imageAlt || article.title}
-            sourceName={article.source.name}
-            aspectRatio="3/2"
-            className="rounded-xl mb-8"
-          />
+          <div className="max-w-xl mb-8">
+            <ArticleImage
+              src={`/api/img?url=${encodeURIComponent(article.imageUrl)}`}
+              alt={article.imageAlt || article.title}
+              sourceName={article.source.name}
+              aspectRatio="16/9"
+              className="rounded-xl"
+            />
+          </div>
         )}
 
         {/* Two-column content */}
@@ -195,6 +197,23 @@ export default async function ArticlePage({
                   </li>
                 ))}
               </ul>
+            )}
+
+            {/* Article Extract */}
+            {article.content && (
+              <div className="border-t border-[var(--border)] pt-6 mt-6">
+                <h2 className="text-body-sm font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-3">
+                  Article Extract
+                </h2>
+                <div 
+                  className="text-body-md text-[var(--text-body)] leading-relaxed space-y-4 max-w-none prose dark:prose-invert"
+                  dangerouslySetInnerHTML={{ 
+                    __html: article.content.length > 2500 
+                      ? article.content.slice(0, 2500) + '...'
+                      : article.content 
+                  }}
+                />
+              </div>
             )}
 
             {/* Read on source */}

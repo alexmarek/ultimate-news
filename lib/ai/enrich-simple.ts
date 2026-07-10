@@ -62,7 +62,7 @@ function titleKeywordArea(title: string): Area | null {
   }
 
   // Travel keywords
-  if (/\b(hotel|restaurant|destination|travel|trip|vacation|tourist|guide|itinerary|flight|airline)\b/.test(t)) {
+  if (/\b(hotel|restaurant|destination|travel|trip|vacation|tourist|itinerary|flight|airline)\b/.test(t)) {
     return 'Travel';
   }
 
@@ -128,6 +128,8 @@ const sourceEntities: Record<string, string[]> = {
   "Fodor's Travel": ['Tripadvisor', 'Expedia', 'Booking.com', 'Lonely Planet', 'Airbnb'],
   'Lonely Planet': ['UNESCO', 'National Geographic', 'Skyscanner', 'Hostelworld', 'Airbnb'],
   'Sport.cz': ['NHL', 'Czech Republic', 'Football', 'Tennis', 'Extraliga'],
+  'Budget Traveller': ['Europe', 'Hostels', 'Train travel', 'Budget guides', 'Backpacking'],
+  'Be My Travel Muse': ['Solo female travel', 'Backpacking', 'Adventure', 'Travel tips', 'Nature'],
 };
 
 // Source name → contentKind for area hinting
@@ -149,6 +151,8 @@ const sourceContentKind: Record<string, string> = {
   'Yahoo Finance': 'business',
   "Fodor's Travel": 'travel',
   'Lonely Planet': 'travel',
+  'Budget Traveller': 'travel',
+  'Be My Travel Muse': 'travel',
 };
 
 export async function enrichArticle(input: EnrichInput): Promise<EnrichOutput> {

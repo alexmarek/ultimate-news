@@ -64,7 +64,12 @@ export default async function Home({
     : {};
 
   const independentFilter = independentOnly
-    ? { cluster: { independentSourceCount: { gt: 0 } } }
+    ? {
+        OR: [
+          { source: { editorialIndependence: 'independent' } },
+          { cluster: { independentSourceCount: { gt: 0 } } }
+        ]
+      }
     : {};
 
   const feedFilter = { isInDailyFeed: true };
@@ -142,9 +147,7 @@ export default async function Home({
   const itemsPerPage = category && category !== 'all' ? PER_PAGE : PER_CATEGORY;
   const totalPages = Math.ceil(totalArticles / itemsPerPage);
   const isSectionView = !category && !query;
-  const gridClass = isSectionView
-    ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5'
-    : 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 min-[1200px]:grid-cols-4 gap-5';
+  const gridClass = 'columns-2 lg:columns-4 gap-5 [column-fill:balance]';
 
   const dbCategories = await prisma.article.findMany({
     where: { isInDailyFeed: true },
@@ -245,9 +248,6 @@ export default async function Home({
                     <h2 className="font-serif text-headline-md font-semibold text-[var(--text)] uppercase tracking-wide">
                       {cat}
                     </h2>
-                    <p className="text-[var(--text-muted)] text-body-md mt-1 line-clamp-2">
-                      {categorySummary(catArticles)}
-                    </p>
                   </div>
                 )}
                 {!isSectionView && (
