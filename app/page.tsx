@@ -6,7 +6,6 @@ import Pagination from '@/components/Pagination';
 import { prisma } from '@/lib/db';
 import { cookies } from 'next/headers';
 import Link from 'next/link';
-import { Bookmark } from 'lucide-react';
 import KeyboardNavWrapper from '@/components/KeyboardNavWrapper';
 import MasonryGrid from '@/components/MasonryGrid';
 import ThemeToggle from '@/components/ThemeToggle';
@@ -48,13 +47,6 @@ export default async function Home({
     }
   } catch {}
   const isRead = (articleId: string) => readArticleIds.has(articleId);
-
-  const savedArticles = await prisma.articleSaved.findMany({
-    where: { userId: 'default' },
-    select: { articleId: true },
-  });
-  const savedArticleIds = new Set(savedArticles.map((s) => s.articleId));
-  const isSaved = (articleId: string) => savedArticleIds.has(articleId);
 
   const readFilter = hideRead && readArticleIds.size > 0
     ? { id: { notIn: [...readArticleIds] } }
@@ -113,13 +105,6 @@ export default async function Home({
             <div>
               <div className="flex items-center gap-4">
               <Link href="/" className="font-serif text-display-3 font-bold text-[var(--text)] hover:text-[var(--text-body)] transition-colors">Ultimate News</Link>
-              <Link
-                href="/saved"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-body-md font-medium text-[var(--text-body)] hover:bg-[var(--surface)] transition-colors"
-              >
-                <Bookmark className="w-4 h-4" />
-                Saved
-              </Link>
               <ThemeToggle />
               </div>
               <p className="text-[var(--text-body)] mt-1">Curated news from sources you care about</p>
@@ -175,7 +160,6 @@ export default async function Home({
                       article={article}
                       cluster={article.cluster}
                       isRead={isRead(article.id)}
-                      initialSaved={isSaved(article.id)}
                       dataKbId={article.id}
                     />
                   ))}

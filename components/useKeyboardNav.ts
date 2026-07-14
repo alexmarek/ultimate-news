@@ -31,16 +31,6 @@ export function useKeyboardNav(articleIds: string[]) {
     if (focusedId) router.push(`/article/${focusedId}`);
   }, [focusedId, router]);
 
-  const toggleSaveFocused = useCallback(() => {
-    if (focusedId) {
-      fetch('/api/saved', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ articleId: focusedId }),
-      });
-    }
-  }, [focusedId]);
-
   const markReadFocused = useCallback(() => {
     if (focusedId) {
       const COOKIE_NAME = 'read_articles';
@@ -75,10 +65,6 @@ export function useKeyboardNav(articleIds: string[]) {
           e.preventDefault();
           openFocused();
           break;
-        case 's':
-          e.preventDefault();
-          toggleSaveFocused();
-          break;
         case 'm':
           e.preventDefault();
           markReadFocused();
@@ -102,7 +88,7 @@ export function useKeyboardNav(articleIds: string[]) {
 
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  }, [navigate, openFocused, toggleSaveFocused, markReadFocused, reset]);
+  }, [navigate, openFocused, markReadFocused, reset]);
 
   // Visual focus ring on the focused card
   useEffect(() => {
