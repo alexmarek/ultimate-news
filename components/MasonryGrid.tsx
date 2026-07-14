@@ -6,7 +6,7 @@ export default function MasonryGrid({ children }: { children: ReactNode[] }) {
   const [columnCount, setColumnCount] = useState(4);
 
   useEffect(() => {
-    const update = () => setColumnCount(window.innerWidth >= 1024 ? 4 : 2);
+    const update = () => setColumnCount(window.innerWidth >= 1024 ? 4 : 1);
     update();
     window.addEventListener('resize', update);
     return () => window.removeEventListener('resize', update);
