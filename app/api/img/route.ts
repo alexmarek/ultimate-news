@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
+import sharp from 'sharp';
 
 const ONE_WEEK = 60 * 60 * 24 * 7;
+const MAX_WIDTH = 800;
 
 export async function GET(req: NextRequest) {
   const url = req.nextUrl.searchParams.get('url');
@@ -15,16 +17,20 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Image not found' }, { status: 404 });
     }
 
-    const contentType = response.headers.get('content-type') || 'image/jpeg';
     const buffer = await response.arrayBuffer();
 
     if (buffer.byteLength === 0) {
       return NextResponse.json({ error: 'Empty image' }, { status: 404 });
     }
 
-    return new NextResponse(buffer, {
+    const webpBuffer = await sharp(Buffer.from(buffer))
+      .resize({ width: MAX_WIDTH, withoutEnlargement: true })
+      .webp({ quality: 80 })
+      .toBuffer();
+
+    return new NextResponse(new Uint8Array(webpBuffer), {
       headers: {
-        'Content-Type': contentType,
+        'Content-Type': 'image/webp',
         'Cache-Control': `public, max-age=${ONE_WEEK}, immutable`,
         'Access-Control-Allow-Origin': '*',
       },

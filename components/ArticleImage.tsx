@@ -59,6 +59,8 @@ export default function ArticleImage({
         src={src}
         alt={alt}
         className="absolute inset-0 w-full h-full object-cover"
+        loading="lazy"
+        decoding="async"
         onError={() => setErrored(true)}
       />
     </div>
