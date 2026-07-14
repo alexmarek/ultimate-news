@@ -49,6 +49,9 @@ async function seedSources() {
     { id: 'qz', name: 'Quartz', url: 'https://qz.com', feedUrl: 'https://qz.com/feed', ingestStrategy: 'rss', lang: 'en', tier: 'tier-1', editorialIndependence: 'independent', isWireService: false, contentKind: 'business', weight: 0.9, isActive: true },
     { id: 'budgettraveller', name: 'Budget Traveller', url: 'https://budgettraveller.org/blog/', feedUrl: 'https://budgettraveller.org/feed/', ingestStrategy: 'rss', lang: 'en', tier: 'tier-2', editorialIndependence: 'independent', isWireService: false, contentKind: 'travel', weight: 0.8, isActive: true },
     { id: 'bemytravelmuse', name: 'Be My Travel Muse', url: 'https://www.bemytravelmuse.com/archives/', feedUrl: 'https://www.bemytravelmuse.com/feed/', ingestStrategy: 'rss', lang: 'en', tier: 'tier-2', editorialIndependence: 'independent', isWireService: false, contentKind: 'travel', weight: 0.8, isActive: true },
+    { id: 'telegraph-travel', name: 'The Telegraph', url: 'https://www.telegraph.co.uk/travel/', feedUrl: null, ingestStrategy: 'rss', lang: 'en', tier: 'tier-1', editorialIndependence: 'independent', isWireService: false, contentKind: 'travel', weight: 0.9, isActive: true },
+    { id: 'euobserver', name: 'EUobserver', url: 'https://euobserver.com/', feedUrl: null, ingestStrategy: 'rss', lang: 'en', tier: 'tier-1', editorialIndependence: 'independent', isWireService: false, contentKind: 'news', weight: 0.9, isActive: true },
+    { id: 'theverge', name: 'The Verge', url: 'https://www.theverge.com/', feedUrl: null, ingestStrategy: 'rss', lang: 'en', tier: 'tier-1', editorialIndependence: 'independent', isWireService: false, contentKind: 'technology', weight: 1.0, isActive: true },
   ];
 
   for (const s of sources) {

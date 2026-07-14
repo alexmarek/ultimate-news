@@ -153,6 +153,9 @@ const sourceContentKind: Record<string, string> = {
   'Lonely Planet': 'travel',
   'Budget Traveller': 'travel',
   'Be My Travel Muse': 'travel',
+  'The Telegraph': 'travel',
+  'EUobserver': 'news',
+  'The Verge': 'technology',
 };
 
 export async function enrichArticle(input: EnrichInput): Promise<EnrichOutput> {
