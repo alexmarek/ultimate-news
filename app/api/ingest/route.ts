@@ -85,7 +85,15 @@ export async function POST(req: NextRequest) {
 }
 
 export async function runIngest(sources: Awaited<ReturnType<typeof prisma.source.findMany>>) {
+  const activeSources = sources.filter((s) => s.id in SOURCE_CONFIGS);
+
+  if (activeSources.length === 0) {
+    console.error('[ingest] No active sources found in SOURCE_CONFIGS — aborting without delete');
+    return NextResponse.json({ error: 'No active sources configured' }, { status: 400 });
+  }
+
   // Wipe all existing articles and clusters for a fresh daily feed
+  console.log(`[ingest] Wiping existing data (${activeSources.length} active sources)...`);
   await prisma.articleRead.deleteMany();
   await prisma.articleSaved.deleteMany();
   await prisma.cluster.deleteMany();
@@ -96,7 +104,6 @@ export async function runIngest(sources: Awaited<ReturnType<typeof prisma.source
   let sourceErrors = 0;
 
   const seenArticleIds = new Set<string>();
-  const activeSources = sources.filter((s) => s.id in SOURCE_CONFIGS);
 
   const allNewArticles: Array<{
     articleId: string;
