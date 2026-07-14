@@ -11,6 +11,8 @@ import MasonryGrid from '@/components/MasonryGrid';
 import ThemeToggle from '@/components/ThemeToggle';
 import type { Article, Source, Cluster } from '@prisma/client';
 
+export const dynamic = 'force-dynamic';
+
 type ArticleWithRelations = Article & { source: Source; cluster: Cluster | null };
 
 const PER_PAGE = 12;
