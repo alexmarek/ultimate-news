@@ -32,7 +32,7 @@ export default function NewsCard({ article, cluster, isRead, initialSaved, dataK
       {article.imageUrl && (
         <Link href={`/article/${article.id}`} className="block relative">
           <ArticleImage
-            src={`/api/img?url=${encodeURIComponent(article.imageUrl)}`}
+            src={`/api/img?url=${encodeURIComponent(article.imageUrl)}&v=2`}
             alt={article.imageAlt || article.title}
             sourceName={article.source.name}
           />

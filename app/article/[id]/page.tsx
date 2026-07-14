@@ -156,7 +156,7 @@ export default async function ArticlePage({
         {article.imageUrl && (
           <div className="max-w-xl mb-8">
             <ArticleImage
-              src={`/api/img?url=${encodeURIComponent(article.imageUrl)}`}
+              src={`/api/img?url=${encodeURIComponent(article.imageUrl)}&v=2`}
               alt={article.imageAlt || article.title}
               sourceName={article.source.name}
               aspectRatio="16/9"
