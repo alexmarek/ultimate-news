@@ -58,7 +58,7 @@ export default function NewsCard({ article, cluster, isRead, initialSaved, dataK
 
         {/* Title */}
         <Link href={`/article/${article.id}`} className="block">
-          <h3 className={`font-serif text-headline-md font-semibold text-[var(--text)] line-clamp-2 hover:text-[var(--text-body)] transition-colors ${cluster && cluster.totalSourceCount > 1 ? 'mb-1.5' : 'mb-3'}`}>
+          <h3 className={`font-serif text-headline-md font-semibold text-[var(--text)] line-clamp-4 hover:text-[var(--text-body)] transition-colors ${cluster && cluster.totalSourceCount > 1 ? 'mb-1.5' : 'mb-3'}`}>
             {article.title}
           </h3>
         </Link>
