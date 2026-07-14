@@ -173,6 +173,11 @@ export async function runIngest(sources: Awaited<ReturnType<typeof prisma.source
         if (existing) continue;
 
         const publishedAt = item.pubDate ? new Date(item.pubDate) : new Date();
+
+        // Skip articles older than 7 days
+        const maxAge = 7 * 24 * 60 * 60 * 1000;
+        if (Date.now() - publishedAt.getTime() > maxAge) continue;
+
         const excerpt = item.contentSnippet || item.summary || '';
         const title = item.title || 'Untitled';
         const imageUrl = extractImageFromRssItem(item as unknown as Record<string, unknown>);
