@@ -37,7 +37,7 @@ async function getFeedUrl(source: { id: string; feedUrl: string | null; url: str
   return discovered;
 }
 
-async function seedSources() {
+export async function seedSources() {
   const sources = [
     { id: 'japantoday', name: 'Japan Today', url: 'https://japantoday.com/', feedUrl: null, ingestStrategy: 'rss', lang: 'en', tier: 'tier-1', editorialIndependence: 'independent', isWireService: false, contentKind: 'news', weight: 0.9, isActive: true },
     { id: 'dw', name: 'Deutsche Welle', url: 'https://www.dw.com/en/top-stories/s-9097', feedUrl: 'https://rss.dw.com/rdf/rss-en-all', ingestStrategy: 'rss', lang: 'en', tier: 'tier-1', editorialIndependence: 'independent', isWireService: false, contentKind: 'news', weight: 0.9, isActive: true },
@@ -47,9 +47,10 @@ async function seedSources() {
     { id: 'bbc-future-planet', name: 'BBC Future Planet', url: 'https://www.bbc.com/future-planet', feedUrl: 'https://feeds.bbci.co.uk/news/science_and_environment/rss.xml', ingestStrategy: 'rss', lang: 'en', tier: 'tier-1', editorialIndependence: 'independent', isWireService: false, contentKind: 'environment', weight: 0.85, isActive: true },
     { id: 'goodnewsnetwork', name: 'Good News Network', url: 'https://www.goodnewsnetwork.org', feedUrl: 'https://www.goodnewsnetwork.org/feed/', ingestStrategy: 'rss', lang: 'en', tier: 'tier-2', editorialIndependence: 'independent', isWireService: false, contentKind: 'positive-news', weight: 0.8, isActive: true },
     { id: 'qz', name: 'Quartz', url: 'https://qz.com', feedUrl: 'https://qz.com/feed', ingestStrategy: 'rss', lang: 'en', tier: 'tier-1', editorialIndependence: 'independent', isWireService: false, contentKind: 'business', weight: 0.9, isActive: true },
-    { id: 'budgettraveller', name: 'Budget Traveller', url: 'https://budgettraveller.org/blog/', feedUrl: 'https://budgettraveller.org/feed/', ingestStrategy: 'rss', lang: 'en', tier: 'tier-2', editorialIndependence: 'independent', isWireService: false, contentKind: 'travel', weight: 0.8, isActive: true },
-    { id: 'bemytravelmuse', name: 'Be My Travel Muse', url: 'https://www.bemytravelmuse.com/archives/', feedUrl: 'https://www.bemytravelmuse.com/feed/', ingestStrategy: 'rss', lang: 'en', tier: 'tier-2', editorialIndependence: 'independent', isWireService: false, contentKind: 'travel', weight: 0.8, isActive: true },
-    { id: 'telegraph-travel', name: 'The Telegraph', url: 'https://www.telegraph.co.uk/travel/', feedUrl: null, ingestStrategy: 'rss', lang: 'en', tier: 'tier-1', editorialIndependence: 'independent', isWireService: false, contentKind: 'travel', weight: 0.9, isActive: true },
+    { id: 'matadornetwork', name: 'Matador Network', url: 'https://matadornetwork.com', feedUrl: 'https://matadornetwork.com/feed/', ingestStrategy: 'rss', lang: 'en', tier: 'tier-1', editorialIndependence: 'independent', isWireService: false, contentKind: 'travel', weight: 0.9, isActive: true },
+    { id: 'smithsonian-travel', name: 'Smithsonian Magazine', url: 'https://www.smithsonianmag.com/travel/', feedUrl: 'https://www.smithsonianmag.com/rss/travel/', ingestStrategy: 'rss', lang: 'en', tier: 'tier-1', editorialIndependence: 'independent', isWireService: false, contentKind: 'travel', weight: 0.9, isActive: true },
+    { id: 'longreads-travel', name: 'Longreads', url: 'https://longreads.com/tag/travel/', feedUrl: 'https://longreads.com/tag/travel/feed/', ingestStrategy: 'rss', lang: 'en', tier: 'tier-1', editorialIndependence: 'independent', isWireService: false, contentKind: 'travel', weight: 0.9, isActive: true },
+    { id: 'fathomaway', name: 'Fathom Away', url: 'https://fathomaway.com', feedUrl: 'https://fathomaway.com/feed/', ingestStrategy: 'rss', lang: 'en', tier: 'tier-1', editorialIndependence: 'independent', isWireService: false, contentKind: 'travel', weight: 0.9, isActive: true },
     { id: 'euobserver', name: 'EUobserver', url: 'https://euobserver.com/', feedUrl: null, ingestStrategy: 'rss', lang: 'en', tier: 'tier-1', editorialIndependence: 'independent', isWireService: false, contentKind: 'news', weight: 0.9, isActive: true },
     { id: 'theverge', name: 'The Verge', url: 'https://www.theverge.com/', feedUrl: null, ingestStrategy: 'rss', lang: 'en', tier: 'tier-1', editorialIndependence: 'independent', isWireService: false, contentKind: 'technology', weight: 1.0, isActive: true },
   ];
@@ -76,13 +77,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  // Always sync seed sources (upserts new, deactivates removed)
+  await seedSources();
   const sources = await prisma.source.findMany({ where: { isActive: true } });
-
-  if (sources.length === 0) {
-    await seedSources();
-    const seeded = await prisma.source.findMany({ where: { isActive: true } });
-    return runIngest(seeded);
-  }
 
   return runIngest(sources);
 }
@@ -177,9 +174,9 @@ export async function runIngest(sources: Awaited<ReturnType<typeof prisma.source
 
         const publishedAt = item.pubDate ? new Date(item.pubDate) : new Date();
 
-        // Skip articles older than 7 days
+        // Skip articles older than 7 days (except Travel sources)
         const maxAge = 7 * 24 * 60 * 60 * 1000;
-        if (Date.now() - publishedAt.getTime() > maxAge) continue;
+        if (config.category !== 'Travel' && Date.now() - publishedAt.getTime() > maxAge) continue;
 
         const excerpt = item.contentSnippet || item.summary || '';
         const title = item.title || 'Untitled';

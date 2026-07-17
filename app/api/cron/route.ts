@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { runIngest } from '@/app/api/ingest/route';
+import { runIngest, seedSources } from '@/app/api/ingest/route';
 
 // Called by Vercel Cron at 08:00 UTC (10:00 CEST) daily.
 
@@ -18,6 +18,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
+    await seedSources();
     const sources = await prisma.source.findMany({ where: { isActive: true } });
     return runIngest(sources);
   } catch (error) {

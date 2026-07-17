@@ -25,7 +25,8 @@ export const SOURCE_CONFIGS: Record<string, { category: Area; limit: number }> =
   'thehackernews': { category: 'Technology', limit: 3 },
   'insideclimatenews': { category: 'Environment', limit: 2 },
   'bbc-future-planet': { category: 'Environment', limit: 2 },
-  'budgettraveller': { category: 'Travel', limit: 4 },
-  'bemytravelmuse': { category: 'Travel', limit: 4 },
-  'telegraph-travel': { category: 'Travel', limit: 4 },
+  'matadornetwork': { category: 'Travel', limit: 4 },
+  'smithsonian-travel': { category: 'Travel', limit: 4 },
+  'longreads-travel': { category: 'Travel', limit: 4 },
+  'fathomaway': { category: 'Travel', limit: 4 },
 };

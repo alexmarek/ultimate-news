@@ -153,7 +153,11 @@ const sourceContentKind: Record<string, string> = {
   'Lonely Planet': 'travel',
   'Budget Traveller': 'travel',
   'Be My Travel Muse': 'travel',
-  'The Telegraph': 'travel',
+  'Atlas Obscura': 'travel',
+  'Matador Network': 'travel',
+  'Smithsonian Magazine': 'travel',
+  'Longreads': 'travel',
+  'Fathom Away': 'travel',
   'EUobserver': 'news',
   'The Verge': 'technology',
 };
