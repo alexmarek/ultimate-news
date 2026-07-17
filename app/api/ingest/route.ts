@@ -39,7 +39,7 @@ async function getFeedUrl(source: { id: string; feedUrl: string | null; url: str
 
 async function seedSources() {
   const sources = [
-    { id: 'propublica', name: 'ProPublica', url: 'https://www.propublica.org', feedUrl: 'https://www.propublica.org/feeds/propublica/main', ingestStrategy: 'rss', lang: 'en', tier: 'tier-1', editorialIndependence: 'independent', isWireService: false, contentKind: 'investigative', weight: 1.0, isActive: true },
+    { id: 'japantoday', name: 'Japan Today', url: 'https://japantoday.com/', feedUrl: null, ingestStrategy: 'rss', lang: 'en', tier: 'tier-1', editorialIndependence: 'independent', isWireService: false, contentKind: 'news', weight: 0.9, isActive: true },
     { id: 'dw', name: 'Deutsche Welle', url: 'https://www.dw.com/en/top-stories/s-9097', feedUrl: 'https://rss.dw.com/rdf/rss-en-all', ingestStrategy: 'rss', lang: 'en', tier: 'tier-1', editorialIndependence: 'independent', isWireService: false, contentKind: 'news', weight: 0.9, isActive: true },
     { id: 'wired', name: 'Wired', url: 'https://www.wired.com', feedUrl: 'https://www.wired.com/feed/rss', ingestStrategy: 'rss', lang: 'en', tier: 'tier-1', editorialIndependence: 'independent', isWireService: false, contentKind: 'technology', weight: 1.0, isActive: true },
     { id: 'thehackernews', name: 'The Hacker News', url: 'https://thehackernews.com', feedUrl: 'https://feeds.feedburner.com/TheHackersNews', ingestStrategy: 'rss', lang: 'en', tier: 'tier-2', editorialIndependence: 'independent', isWireService: false, contentKind: 'cybersecurity', weight: 0.8, isActive: true },
