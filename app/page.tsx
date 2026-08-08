@@ -107,7 +107,7 @@ export default async function Home({
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
               <div className="flex items-center gap-4">
-              <Link href="/" className="font-serif text-display-3 font-bold text-[var(--text)] hover:text-[var(--text-body)] transition-colors">Ultimate News</Link>
+              <Link href={hideRead ? '/?hideRead=1' : '/'} className="font-serif text-display-3 font-bold text-[var(--text)] hover:text-[var(--text-body)] transition-colors">Ultimate News</Link>
               <div className="flex items-center gap-1">
                 <Suspense>
                   <HideReadToggle />
