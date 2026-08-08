@@ -103,6 +103,8 @@ Return JSON format:
   "incomplete": boolean
 }
 
+The summary must be 4-6 sentences (roughly 80-140 words) and capture the key facts and context of the article. Plain text only — no HTML tags, no markdown, no bullet points.
+
 Article details:
 - Source: {sourceName}
 - Language: {sourceLang}

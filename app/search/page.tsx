@@ -7,6 +7,7 @@ import { Newspaper, ArrowLeft, Search } from 'lucide-react';
 import TimeAgo from '@/components/TimeAgo';
 import { useKeyboardNav } from '@/components/useKeyboardNav';
 import HelpModal from '@/components/HelpModal';
+import { stripHtml, decodeEntities } from '@/lib/text';
 
 interface SearchResult {
   id: string;
@@ -160,7 +161,7 @@ export default function SearchPage() {
 
                       <Link href={`/article/${r.id}`} className="block">
                         <h2 className="font-serif text-headline-md font-semibold text-[var(--text)] mb-1 hover:text-[var(--text-body)] transition-colors">
-                          {r.title}
+                          {decodeEntities(r.title)}
                         </h2>
                       </Link>
 
@@ -174,7 +175,7 @@ export default function SearchPage() {
 
                       {(r.summary || r.excerpt) && (
                         <p className="text-body-md text-[var(--text-body)] line-clamp-2">
-                          {r.summary || r.excerpt}
+                          {stripHtml(r.summary || r.excerpt)}
                         </p>
                       )}
                     </div>

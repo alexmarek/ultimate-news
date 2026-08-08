@@ -3,6 +3,7 @@
 // Uses source contentKind as area signal + title keywords for topic extraction.
 
 import { AREAS, type Area } from '@/lib/types';
+import { stripHtml } from '@/lib/text';
 
 interface EnrichInput {
   sourceName: string;
@@ -162,6 +163,18 @@ const sourceContentKind: Record<string, string> = {
   'The Verge': 'technology',
 };
 
+// Take whole sentences from text until maxLen is reached
+function firstSentences(text: string, maxLen: number): string {
+  const sentences = text.match(/[^.!?]+[.!?]+["')\]]*(?:\s|$)/g);
+  if (!sentences) return text.slice(0, maxLen).trim();
+  let out = '';
+  for (const s of sentences) {
+    if (out.length > 0 && (out + s).length > maxLen) break;
+    out += s;
+  }
+  return out.trim() || text.slice(0, maxLen).trim();
+}
+
 export async function enrichArticle(input: EnrichInput): Promise<EnrichOutput> {
   // 1. Determine area: title keywords > source contentKind > random
   const keywordArea = titleKeywordArea(input.title);
@@ -183,8 +196,15 @@ export async function enrichArticle(input: EnrichInput): Promise<EnrichOutput> {
   const entities = sourceEntities[input.sourceName] || ['Global Organization', 'Expert Analysis', 'Industry Leader'];
   const pick = (arr: string[]) => arr[Math.floor(Math.random() * arr.length)];
 
+  const cleanExcerpt = stripHtml(input.excerpt || '');
+  const cleanContent = input.content ? stripHtml(input.content) : '';
+  let summary = cleanExcerpt;
+  if (cleanContent && summary.length < 500) {
+    summary = firstSentences((summary + ' ' + cleanContent).trim(), 800);
+  }
+
   return {
-    summary: input.excerpt || input.content?.replace(/<[^>]*>/g, '').slice(0, 400) || '',
+    summary,
     areas: [{ area: selectedArea, confidence: keywordArea ? 0.85 : kindArea ? 0.7 : 0.5 }],
     topics,
     entities: [pick(entities), pick(entities)],

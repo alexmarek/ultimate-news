@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import Parser from 'rss-parser';
 import { extractImageFromRssItem } from '@/lib/ingest/extractImage';
+import { fetchArticleText } from '@/lib/ingest/fetchArticleText';
+import { stripHtml } from '@/lib/text';
 import { canonicalizeUrl, articleIdFromUrl } from '@/lib/ingest/canonicalize';
 import { enrichArticle } from '@/lib/ai/enrich';
 import { embed } from '@/lib/ai/embed';
@@ -41,7 +43,6 @@ export async function seedSources() {
   const sources = [
     { id: 'japantoday', name: 'Japan Today', url: 'https://japantoday.com/', feedUrl: null, ingestStrategy: 'rss', lang: 'en', tier: 'tier-1', editorialIndependence: 'independent', isWireService: false, contentKind: 'news', weight: 0.9, isActive: true },
     { id: 'dw', name: 'Deutsche Welle', url: 'https://www.dw.com/en/top-stories/s-9097', feedUrl: 'https://rss.dw.com/rdf/rss-en-all', ingestStrategy: 'rss', lang: 'en', tier: 'tier-1', editorialIndependence: 'independent', isWireService: false, contentKind: 'news', weight: 0.9, isActive: true },
-    { id: 'wired', name: 'Wired', url: 'https://www.wired.com', feedUrl: 'https://www.wired.com/feed/rss', ingestStrategy: 'rss', lang: 'en', tier: 'tier-1', editorialIndependence: 'independent', isWireService: false, contentKind: 'technology', weight: 1.0, isActive: true },
     { id: 'thehackernews', name: 'The Hacker News', url: 'https://thehackernews.com', feedUrl: 'https://feeds.feedburner.com/TheHackersNews', ingestStrategy: 'rss', lang: 'en', tier: 'tier-2', editorialIndependence: 'independent', isWireService: false, contentKind: 'cybersecurity', weight: 0.8, isActive: true },
     { id: 'insideclimatenews', name: 'Inside Climate News', url: 'https://insideclimatenews.org', feedUrl: 'https://insideclimatenews.org/feed/', ingestStrategy: 'rss', lang: 'en', tier: 'tier-2', editorialIndependence: 'independent', isWireService: false, contentKind: 'environment', weight: 0.85, isActive: true },
     { id: 'bbc-future-planet', name: 'BBC Future Planet', url: 'https://www.bbc.com/future-planet', feedUrl: 'https://feeds.bbci.co.uk/news/science_and_environment/rss.xml', ingestStrategy: 'rss', lang: 'en', tier: 'tier-1', editorialIndependence: 'independent', isWireService: false, contentKind: 'environment', weight: 0.85, isActive: true },
@@ -52,14 +53,14 @@ export async function seedSources() {
     { id: 'longreads-travel', name: 'Longreads', url: 'https://longreads.com/tag/travel/', feedUrl: 'https://longreads.com/tag/travel/feed/', ingestStrategy: 'rss', lang: 'en', tier: 'tier-1', editorialIndependence: 'independent', isWireService: false, contentKind: 'travel', weight: 0.9, isActive: true },
     { id: 'fathomaway', name: 'Fathom Away', url: 'https://fathomaway.com', feedUrl: 'https://fathomaway.com/feed/', ingestStrategy: 'rss', lang: 'en', tier: 'tier-1', editorialIndependence: 'independent', isWireService: false, contentKind: 'travel', weight: 0.9, isActive: true },
     { id: 'euobserver', name: 'EUobserver', url: 'https://euobserver.com/', feedUrl: null, ingestStrategy: 'rss', lang: 'en', tier: 'tier-1', editorialIndependence: 'independent', isWireService: false, contentKind: 'news', weight: 0.9, isActive: true },
-    { id: 'theverge', name: 'The Verge', url: 'https://www.theverge.com/', feedUrl: null, ingestStrategy: 'rss', lang: 'en', tier: 'tier-1', editorialIndependence: 'independent', isWireService: false, contentKind: 'technology', weight: 1.0, isActive: true },
+    { id: 'theverge', name: 'The Verge', url: 'https://www.theverge.com/tech', feedUrl: 'https://www.theverge.com/rss/tech/index.xml', ingestStrategy: 'rss', lang: 'en', tier: 'tier-1', editorialIndependence: 'independent', isWireService: false, contentKind: 'technology', weight: 1.0, isActive: true },
   ];
 
   for (const s of sources) {
     await prisma.source.upsert({
       where: { id: s.id },
       create: s,
-      update: { isActive: true },
+      update: { isActive: true, feedUrl: s.feedUrl, name: s.name, url: s.url },
     });
   }
 
@@ -178,16 +179,24 @@ export async function runIngest(sources: Awaited<ReturnType<typeof prisma.source
         const maxAge = 7 * 24 * 60 * 60 * 1000;
         if (config.category !== 'Travel' && Date.now() - publishedAt.getTime() > maxAge) continue;
 
-        const excerpt = item.contentSnippet || item.summary || '';
-        const title = item.title || 'Untitled';
+        const excerpt = stripHtml(item.contentSnippet || item.summary || '');
+        const title = stripHtml(item.title || 'Untitled');
         const imageUrl = extractImageFromRssItem(item as unknown as Record<string, unknown>);
+
+        let content = stripHtml(item.content || item['content:encoded'] || '');
+
+        // RSS gave us too little to summarize from — fetch the article body
+        if (content.length < 300 && excerpt.length < 300) {
+          const fetched = await fetchArticleText(canonicalUrl);
+          if (fetched) content = fetched;
+        }
 
         const enrichment = await enrichArticle({
           sourceName: source.name,
           sourceLang: source.lang,
           title,
           excerpt,
-          content: item.content || undefined,
+          content: content || undefined,
         });
 
         // Determine category deterministically based on our SOURCE_CONFIGS matrix
@@ -212,7 +221,7 @@ export async function runIngest(sources: Awaited<ReturnType<typeof prisma.source
           originalUrl: rawUrl,
           title,
           excerpt,
-          content: item.content || item['content:encoded'] || null,
+          content: content || null,
           publishedAt,
           author: item.creator || null,
           lang: source.lang,

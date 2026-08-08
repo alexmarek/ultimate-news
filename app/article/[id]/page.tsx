@@ -5,6 +5,7 @@ import { Newspaper, ExternalLink, ArrowLeft } from 'lucide-react';
 import TimeAgo from '@/components/TimeAgo';
 import MarkRead from '@/components/MarkRead';
 import ArticleImage from '@/components/ArticleImage';
+import { stripHtml, decodeEntities } from '@/lib/text';
 
 function SourceInitial({ name }: { name: string }) {
   return (
@@ -33,7 +34,7 @@ export default async function ArticlePage({
 
   if (!article) notFound();
 
-  const summaryParagraphs = article.summary?.split('\n').filter(Boolean) ?? [];
+  const summaryParagraphs = article.summary?.split('\n').map(stripHtml).filter(Boolean) ?? [];
   const topics = article.topics ? article.topics.split(',') : [];
   const corroborationScore = article.cluster
     ? Math.round(article.cluster.corroborationScore * 100)
@@ -91,7 +92,7 @@ export default async function ArticlePage({
             </h4>
             {ca.excerpt && (
               <p className="text-body-sm text-[var(--text-faint)] line-clamp-1">
-                {ca.excerpt}
+                {stripHtml(ca.excerpt)}
               </p>
             )}
           </div>
@@ -129,7 +130,7 @@ export default async function ArticlePage({
 
         {/* Headline */}
         <h1 className="font-serif text-display-3 md:text-display-2 font-semibold text-[var(--text)] mb-5">
-          {article.title}
+          {decodeEntities(article.title)}
         </h1>
 
         {/* Source row */}
@@ -192,21 +193,6 @@ export default async function ArticlePage({
                   </li>
                 ))}
               </ul>
-            )}
-
-            {/* Article Extract */}
-            {article.content && (
-              <div className="border-t border-[var(--border)] pt-6 mt-6">
-                <h2 className="text-body-sm font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-3">
-                  Article Extract
-                </h2>
-                <p className="text-body-md text-[var(--text-body)] leading-relaxed max-w-none">
-                  {(() => {
-                    const clean = article.content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
-                    return clean.length > 1500 ? clean.slice(0, 1500) + '...' : clean;
-                  })()}
-                </p>
-              </div>
             )}
 
             {/* Read on source */}

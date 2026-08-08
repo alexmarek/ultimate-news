@@ -15,7 +15,6 @@ export const DAILY_FEED_TARGETS: Record<Area, number> = {
 };
 
 export const SOURCE_CONFIGS: Record<string, { category: Area; limit: number }> = {
-  'wired': { category: 'Technology', limit: 2 },
   'theverge': { category: 'Technology', limit: 2 },
   'goodnewsnetwork': { category: 'Positive News', limit: 4 },
   'qz': { category: 'Business', limit: 2 },

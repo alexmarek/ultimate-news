@@ -5,6 +5,7 @@ import type { Article, Source, Cluster } from '@prisma/client';
 import { formatDistanceToNow } from 'date-fns';
 import { ExternalLink, Newspaper } from 'lucide-react';
 import ArticleImage from '@/components/ArticleImage';
+import { stripHtml, decodeEntities } from '@/lib/text';
 
 interface NewsCardProps {
   article: Article & { source: Source };
@@ -57,7 +58,7 @@ export default function NewsCard({ article, cluster, isRead, dataKbId }: NewsCar
         {/* Title */}
         <Link href={`/article/${article.id}`} className="block">
           <h3 className={`font-serif text-headline-md font-semibold text-[var(--text)] line-clamp-4 hover:text-[var(--text-body)] transition-colors ${cluster && cluster.totalSourceCount > 1 ? 'mb-1.5' : 'mb-3'}`}>
-            {article.title}
+            {decodeEntities(article.title)}
           </h3>
         </Link>
 
@@ -76,7 +77,7 @@ export default function NewsCard({ article, cluster, isRead, dataKbId }: NewsCar
         {/* Summary */}
         {article.summary && (
           <p className="text-[var(--text-body)] mb-4 line-clamp-5 text-body-md">
-            {article.summary}
+            {stripHtml(article.summary)}
           </p>
         )}
 
