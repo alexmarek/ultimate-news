@@ -180,12 +180,14 @@ export default async function Home({
 
         {totalPages > 1 && (
           <div className="mt-10">
-            <Pagination
-              currentPage={page}
-              totalPages={totalPages}
-              query={query}
-              category={category}
-            />
+            <Suspense>
+              <Pagination
+                currentPage={page}
+                totalPages={totalPages}
+                query={query}
+                category={category}
+              />
+            </Suspense>
           </div>
         )}
 
