@@ -9,6 +9,7 @@ import Link from 'next/link';
 import KeyboardNavWrapper from '@/components/KeyboardNavWrapper';
 import MasonryGrid from '@/components/MasonryGrid';
 import ThemeToggle from '@/components/ThemeToggle';
+import HideReadToggle from '@/components/HideReadToggle';
 import type { Article, Source, Cluster } from '@prisma/client';
 
 export const dynamic = 'force-dynamic';
@@ -107,7 +108,12 @@ export default async function Home({
             <div>
               <div className="flex items-center gap-4">
               <Link href="/" className="font-serif text-display-3 font-bold text-[var(--text)] hover:text-[var(--text-body)] transition-colors">Ultimate News</Link>
-              <ThemeToggle />
+              <div className="flex items-center gap-1">
+                <Suspense>
+                  <HideReadToggle />
+                </Suspense>
+                <ThemeToggle />
+              </div>
               </div>
               <p className="text-[var(--text-body)] mt-1">Curated news from sources you care about</p>
             </div>
