@@ -76,18 +76,33 @@ Important: choose the DOMINANT angle. When in doubt, pick the more specific cate
 
 === TOPIC EXTRACTION RULES ===
 
-Extract 0 to 5 topics that are specific nouns or noun phrases LITERALLY DISCUSSED in the article text. Do not invent topics. If fewer than 3 topics are clearly present, return fewer — even just 1 or 0.
+Extract 1-5 TOPICS from the article. Topics are meaningful concepts, entities, or subjects — NOT sliding-window word combinations from the title.
 
-Topics must be concrete entities, events, people, or concepts mentioned in the content — NOT generic category buzzwords.
+Good topics:
+- Named entities: 'FIFA', 'Gianni Infantino', 'British Columbia'
+- Subject nouns: 'wildfires', 'aviation safety', 'World Cup governance'
+- Domain concepts: 'far-right politics', 'wildlife conservation', 'greenhouse gas emissions'
 
-GOOD topic extraction:
-  Article about NHL goalie voting → ["Vezina Trophy", "NHL goaltenders", "Czech hockey"]
-  Article about news deserts → ["news deserts", "local journalism", "taxpayer costs"]
-  Article about cooking equipment → ["busking amplifiers", "street performance", "battery-powered PA"]
+Bad topics (never return these):
+- Two-word phrases lifted directly from the title as sliding windows (e.g., 'FIFA warns', 'warns against', 'against concerted' from a headline about FIFA)
+- Generic buzzwords not appearing in the article ('blockchain', 'innovation', 'gadgets')
+- Function words or fragments ('at least', 'on the', 'the new')
 
-BAD topic extraction:
-  ["blockchain", "innovation", "hardware"] ← generic Technology buzzwords, not in the hockey article
-  ["data", "gadgets", "privacy"] ← not in the media-economics article
+Each topic should be a standalone concept a reader would search for or click to follow. If you cannot find 3 meaningful topics, return fewer — even just 1 or 2.
+
+Examples:
+
+ARTICLE: "FIFA warns against 'concerted effort' to undermine Gianni Infantino"
+GOOD topics: FIFA, Gianni Infantino, World Cup governance
+BAD topics: FIFA warns, warns against, against concerted
+
+ARTICLE: "Canada: British Columbia declares emergency as fires spread"
+GOOD topics: British Columbia, wildfires, Canadian emergency response
+BAD topics: Canada British, Columbia declares
+
+ARTICLE: "Rare turtle to be sent back home in 5,000-mile trip"
+GOOD topics: sea turtles, wildlife conservation, Anglesey Sea Zoo
+BAD topics: Rare turtle, turtle to, be sent
 
 === NON-ENGLISH CONTENT ===
 

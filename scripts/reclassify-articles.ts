@@ -16,6 +16,7 @@ import { prisma } from '@/lib/db';
 import { AREAS } from '@/lib/types';
 import Anthropic from '@anthropic-ai/sdk';
 import { ENRICH_PROMPT } from '@/lib/ai/prompts';
+import { enrichArticle as mockEnrich } from '@/lib/ai/enrich-simple';
 
 const CONFIDENCE_THRESHOLD = 0.65;
 const DEFAULT_BATCH_SIZE = 50;
@@ -41,7 +42,15 @@ async function enrichWithClaude(
   excerpt: string,
   content: string | null,
 ): Promise<EnrichOutput> {
-  const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
+  const key = process.env.ANTHROPIC_API_KEY;
+
+  // Fall back to local mock when no real key is configured
+  if (!key || key.startsWith('sk-dummy')) {
+    console.log('  (mock enrichment — no real ANTHROPIC_API_KEY)');
+    return mockEnrich({ sourceName, sourceLang, title, excerpt, content: content || undefined });
+  }
+
+  const anthropic = new Anthropic({ apiKey: key });
 
   const prompt = ENRICH_PROMPT
     .replace('{sourceName}', sourceName)

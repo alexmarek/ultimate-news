@@ -5,6 +5,7 @@ import CategoryFilter from '@/components/CategoryFilter';
 import Pagination from '@/components/Pagination';
 import { prisma } from '@/lib/db';
 import { cookies } from 'next/headers';
+import { formatDistanceToNow } from 'date-fns';
 import Link from 'next/link';
 import KeyboardNavWrapper from '@/components/KeyboardNavWrapper';
 import MasonryGrid from '@/components/MasonryGrid';
@@ -100,6 +101,16 @@ export default async function Home({
 
   const allArticleIds = articles.map((a) => a.id);
 
+  // Footer stats
+  const activeSourceCount = await prisma.source.count({ where: { isActive: true } });
+  const latestArticle = await prisma.article.findFirst({
+    orderBy: { fetchedAt: 'desc' },
+    select: { fetchedAt: true },
+  });
+  const lastUpdated = latestArticle
+    ? formatDistanceToNow(latestArticle.fetchedAt, { addSuffix: true })
+    : null;
+
   return (
     <div className="min-h-screen bg-[var(--bg)]">
       <header className="bg-[var(--surface-elevated)] border-b border-[var(--border)] sticky top-0 z-50">
@@ -193,8 +204,8 @@ export default async function Home({
 
         <div className="mt-12 pt-8 border-t border-[var(--border)]">
           <div className="max-w-2xl mx-auto text-center text-[var(--text-body)] text-body-md">
-            <p>News updated every 24 hours</p>
-            <p className="mt-2">Sources: BBC, Reuters, Associated Press, and more</p>
+            {lastUpdated && <p>Last updated {lastUpdated}</p>}
+            <p className="mt-2">{activeSourceCount} sources across {categoryNames.length} categories</p>
           </div>
         </div>
       </main>

@@ -75,41 +75,45 @@ function titleKeywordArea(title: string): Area | null {
   return null;
 }
 
-function extractTopicsFromText(title: string, excerpt: string): string[] {
-  const text = (title + ' ' + excerpt).toLowerCase();
-  const words = text.split(/[^a-zA-Z0-9]+/).filter((w) => w.length > 3);
-  const wordFreq = new Map<string, number>();
-  for (const w of words) {
-    wordFreq.set(w, (wordFreq.get(w) || 0) + 1);
-  }
+function extractTopicsFromText(title: string, excerpt: string, content?: string): string[] {
+  // Use sentence-case body text, not the title — title-case headlines
+  // make every word look like a proper noun.
+  const text = (excerpt + ' ' + (content || '')).trim() || title;
 
-  const stopWords = new Set([
-    'this', 'that', 'with', 'from', 'they', 'have', 'been', 'were', 'their',
-    'about', 'which', 'when', 'what', 'more', 'than', 'over', 'into', 'also',
-    'after', 'before', 'would', 'could', 'these', 'those', 'there', 'very',
+  const STOP = new Set([
+    'the', 'a', 'an', 'in', 'on', 'at', 'to', 'from', 'with', 'and', 'but', 'or',
+    'for', 'of', 'by', 'as', 'is', 'are', 'was', 'were', 'be', 'been', 'it', 'its',
+    'this', 'that', 'these', 'those', 'more', 'most', 'new', 'after', 'before',
+    'over', 'under', 'into', 'about', 'against', 'between', 'during', 'says',
+    'said', 'will', 'would', 'could', 'should', 'has', 'have', 'had', 'not',
+    'than', 'then', 'so', 'also', 'just', 'now', 'first', 'last', 'many', 'may',
+    'up', 'out', 'off', 'back', 'home', 'next', 'latest', 'watch', 'video',
+    'once', 'gone', 'even', 'read', 'years', 'year', 'every', 'much',
   ]);
 
-  // Multi-word phrases: adjacent capitalized or significant words
-  const phrases: string[] = [];
-  const titleWords = title.split(/[^a-zA-Z0-9\u00C0-\u024F]+/).filter((w) => w.length > 1);
-  for (let i = 0; i < titleWords.length - 1; i++) {
-    const phrase = titleWords.slice(i, i + 2).join(' ');
-    if (phrase.length > 5 && !stopWords.has(phrase.toLowerCase().split(' ')[0])) {
-      phrases.push(phrase);
-    }
+  // Capitalized sequences of 1-3 words = candidate proper-noun topics
+  const freq = new Map<string, number>();
+  const matches = text.matchAll(/\b([A-Z][a-zA-Z0-9À-ɏ]*(?:[ \-][A-Z][a-zA-Z0-9À-ɏ]*){0,2})\b/g);
+  for (const m of matches) {
+    const phrase = m[1].trim();
+    if (phrase.length < 3) continue;
+    const words = phrase.split(/[ \-]/);
+    if (STOP.has(words[0].toLowerCase())) continue;
+    if (words.every((w) => STOP.has(w.toLowerCase()))) continue;
+    freq.set(phrase, (freq.get(phrase) || 0) + 1);
   }
 
-  // Get top single words by frequency
-  const sorted = [...wordFreq.entries()]
-    .filter(([w]) => !stopWords.has(w) && w.length > 3)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 5)
-    .map(([w]) => w);
+  // Rank: frequency desc, shorter phrase first on ties (more canonical)
+  const ranked = [...freq.entries()].sort((a, b) => b[1] - a[1] || a[0].length - b[0].length);
 
-  // Combine phrases + top words, take up to 3
-  const result = [...new Set([...phrases, ...sorted])].slice(0, 3);
-
-  return result.length > 0 ? result : [];
+  // Drop longer phrases that merely extend an already-kept shorter one
+  const kept: string[] = [];
+  for (const [phrase, count] of ranked) {
+    const redundant = kept.some((k) => phrase.includes(k) && (freq.get(k) || 0) >= count);
+    if (!redundant) kept.push(phrase);
+    if (kept.length >= 3) break;
+  }
+  return kept;
 }
 
 const sourceEntities: Record<string, string[]> = {
@@ -189,8 +193,8 @@ export async function enrichArticle(input: EnrichInput): Promise<EnrichOutput> {
     selectedArea = AREAS[Math.floor(Math.random() * AREAS.length)];
   }
 
-  // 2. Extract topics from actual text (title + excerpt)
-  const topics = extractTopicsFromText(input.title, input.excerpt);
+  // 2. Extract topics from actual text (excerpt + fetched content)
+  const topics = extractTopicsFromText(input.title, input.excerpt, input.content);
 
   // 3. Entities from source-specific list or generic
   const entities = sourceEntities[input.sourceName] || ['Global Organization', 'Expert Analysis', 'Industry Leader'];
