@@ -34,6 +34,24 @@ const STOPWORDS = new Set(
     .split(' '),
 );
 
+/**
+ * Some feeds give the headline followed by the start of the same text again
+ * ("Title words ... Title words ..."). For short snippets, cut at the echo.
+ * Long texts are left alone: a repeated opening there is legitimate prose.
+ */
+function dropEchoedStart(text: string): string {
+  const words = text.split(' ');
+  if (words.length < 14 || words.length > 80) return text;
+  const opening = words.slice(0, 6).join(' ').toLowerCase();
+  for (let i = 8; i <= words.length - 6; i++) {
+    if (words.slice(i, i + 6).join(' ').toLowerCase() === opening) {
+      const cut = words.slice(0, i).join(' ').trim();
+      return /[.!?]["'\u201D\u2019)\]]*$/.test(cut) ? cut : `${cut}.`;
+    }
+  }
+  return text;
+}
+
 /** Strips feed boilerplate and drops a tail that the feed cut off mid-sentence. */
 export function cleanSourceText(raw: string): string {
   let text = stripHtml(raw);
@@ -49,7 +67,7 @@ export function cleanSourceText(raw: string): string {
       text = sentences.join(' ');
     }
   }
-  return text;
+  return dropEchoedStart(text);
 }
 
 function tokenize(sentence: string): string[] {

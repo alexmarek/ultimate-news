@@ -14,6 +14,16 @@ test('cleanSourceText removes WordPress "appeared first on" footers', () => {
   assert.equal(cleanSourceText(raw), 'A useful sentence about the topic at hand.');
 });
 
+test('cleanSourceText cuts a headline that the feed repeats inside the same snippet', () => {
+  const raw = 'U.S. News ranks diets for diabetes management each year \u2014 here are 10 top-performing approaches and how each works U.S. News ranks diets for diabetes management each year';
+  assert.equal(cleanSourceText(raw), 'U.S. News ranks diets for diabetes management each year \u2014 here are 10 top-performing approaches and how each works.');
+});
+
+test('cleanSourceText keeps long articles whose opening words legitimately recur', () => {
+  const body = Array.from({ length: 30 }, (_, i) => `According to the report published in March, finding number ${i} matters.`).join(' ');
+  assert.equal(cleanSourceText(body), body);
+});
+
 test('excerpt that is repeated inside the body does not repeat in the summary (live-site bug)', () => {
   const excerpt = 'Critics have crowned a handful of standouts in the first half of 2026. Here are the five films with the strongest reviews.';
   const out = buildExtractiveSummary({ title: 'Best films of 2026 so far', excerpt, content: excerpt });
