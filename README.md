@@ -1,10 +1,10 @@
 # Ultimate News
 
-A curated daily news aggregator — articles from 13 sources across 7 categories, refreshed every 24 hours via cron. Built with Next.js 15, Tailwind v4, and Prisma.
+A curated daily news aggregator — articles from 12 sources across 7 categories, refreshed every 24 hours via cron. Built with Next.js 15, Tailwind v4, and Prisma.
 
 ## Features
 
-- **13 sources** across World News, Technology, Science, Environment, Positive News, Business, Travel (defined in `lib/config/sources.ts`)
+- **12 sources** across World News, Technology, Science, Environment, Positive News, Business, Travel (defined in `lib/config/sources.ts`)
 - **14-day freshness limit** — articles older than 14 days are never ingested and never shown (`MAX_ARTICLE_AGE_DAYS` in `lib/config/dailyFeed.ts`)
 - **Daily refresh** — Vercel Cron re-ingests all articles at 08:00 UTC; the previous feed is replaced only once new articles are ready, so a failed run never empties the site
 - **12 articles per page** with pagination

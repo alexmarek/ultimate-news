@@ -4,11 +4,10 @@ import { SOURCES, SOURCES_BY_ID, toSourceRecord } from '@/lib/config/sources';
 import { DAILY_FEED_TARGETS, MAX_ARTICLE_AGE_DAYS, freshCutoff, visibleArticleFilter } from '@/lib/config/dailyFeed';
 import { AREAS } from '@/lib/types';
 
-const REMOVED = ['bbc-future-planet', 'thehackernews', 'dw', 'matadornetwork', 'longreads-travel', 'europeanbestdestinations', 'japantoday'];
+const REMOVED = ['bbc-future-planet', 'thehackernews', 'dw', 'matadornetwork', 'longreads-travel', 'europeanbestdestinations', 'japantoday', 'allsides-world'];
 const ADDED: Record<string, { url: string; category: string }> = {
   'ricksteves-cameron': { url: 'https://blog.ricksteves.com/cameron/', category: 'Travel' },
   zmescience: { url: 'https://www.zmescience.com/', category: 'Science' },
-  'allsides-world': { url: 'https://www.allsides.com/topics/world', category: 'World News' },
   'un-climate-reports': { url: 'https://news.un.org/en/news/topic/climate-change', category: 'Environment' },
   nautilus: { url: 'https://nautil.us/', category: 'Positive News' },
 };

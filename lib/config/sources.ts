@@ -33,8 +33,6 @@ export const SOURCES: SourceDef[] = [
   // --- World News ---
   { id: 'newsonjapan', name: 'News On Japan', url: 'https://newsonjapan.com/', feeds: ['https://newsonjapan.com/rss/top.xml'], category: 'World News', limit: 3, contentKind: 'news', tier: 'tier-1', weight: 0.9 },
   { id: 'euobserver', name: 'EUobserver', url: 'https://euobserver.com/', category: 'World News', limit: 2, contentKind: 'news', tier: 'tier-1', weight: 0.9 },
-  // [Unverified] scraped; not yet checked against the live page.
-  { id: 'allsides-world', name: 'AllSides', url: 'https://www.allsides.com/topics/world', scrape: true, category: 'World News', limit: 3, contentKind: 'news', tier: 'tier-1', weight: 0.85 },
 
   // --- Technology ---
   { id: 'theverge', name: 'The Verge', url: 'https://www.theverge.com/tech', feeds: ['https://www.theverge.com/rss/tech/index.xml'], category: 'Technology', limit: 2, contentKind: 'technology', tier: 'tier-1', weight: 1.0 },
