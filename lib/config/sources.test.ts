@@ -65,7 +65,7 @@ test('toSourceRecord produces a DB row', () => {
   const row = toSourceRecord(SOURCES_BY_ID.theverge);
   assert.equal(row.feedUrl, 'https://www.theverge.com/rss/tech/index.xml');
   assert.equal(row.ingestStrategy, 'rss');
-  assert.equal(toSourceRecord(SOURCES_BY_ID['allsides-world']).ingestStrategy, 'html');
+  assert.equal(toSourceRecord(SOURCES_BY_ID.zmescience).ingestStrategy, 'html');
 });
 
 test('freshness window is 14 days', () => {
