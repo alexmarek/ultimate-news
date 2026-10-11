@@ -32,6 +32,7 @@ export interface SourceDef {
 export const SOURCES: SourceDef[] = [
   // --- World News ---
   { id: 'newsonjapan', name: 'News On Japan', url: 'https://newsonjapan.com/', feeds: ['https://newsonjapan.com/rss/top.xml'], category: 'World News', limit: 3, contentKind: 'news', tier: 'tier-1', weight: 0.9 },
+  { id: 'japantimes', name: 'The Japan Times', url: 'https://www.japantimes.co.jp/', feeds: ['https://www.japantimes.co.jp/feed/topstories/'], category: 'World News', limit: 3, contentKind: 'news', tier: 'tier-1', weight: 0.9 },
   { id: 'euobserver', name: 'EUobserver', url: 'https://euobserver.com/', category: 'World News', limit: 2, contentKind: 'news', tier: 'tier-1', weight: 0.9 },
 
   // --- Technology ---

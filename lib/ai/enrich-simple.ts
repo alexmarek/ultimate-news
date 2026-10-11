@@ -163,6 +163,7 @@ const sourceContentKind: Record<string, string> = {
   'EUobserver': 'news',
   'The Verge': 'technology',
   'News On Japan': 'news',
+  'The Japan Times': 'news',
   'ZME Science': 'science',
   'UN Climate Change': 'environment',
   'Nautilus': 'positive-news',

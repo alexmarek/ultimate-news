@@ -47,11 +47,16 @@ test('the six new sources are scrape-only: no feed URLs configured', () => {
   }
 });
 
-test('News On Japan uses the requested RSS feed', () => {
-  const s = SOURCES_BY_ID.newsonjapan;
-  assert.deepEqual(s.feeds, ['https://newsonjapan.com/rss/top.xml']);
-  assert.equal(s.category, 'World News');
-  assert.equal(s.scrape, undefined);
+test('News On Japan and The Japan Times use the requested RSS feeds', () => {
+  const feeds: Record<string, string> = {
+    newsonjapan: 'https://newsonjapan.com/rss/top.xml',
+    japantimes: 'https://www.japantimes.co.jp/feed/topstories/',
+  };
+  for (const [id, feed] of Object.entries(feeds)) {
+    assert.deepEqual(SOURCES_BY_ID[id].feeds, [feed], id);
+    assert.equal(SOURCES_BY_ID[id].category, 'World News', id);
+    assert.equal(SOURCES_BY_ID[id].scrape, undefined, id);
+  }
 });
 
 test('category targets equal the sum of source limits', () => {
