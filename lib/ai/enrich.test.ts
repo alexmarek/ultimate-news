@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildPrompt, enrichArticle, parseResponse } from '@/lib/ai/enrich';
+import { buildPrompt, enrichArticle, isSnippet, parseResponse } from '@/lib/ai/enrich';
 import { countSummaryWords, parseSummary } from '@/lib/summary';
 
 const GOOD_REPLY = `<metadata>
@@ -62,6 +62,46 @@ test('parseResponse handles a reply cut off at max_tokens (unclosed summary)', (
 test('parseResponse rejects replies with no usable summary', () => {
   assert.equal(parseResponse('Sorry, I cannot help with that.'), null);
   assert.equal(parseResponse('<metadata>{}</metadata><summary>Too short.</summary>'), null);
+});
+
+// What the model actually returned for the Quartz snippet (headline only) before the snippet rule existed.
+const QUARTZ_REPLY = `<metadata>{"areas": [{"area": "Science", "confidence": 0.6}], "topics": ["diabetes"], "entities": ["U.S. News"], "titleEn": null, "incomplete": true}</metadata>
+<summary>
+**U.S. News ranks diets for diabetes management each year, listing 10 top-performing approaches.**
+
+The excerpt provided does not contain the detailed information about how each approach works.
+
+## Key points
+
+- U.S. News publishes an annual ranking of diets.
+- Ten approaches are listed for diabetes management.
+
+## Why it matters
+
+Diet plays a central role in managing diabetes.
+</summary>`;
+
+test('snippet replies keep only the lead: no meta-commentary, key points or invented context', () => {
+  const parsed = parseResponse(QUARTZ_REPLY, false, true);
+  assert.ok(parsed);
+  assert.equal(parsed.summary, '**U.S. News ranks diets for diabetes management each year, listing 10 top-performing approaches.**');
+  assert.ok(!/excerpt/i.test(parsed.summary));
+});
+
+test('full-article replies drop meta-commentary but keep their structure', () => {
+  const parsed = parseResponse(QUARTZ_REPLY.replace('the detailed information about how each approach works', 'the detailed information'), false, false);
+  assert.ok(parsed);
+  assert.ok(!/excerpt/i.test(parsed.summary));
+  assert.deepEqual(parseSummary(parsed.summary).map((b) => b.type), ['lead', 'heading', 'list', 'heading', 'paragraph']);
+});
+
+test('isSnippet / buildPrompt flag short texts so the prompt applies the snippet rule', () => {
+  const short = { sourceName: 'Quartz', sourceLang: 'en', title: 'T', excerpt: 'Only a headline-length snippet here.' };
+  assert.ok(isSnippet(short));
+  assert.ok(buildPrompt(short).includes('Text type: SNIPPET'));
+  const long = { ...short, content: Array.from({ length: 300 }, (_, i) => `word${i}`).join(' ') };
+  assert.ok(!isSnippet(long));
+  assert.ok(buildPrompt(long).includes('Text type: full article text'));
 });
 
 test('buildPrompt substitutes article text literally ($ patterns and {placeholders} are not interpreted)', () => {

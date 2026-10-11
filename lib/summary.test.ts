@@ -4,6 +4,9 @@ import {
   MAX_SUMMARY_WORDS,
   countSummaryWords,
   dedupeSentences,
+  dropMetaCommentary,
+  isMetaCommentary,
+  leadOnlySummary,
   normalizeSummary,
   parseInline,
   parseSummary,
@@ -41,6 +44,39 @@ test('plain legacy summaries parse as paragraphs without a lead', () => {
 test('a bold first paragraph with extra text is not treated as a lead', () => {
   const blocks = parseSummary('**Bold start.** And then plain text.');
   assert.equal(blocks[0].type, 'paragraph');
+});
+
+test('a complete bold opening sentence followed by text becomes the lead (live Verge case)', () => {
+  const blocks = parseSummary('**Ledger says tampered hardware drained users\' wallets.** Reports have been mounting since last week.\nThe reseller paused sales.');
+  assert.deepEqual(blocks.map((b) => b.type), ['lead', 'paragraph']);
+  assert.equal(blocks[0].type === 'lead' && blocks[0].text, 'Ledger says tampered hardware drained users\' wallets.');
+  assert.equal(blocks[1].type === 'paragraph' && blocks[1].text, 'Reports have been mounting since last week. The reseller paused sales.');
+});
+
+test('several bold opening sentences form one lead; a bold name at the start does not', () => {
+  const two = parseSummary('**The central bank raised rates again today.** **Markets reacted within minutes.** Analysts expect more.');
+  assert.equal(two[0].type === 'lead' && two[0].text, 'The central bank raised rates again today. Markets reacted within minutes.');
+  const name = parseSummary('**Apple** announced a new laptop with a faster chip and a longer battery life.');
+  assert.equal(name[0].type, 'paragraph');
+});
+
+test('lead splitting survives normalizeSummary (stored as lead + paragraph)', () => {
+  const out = normalizeSummary('**The council approved the new tram line on Monday evening.** Construction starts in spring.');
+  assert.equal(out, '**The council approved the new tram line on Monday evening.**\n\nConstruction starts in spring.');
+});
+
+test('meta-commentary about the supplied text is detected and removed', () => {
+  assert.ok(isMetaCommentary('The excerpt provided does not contain the detailed information about each diet.'));
+  assert.ok(isMetaCommentary('The snippet only lists the headline.'));
+  assert.ok(!isMetaCommentary('Researchers excerpted the report and found only minor errors.'));
+  const cleaned = dropMetaCommentary('**U.S. News ranks diets for diabetes management each year.**\n\nThe excerpt provided does not contain the detailed information. Ten approaches are listed.');
+  assert.equal(cleaned, '**U.S. News ranks diets for diabetes management each year.**\n\nTen approaches are listed.');
+});
+
+test('leadOnlySummary keeps the lead and one paragraph and drops lists and headings', () => {
+  const out = leadOnlySummary(STRUCTURED);
+  assert.deepEqual(parseSummary(out).map((b) => b.type), ['lead', 'paragraph']);
+  assert.equal(leadOnlySummary('**Just a lead sentence for the story today.**'), '**Just a lead sentence for the story today.**');
 });
 
 test('parseInline handles bold, italic and stray asterisks', () => {

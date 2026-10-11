@@ -10,7 +10,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { ENRICH_PROMPT } from '@/lib/ai/prompts';
 import { enrichArticle as fallbackEnrich } from '@/lib/ai/enrich-simple';
-import { MAX_SUMMARY_WORDS, normalizeSummary, countSummaryWords } from '@/lib/summary';
+import { MAX_SUMMARY_WORDS, countSummaryWords, countWords, dropMetaCommentary, leadOnlySummary, normalizeSummary } from '@/lib/summary';
 
 export interface EnrichInput {
   sourceName: string;
@@ -42,6 +42,14 @@ const MAX_ARTICLE_CHARS = 16000;
 const MAX_OUTPUT_TOKENS = 2048;
 // A usable summary has at least this many words; shorter means the reply was broken.
 const MIN_SUMMARY_WORDS = 12;
+// Below this many words the source gave only a snippet (typical for feeds whose pages we
+// cannot read). Such articles get a short lead only: more would restate the snippet or invent context.
+const SNIPPET_MAX_WORDS = 150;
+const MIN_SNIPPET_SUMMARY_WORDS = 5;
+
+export function isSnippet(input: Pick<EnrichInput, 'excerpt' | 'content'>): boolean {
+  return countWords(input.content || input.excerpt || '') < SNIPPET_MAX_WORDS;
+}
 
 export function buildPrompt(input: EnrichInput): string {
   const values: Record<string, string> = {
@@ -50,9 +58,10 @@ export function buildPrompt(input: EnrichInput): string {
     title: input.title,
     excerpt: input.excerpt,
     content: (input.content || input.excerpt || '').slice(0, MAX_ARTICLE_CHARS),
+    textType: isSnippet(input) ? 'SNIPPET (only the start of the article is available)' : 'full article text',
   };
   // Single pass with a replacer function: article text may contain "$&" or "{title}".
-  return ENRICH_PROMPT.replace(/\{(sourceName|sourceLang|title|excerpt|content)\}/g, (_, key: string) => values[key]);
+  return ENRICH_PROMPT.replace(/\{(sourceName|sourceLang|title|excerpt|content|textType)\}/g, (_, key: string) => values[key]);
 }
 
 interface ParsedReply {
@@ -65,16 +74,19 @@ interface ParsedReply {
 }
 
 /** Parses the <metadata>/<summary> reply. Returns null if no usable summary is present. */
-export function parseResponse(text: string, truncated = false): ParsedReply | null {
+export function parseResponse(text: string, truncated = false, snippet = false): ParsedReply | null {
   const summaryMatch = text.match(/<summary>([\s\S]*?)(?:<\/summary>|$)/i);
   if (!summaryMatch) return null;
 
   const closed = /<\/summary>/i.test(text);
-  const summary = normalizeSummary(summaryMatch[1], {
+  // Remove talk about the text itself, and for snippets everything beyond the lead.
+  let raw = dropMetaCommentary(summaryMatch[1]);
+  if (snippet) raw = leadOnlySummary(raw);
+  const summary = normalizeSummary(raw, {
     maxWords: MAX_SUMMARY_WORDS,
     dropTrailingFragment: truncated || !closed,
   });
-  if (countSummaryWords(summary) < MIN_SUMMARY_WORDS) return null;
+  if (countSummaryWords(summary) < (snippet ? MIN_SNIPPET_SUMMARY_WORDS : MIN_SUMMARY_WORDS)) return null;
 
   let meta: Record<string, unknown> = {};
   const metaMatch = text.match(/<metadata>([\s\S]*?)<\/metadata>/i);
@@ -130,7 +142,7 @@ export async function enrichArticle(input: EnrichInput): Promise<EnrichOutput> {
       .map((block) => (block as { text: string }).text)
       .join('\n');
 
-    const parsed = parseResponse(text, msg.stop_reason === 'max_tokens');
+    const parsed = parseResponse(text, msg.stop_reason === 'max_tokens', isSnippet(input));
     if (parsed) {
       const fallbackAreas = [{ area: 'World News', confidence: 0.5 }];
       return {

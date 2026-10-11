@@ -196,13 +196,35 @@ export function parseSummary(summary: string | null | undefined): SummaryBlock[]
   flushParagraph();
   flushList();
 
-  // A bold first paragraph is the lead (main message).
+  // The first paragraph is the lead (main message) when it is entirely bold, or when it opens
+  // with one or more complete bold sentences followed by plain text ("**Lead.** Details...").
   const first = blocks[0];
-  if (first?.type === 'paragraph' && first.text.startsWith('**') && first.text.endsWith('**') && first.text.length > 4) {
-    const inner = first.text.slice(2, -2);
-    if (!inner.includes('**')) blocks[0] = { type: 'lead', text: inner };
+  if (first?.type === 'paragraph') {
+    if (first.text.startsWith('**') && first.text.endsWith('**') && first.text.length > 4 && !first.text.slice(2, -2).includes('**')) {
+      blocks[0] = { type: 'lead', text: first.text.slice(2, -2) };
+    } else {
+      const split = splitBoldOpening(first.text);
+      if (split) blocks.splice(0, 1, { type: 'lead', text: split.lead }, ...(split.rest ? [{ type: 'paragraph' as const, text: split.rest }] : []));
+    }
   }
   return blocks;
+}
+
+/**
+ * Splits "**Sentence one.** **Sentence two.** More text" into the bold sentences and the rest.
+ * A bold span only counts when it is a full sentence (ends with punctuation; the first one needs 5+ words), so a
+ * paragraph that merely starts with a bold name ("**Apple** announced ...") stays a paragraph.
+ */
+function splitBoldOpening(text: string): { lead: string; rest: string } | null {
+  const lead: string[] = [];
+  let rest = text;
+  for (;;) {
+    const m = rest.match(/^\*\*(.+?)\*\*\s*(\S[\s\S]*)?$/);
+    if (!m || m[1].includes('**') || !ENDS_SENTENCE.test(m[1]) || (lead.length === 0 && countWords(m[1]) < 5)) break;
+    lead.push(m[1]);
+    rest = m[2] ?? '';
+  }
+  return lead.length ? { lead: lead.join(' '), rest } : null;
 }
 
 export function serializeSummary(blocks: SummaryBlock[]): string {
@@ -343,6 +365,49 @@ export function normalizeSummary(raw: string | null | undefined, opts: Normalize
   const maxWords = opts.maxWords ?? MAX_SUMMARY_WORDS;
   const blocks = capWords(dedupeBlocks(parseSummary(raw)), maxWords, opts.dropTrailingFragment ?? false);
   return serializeSummary(blocks);
+}
+
+// ---------------------------------------------------------------------------
+// Cleaning model output
+// ---------------------------------------------------------------------------
+
+const META_SUBJECT = /\b(?:(?:the|this|that)\s+(?:excerpt|snippet)|provided\s+(?:text|article|content)|(?:text|article|content)\s+(?:provided|given|supplied)|available\s+(?:text|information|details))\b/i;
+const META_LIMIT = /\b(?:does not|doesn't|do not|don't|did not|cannot|can't|only|lacks?|limited|too short|cuts? off|truncated|incomplete|no (?:further|more|additional)|not (?:contain|include|provide|specify|detail|mention|state))\b/i;
+
+/** True for a sentence that talks about the text the model was given ("The excerpt does not contain...") rather than the story. */
+export function isMetaCommentary(sentence: string): boolean {
+  const plain = stripInline(sentence);
+  return META_SUBJECT.test(plain) && META_LIMIT.test(plain);
+}
+
+/** Removes sentences and bullets that are meta-commentary; promotes the next paragraph if the lead was one. */
+export function dropMetaCommentary(summary: string): string {
+  const blocks = parseSummary(summary);
+  const hadLead = blocks[0]?.type === 'lead';
+  const kept: SummaryBlock[] = [];
+  for (const b of blocks) {
+    if (b.type === 'heading') kept.push(b);
+    else if (b.type === 'list') {
+      const items = b.items.filter((i) => !isMetaCommentary(i));
+      if (items.length) kept.push({ type: 'list', items });
+    } else {
+      const text = splitSentences(b.text).filter((s) => !isMetaCommentary(s)).join(' ');
+      if (text) kept.push({ type: b.type, text });
+    }
+  }
+  if (hadLead && kept[0]?.type === 'paragraph') kept[0] = { type: 'lead', text: kept[0].text };
+  return serializeSummary(kept);
+}
+
+/**
+ * For snippet-only sources: keeps the lead and at most one short paragraph, and drops
+ * everything from the first heading or list on (those can only restate the snippet).
+ */
+export function leadOnlySummary(summary: string): string {
+  const blocks = parseSummary(summary);
+  const end = blocks.findIndex((b) => b.type === 'heading' || b.type === 'list');
+  const head = (end === -1 ? blocks : blocks.slice(0, end)).slice(0, 2);
+  return head.length ? serializeSummary(head) : summary;
 }
 
 // ---------------------------------------------------------------------------

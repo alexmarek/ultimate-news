@@ -26,14 +26,16 @@ Goal: a busy reader should understand the whole main message of the article with
 
 Length: at most 400 words. Scale to the source: a long article deserves roughly 250-400 words, a short article or a snippet proportionally less. Never pad to reach a length.
 
-Content: cover the central message, the key facts, figures, names and dates, the context or cause, and the consequence or what happens next. Stay faithful to the text: do not add facts, opinions or background that are not in it. If the text you were given is only a short snippet of the article, summarise only what it says and set "incomplete" to true.
+Content: cover the central message, the key facts, figures, names and dates, the context or cause, and the consequence or what happens next. Stay faithful to the text: do not add facts, opinions or background that are not in it.
+
+Snippets: if the "Text type" line below says SNIPPET, only the start of the article was available. Write just the lead plus, at most, one short paragraph of anything the snippet adds beyond the lead. Do not write "## Key points" or "## Why it matters", do not add background, and never comment on the text itself (no "the excerpt does not contain...", no "further details are not available"). Set "incomplete" to true.
 
 No repetition: every sentence must add new information. Do not restate the headline, do not repeat in a bullet a point already made in a paragraph, and do not echo the excerpt.
 
 Structure - use exactly this lightweight markup and nothing else (no HTML, links, tables or emoji):
 1. Lead: one or two sentences with the core message, wrapped in **double asterisks**.
 2. One to three short paragraphs (2-4 sentences each) with the details and context. Use **bold** for the one to three most important names or figures and *italics* for titles of works or foreign terms.
-3. A line "## Key points" followed by 3-6 lines that each start with "- ". Each bullet is one distinct fact, figure or takeaway in under 25 words.
+3. A line "## Key points" followed by 3-6 lines that each start with "- ". Each bullet is one distinct fact, figure or takeaway in under 25 words. (Not for snippets.)
 4. Optionally a line "## Why it matters" followed by one short paragraph, only if the article supports it.
 Separate blocks with a blank line. Write in neutral, plain English. If the article is not in English, still write the summary in English and set "titleEn" to an English translation of the headline.
 
@@ -158,6 +160,7 @@ Articles in Czech, German, or other non-English languages should be classified u
 Source: {sourceName}
 Language: {sourceLang}
 Title: {title}
+Text type: {textType}
 Excerpt: {excerpt}
 Text: {content}
 </article>`;
