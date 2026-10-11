@@ -31,8 +31,7 @@ export interface SourceDef {
 
 export const SOURCES: SourceDef[] = [
   // --- World News ---
-  // Feed auto-discovery found nothing for this site (it produced no articles), so it is scraped.
-  { id: 'japantoday', name: 'Japan Today', url: 'https://japantoday.com/', scrape: true, category: 'World News', limit: 3, contentKind: 'news', tier: 'tier-1', weight: 0.9 },
+  { id: 'newsonjapan', name: 'News On Japan', url: 'https://newsonjapan.com/', feeds: ['https://newsonjapan.com/rss/top.xml'], category: 'World News', limit: 3, contentKind: 'news', tier: 'tier-1', weight: 0.9 },
   { id: 'euobserver', name: 'EUobserver', url: 'https://euobserver.com/', category: 'World News', limit: 2, contentKind: 'news', tier: 'tier-1', weight: 0.9 },
   // [Unverified] scraped; not yet checked against the live page.
   { id: 'allsides-world', name: 'AllSides', url: 'https://www.allsides.com/topics/world', scrape: true, category: 'World News', limit: 3, contentKind: 'news', tier: 'tier-1', weight: 0.85 },
@@ -46,9 +45,8 @@ export const SOURCES: SourceDef[] = [
 
   // --- Environment ---
   { id: 'insideclimatenews', name: 'Inside Climate News', url: 'https://insideclimatenews.org', feeds: ['https://insideclimatenews.org/feed/'], viaRss2Json: true, category: 'Environment', limit: 2, contentKind: 'environment', tier: 'tier-2', weight: 0.85 },
-  // [Unverified] scraped. The UN reports page lists reports that are published rarely, so with
-  // the 14-day freshness limit this source will often contribute nothing.
-  { id: 'un-climate-reports', name: 'UN Climate Change', url: 'https://www.un.org/en/climatechange/reports', scrape: true, category: 'Environment', limit: 2, contentKind: 'environment', tier: 'tier-1', weight: 0.9 },
+  // [Unverified] scraped; not yet checked against the live page.
+  { id: 'un-climate-reports', name: 'UN Climate Change', url: 'https://news.un.org/en/news/topic/climate-change', scrape: true, category: 'Environment', limit: 2, contentKind: 'environment', tier: 'tier-1', weight: 0.9 },
 
   // --- Positive News ---
   { id: 'goodnewsnetwork', name: 'Good News Network', url: 'https://www.goodnewsnetwork.org', feeds: ['https://www.goodnewsnetwork.org/feed/'], category: 'Positive News', limit: 4, contentKind: 'positive-news', tier: 'tier-2', weight: 0.8 },
@@ -63,7 +61,6 @@ export const SOURCES: SourceDef[] = [
   { id: 'fathomaway', name: 'Fathom Away', url: 'https://fathomaway.com', feeds: ['https://fathomaway.com/feed/'], category: 'Travel', limit: 4, contentKind: 'travel', tier: 'tier-1', weight: 0.9 },
   // [Unverified] scraped; not yet checked against the live page.
   { id: 'ricksteves-cameron', name: "Rick Steves' Europe (Cameron)", url: 'https://blog.ricksteves.com/cameron/', scrape: true, category: 'Travel', limit: 3, contentKind: 'travel', tier: 'tier-2', weight: 0.85 },
-  { id: 'europeanbestdestinations', name: 'European Best Destinations', url: 'https://www.europeanbestdestinations.com/', scrape: true, category: 'Travel', limit: 3, contentKind: 'travel', tier: 'tier-2', weight: 0.85 },
 ];
 
 export const SOURCE_IDS: string[] = SOURCES.map((s) => s.id);

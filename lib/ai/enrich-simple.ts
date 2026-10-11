@@ -162,13 +162,12 @@ const sourceContentKind: Record<string, string> = {
   'Fathom Away': 'travel',
   'EUobserver': 'news',
   'The Verge': 'technology',
-  'Japan Today': 'news',
+  'News On Japan': 'news',
   'AllSides': 'news',
   'ZME Science': 'science',
   'UN Climate Change': 'environment',
   'Nautilus': 'positive-news',
   "Rick Steves' Europe (Cameron)": 'travel',
-  'European Best Destinations': 'travel',
 };
 
 export async function enrichArticle(input: EnrichInput): Promise<SimpleEnrichOutput> {

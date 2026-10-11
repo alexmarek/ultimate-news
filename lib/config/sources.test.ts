@@ -4,13 +4,12 @@ import { SOURCES, SOURCES_BY_ID, toSourceRecord } from '@/lib/config/sources';
 import { DAILY_FEED_TARGETS, MAX_ARTICLE_AGE_DAYS, freshCutoff, visibleArticleFilter } from '@/lib/config/dailyFeed';
 import { AREAS } from '@/lib/types';
 
-const REMOVED = ['bbc-future-planet', 'thehackernews', 'dw', 'matadornetwork', 'longreads-travel'];
+const REMOVED = ['bbc-future-planet', 'thehackernews', 'dw', 'matadornetwork', 'longreads-travel', 'europeanbestdestinations', 'japantoday'];
 const ADDED: Record<string, { url: string; category: string }> = {
   'ricksteves-cameron': { url: 'https://blog.ricksteves.com/cameron/', category: 'Travel' },
-  europeanbestdestinations: { url: 'https://www.europeanbestdestinations.com/', category: 'Travel' },
   zmescience: { url: 'https://www.zmescience.com/', category: 'Science' },
   'allsides-world': { url: 'https://www.allsides.com/topics/world', category: 'World News' },
-  'un-climate-reports': { url: 'https://www.un.org/en/climatechange/reports', category: 'Environment' },
+  'un-climate-reports': { url: 'https://news.un.org/en/news/topic/climate-change', category: 'Environment' },
   nautilus: { url: 'https://nautil.us/', category: 'Positive News' },
 };
 
@@ -47,6 +46,13 @@ test('the six new sources are scrape-only: no feed URLs configured', () => {
     assert.equal(toSourceRecord(SOURCES_BY_ID[id]).feedUrl, null, `${id}: feedUrl`);
     assert.equal(toSourceRecord(SOURCES_BY_ID[id]).ingestStrategy, 'html', `${id}: strategy`);
   }
+});
+
+test('News On Japan uses the requested RSS feed', () => {
+  const s = SOURCES_BY_ID.newsonjapan;
+  assert.deepEqual(s.feeds, ['https://newsonjapan.com/rss/top.xml']);
+  assert.equal(s.category, 'World News');
+  assert.equal(s.scrape, undefined);
 });
 
 test('category targets equal the sum of source limits', () => {
