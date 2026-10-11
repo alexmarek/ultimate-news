@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { runIngest, seedSources } from '@/app/api/ingest/route';
+import { runIngest, seedSources } from '@/lib/ingest/pipeline';
+import { freshCutoff } from '@/lib/config/dailyFeed';
 
 // Called by Vercel Cron at 08:00 UTC (10:00 CEST) daily.
 
@@ -9,7 +10,7 @@ export async function GET(req: NextRequest) {
   if (req.nextUrl.searchParams.has('debug')) {
     const totalArticles = await prisma.article.count();
     const oldArticles = await prisma.article.count({
-      where: { publishedAt: { lt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } },
+      where: { publishedAt: { lt: freshCutoff() } },
     });
     const newest = await prisma.article.findFirst({ orderBy: { publishedAt: 'desc' }, select: { publishedAt: true } });
     const oldest = await prisma.article.findFirst({ orderBy: { publishedAt: 'asc' }, select: { publishedAt: true } });
@@ -20,7 +21,8 @@ export async function GET(req: NextRequest) {
   try {
     await seedSources();
     const sources = await prisma.source.findMany({ where: { isActive: true } });
-    return runIngest(sources);
+    const { status, body } = await runIngest(sources);
+    return NextResponse.json(body, { status });
   } catch (error) {
     return NextResponse.json({
       success: false,

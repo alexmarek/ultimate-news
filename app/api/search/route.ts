@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { queryEmbed, cosineSimilarity } from '@/lib/ai/embed';
+import { visibleArticleFilter } from '@/lib/config/dailyFeed';
 
 const TOP_K = 20;
 const MIN_QUERY_LENGTH = 3;
@@ -27,7 +28,7 @@ export async function POST(req: NextRequest) {
 
     if (!query || typeof query !== 'string' || query.trim().length < MIN_QUERY_LENGTH) {
       const articles = await prisma.article.findMany({
-        where: { embedding: { not: null } },
+        where: { ...visibleArticleFilter(), embedding: { not: null } },
         include: { source: true, cluster: { select: { totalSourceCount: true } } },
         orderBy: { publishedAt: 'desc' },
         take: TOP_K,
@@ -60,7 +61,7 @@ export async function POST(req: NextRequest) {
 
     // Load all articles with embeddings
     const articles = await prisma.article.findMany({
-      where: { embedding: { not: null } },
+      where: { ...visibleArticleFilter(), embedding: { not: null } },
       include: { source: true, cluster: { select: { totalSourceCount: true } } },
     });
 
@@ -69,6 +70,7 @@ export async function POST(req: NextRequest) {
     if (articles.length === 0) {
       // No embeddings stored — fall back to recent articles
       const recent = await prisma.article.findMany({
+        where: visibleArticleFilter(),
         include: { source: true, cluster: { select: { totalSourceCount: true } } },
         orderBy: { publishedAt: 'desc' },
         take: TOP_K,
@@ -144,6 +146,7 @@ export async function POST(req: NextRequest) {
     // Voyage API key missing or API down — fallback to recent
     try {
       const articles = await prisma.article.findMany({
+        where: visibleArticleFilter(),
         include: { source: true, cluster: { select: { totalSourceCount: true } } },
         orderBy: { publishedAt: 'desc' },
         take: TOP_K,

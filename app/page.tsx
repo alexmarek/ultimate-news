@@ -12,6 +12,8 @@ import MasonryGrid from '@/components/MasonryGrid';
 import ThemeToggle from '@/components/ThemeToggle';
 import HideReadToggle from '@/components/HideReadToggle';
 import type { Article, Source, Cluster } from '@prisma/client';
+import { SOURCES } from '@/lib/config/sources';
+import { visibleArticleFilter } from '@/lib/config/dailyFeed';
 
 export const dynamic = 'force-dynamic';
 
@@ -56,7 +58,8 @@ export default async function Home({
     ? { id: { notIn: [...readArticleIds] } }
     : {};
 
-  const feedFilter = { isInDailyFeed: true };
+  // Daily feed only: configured sources, nothing older than the 14-day freshness window.
+  const feedFilter = visibleArticleFilter();
 
   let articles: ArticleWithRelations[];
   let totalArticles: number;
@@ -92,7 +95,7 @@ export default async function Home({
   const gridClass = '';
 
   const dbCategories = await prisma.article.findMany({
-    where: { isInDailyFeed: true },
+    where: feedFilter,
     select: { primaryArea: true },
     distinct: ['primaryArea'],
     take: 20,
@@ -102,8 +105,9 @@ export default async function Home({
   const allArticleIds = articles.map((a) => a.id);
 
   // Footer stats
-  const activeSourceCount = await prisma.source.count({ where: { isActive: true } });
+  const activeSourceCount = SOURCES.length;
   const latestArticle = await prisma.article.findFirst({
+    where: feedFilter,
     orderBy: { fetchedAt: 'desc' },
     select: { fetchedAt: true },
   });

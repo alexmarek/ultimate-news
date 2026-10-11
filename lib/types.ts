@@ -10,6 +10,7 @@ export const AREAS = [
   'Environment',
   'Positive News',
   'Travel',
+  'Science',
 ] as const;
 
 export type Area = (typeof AREAS)[number];

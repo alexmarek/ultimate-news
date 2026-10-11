@@ -1,9 +1,10 @@
 // lib/ai/enrich-simple.ts
-// Simplified enrichment for development without AI dependencies.
-// Uses source contentKind as area signal + title keywords for topic extraction.
+// Fallback enrichment used when Claude is unavailable (see lib/ai/enrich.ts).
+// Uses source contentKind as area signal + title keywords for topic extraction,
+// and an extractive summariser (lib/ai/extractive.ts) for the summary.
 
 import { AREAS, type Area } from '@/lib/types';
-import { stripHtml } from '@/lib/text';
+import { buildExtractiveSummary } from '@/lib/ai/extractive';
 
 interface EnrichInput {
   sourceName: string;
@@ -13,7 +14,7 @@ interface EnrichInput {
   content?: string;
 }
 
-interface EnrichOutput {
+export interface SimpleEnrichOutput {
   summary: string;
   areas: Array<{ area: string; confidence: number }>;
   topics: string[];
@@ -40,6 +41,7 @@ const contentKindArea: Record<string, Area> = {
   'sports': 'Sport',
   'travel': 'Travel',
   'environment': 'Environment',
+  'science': 'Science',
   'gaming': 'Technology',
 };
 
@@ -98,6 +100,9 @@ function extractTopicsFromText(title: string, excerpt: string, content?: string)
     const phrase = m[1].trim();
     if (phrase.length < 3) continue;
     const words = phrase.split(/[ \-]/);
+    // A lone capitalised word at the start of a sentence ("Here", "Critics") is not a proper noun.
+    const atSentenceStart = m.index === 0 || /(?:^|[.!?]["'\u201D\u2019)]*\s+)$/.test(text.slice(Math.max(0, m.index - 6), m.index));
+    if (words.length === 1 && atSentenceStart) continue;
     if (STOP.has(words[0].toLowerCase())) continue;
     if (words.every((w) => STOP.has(w.toLowerCase()))) continue;
     freq.set(phrase, (freq.get(phrase) || 0) + 1);
@@ -119,12 +124,9 @@ function extractTopicsFromText(title: string, excerpt: string, content?: string)
 const sourceEntities: Record<string, string[]> = {
   'Blabbermouth.net': ['Moonspell', 'Metallica', 'Slipknot', 'Cradle of Filth', 'Arch Enemy', 'Gojira'],
   'MusicRadar': ['Fender', 'Gibson', 'Neural DSP', 'IK Multimedia', 'Universal Audio'],
-  'The Hacker News': ['CISA', 'FBI', 'Microsoft', 'Google', 'Cloudflare'],
   'Wired': ['OpenAI', 'Google', 'Apple', 'Meta', 'The Pentagon'],
   'NPR': ['Congress', 'White House', 'Supreme Court', 'FDA', 'CDC'],
-  'DW': ['EU', 'NATO', 'Bundestag', 'European Commission', 'UN'],
   'ProPublica': ['IRS', 'SEC', 'Justice Department', 'Whistleblower', 'Investigation'],
-  'BBC Future Planet': ['UNEP', 'IPCC', 'COP', 'G20', 'World Bank'],
   'Inside Climate News': ['NOAA', 'EPA', 'Green Climate Fund', 'Climate Watch', 'Carbon Brief'],
   'Good News Network': ['Red Cross', 'UNICEF', 'Make-A-Wish', 'Habitat for Humanity'],
   'Smiley Movement': ['Charity', 'Volunteer', 'Community', 'Impact', 'Donation'],
@@ -141,15 +143,12 @@ const sourceEntities: Record<string, string[]> = {
 const sourceContentKind: Record<string, string> = {
   'Wired': 'technology',
   'One Useful Thing': 'ai-newsletter',
-  'The Hacker News': 'cybersecurity',
   'ProPublica': 'investigative',
   'NPR': 'news',
-  'Deutsche Welle': 'news',
   'Blabbermouth.net': 'music-metal',
   'MusicRadar': 'music-gear',
   'Sport.cz': 'sports',
   'Inside Climate News': 'environment',
-  'BBC Future Planet': 'environment',
   'Good News Network': 'positive-news',
   'Smiley Movement': 'positive-news',
   'Quartz': 'business',
@@ -159,27 +158,20 @@ const sourceContentKind: Record<string, string> = {
   'Budget Traveller': 'travel',
   'Be My Travel Muse': 'travel',
   'Atlas Obscura': 'travel',
-  'Matador Network': 'travel',
   'Smithsonian Magazine': 'travel',
-  'Longreads': 'travel',
   'Fathom Away': 'travel',
   'EUobserver': 'news',
   'The Verge': 'technology',
+  'Japan Today': 'news',
+  'AllSides': 'news',
+  'ZME Science': 'science',
+  'UN Climate Change': 'environment',
+  'Nautilus': 'positive-news',
+  "Rick Steves' Europe (Cameron)": 'travel',
+  'European Best Destinations': 'travel',
 };
 
-// Take whole sentences from text until maxLen is reached
-function firstSentences(text: string, maxLen: number): string {
-  const sentences = text.match(/[^.!?]+[.!?]+["')\]]*(?:\s|$)/g);
-  if (!sentences) return text.slice(0, maxLen).trim();
-  let out = '';
-  for (const s of sentences) {
-    if (out.length > 0 && (out + s).length > maxLen) break;
-    out += s;
-  }
-  return out.trim() || text.slice(0, maxLen).trim();
-}
-
-export async function enrichArticle(input: EnrichInput): Promise<EnrichOutput> {
+export async function enrichArticle(input: EnrichInput): Promise<SimpleEnrichOutput> {
   // 1. Determine area: title keywords > source contentKind > random
   const keywordArea = titleKeywordArea(input.title);
   const kindArea = contentKindArea[sourceContentKind[input.sourceName]] as Area | undefined;
@@ -200,12 +192,11 @@ export async function enrichArticle(input: EnrichInput): Promise<EnrichOutput> {
   const entities = sourceEntities[input.sourceName] || ['Global Organization', 'Expert Analysis', 'Industry Leader'];
   const pick = (arr: string[]) => arr[Math.floor(Math.random() * arr.length)];
 
-  const cleanExcerpt = stripHtml(input.excerpt || '');
-  const cleanContent = input.content ? stripHtml(input.content) : '';
-  let summary = cleanExcerpt;
-  if (cleanContent && summary.length < 500) {
-    summary = firstSentences((summary + ' ' + cleanContent).trim(), 800);
-  }
+  const summary = buildExtractiveSummary({
+    title: input.title,
+    excerpt: input.excerpt,
+    content: input.content,
+  });
 
   return {
     summary,

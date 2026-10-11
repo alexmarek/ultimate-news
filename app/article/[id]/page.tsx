@@ -5,7 +5,9 @@ import { Newspaper, ExternalLink, ArrowLeft } from 'lucide-react';
 import TimeAgo from '@/components/TimeAgo';
 import MarkRead from '@/components/MarkRead';
 import ArticleImage from '@/components/ArticleImage';
+import SummaryView from '@/components/SummaryView';
 import { stripHtml, decodeEntities } from '@/lib/text';
+import { countSummaryWords } from '@/lib/summary';
 
 function SourceInitial({ name }: { name: string }) {
   return (
@@ -34,7 +36,7 @@ export default async function ArticlePage({
 
   if (!article) notFound();
 
-  const summaryParagraphs = article.summary?.split('\n').map(stripHtml).filter(Boolean) ?? [];
+  const hasSummary = countSummaryWords(article.summary) > 0;
   const topics = article.topics ? article.topics.split(',') : [];
   const corroborationScore = article.cluster
     ? Math.round(article.cluster.corroborationScore * 100)
@@ -166,18 +168,12 @@ export default async function ArticlePage({
           {/* Left column */}
           <div className="lg:col-span-2 space-y-6">
             {/* Summary */}
-            {summaryParagraphs.length > 0 && (
+            {hasSummary && (
               <div>
                 <h2 className="text-body-sm font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-3">
                   Summary
                 </h2>
-                <div className="space-y-3">
-                  {summaryParagraphs.map((p, i) => (
-                    <p key={i} className="text-body-lg text-[var(--text-body)]">
-                      {p}
-                    </p>
-                  ))}
-                </div>
+                <SummaryView summary={article.summary} />
               </div>
             )}
 

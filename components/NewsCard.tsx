@@ -5,7 +5,8 @@ import type { Article, Source, Cluster } from '@prisma/client';
 import { formatDistanceToNow } from 'date-fns';
 import { ExternalLink, Newspaper } from 'lucide-react';
 import ArticleImage from '@/components/ArticleImage';
-import { stripHtml, decodeEntities } from '@/lib/text';
+import { decodeEntities } from '@/lib/text';
+import { summaryPreview } from '@/lib/summary';
 
 interface NewsCardProps {
   article: Article & { source: Source };
@@ -77,7 +78,7 @@ export default function NewsCard({ article, cluster, isRead, dataKbId }: NewsCar
         {/* Summary */}
         {article.summary && (
           <p className="text-[var(--text-body)] mb-4 line-clamp-5 text-body-md">
-            {stripHtml(article.summary)}
+            {summaryPreview(article.summary)}
           </p>
         )}
 

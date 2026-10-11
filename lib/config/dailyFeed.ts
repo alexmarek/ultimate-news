@@ -1,31 +1,40 @@
 // lib/config/dailyFeed.ts
-// Per-category article targets and source-specific configs for the daily feed.
+// Per-category article targets, per-source configs and the freshness window
+// for the daily feed. Source definitions live in lib/config/sources.ts.
 
 import type { Area } from '@/lib/types';
+import { AREAS } from '@/lib/types';
+import { SOURCES, SOURCE_IDS } from '@/lib/config/sources';
 
-export const DAILY_FEED_TARGETS: Record<Area, number> = {
-  'World News': 6,
-  'Technology': 5,
-  'Environment': 4,
-  'Positive News': 4,
-  'Music': 0,
-  'Sport': 0,
-  'Business': 2,
-  'Travel': 4,
-};
+/** Articles older than this are never ingested and never shown. */
+export const MAX_ARTICLE_AGE_DAYS = 14;
+export const MAX_ARTICLE_AGE_MS = MAX_ARTICLE_AGE_DAYS * 24 * 60 * 60 * 1000;
 
-export const SOURCE_CONFIGS: Record<string, { category: Area; limit: number }> = {
-  'theverge': { category: 'Technology', limit: 2 },
-  'goodnewsnetwork': { category: 'Positive News', limit: 4 },
-  'qz': { category: 'Business', limit: 2 },
-  'japantoday': { category: 'World News', limit: 3 },
-  'euobserver': { category: 'World News', limit: 2 },
-  'dw': { category: 'World News', limit: 4 },
-  'thehackernews': { category: 'Technology', limit: 3 },
-  'insideclimatenews': { category: 'Environment', limit: 2 },
-  'bbc-future-planet': { category: 'Environment', limit: 2 },
-  'matadornetwork': { category: 'Travel', limit: 4 },
-  'smithsonian-travel': { category: 'Travel', limit: 4 },
-  'longreads-travel': { category: 'Travel', limit: 4 },
-  'fathomaway': { category: 'Travel', limit: 4 },
-};
+/** Oldest publish date that still counts as fresh. */
+export function freshCutoff(now: number = Date.now()): Date {
+  return new Date(now - MAX_ARTICLE_AGE_MS);
+}
+
+/**
+ * Prisma `where` fragment for articles that may be displayed: part of the daily
+ * feed, from a currently configured source, and not older than the freshness window.
+ */
+export function visibleArticleFilter(now: number = Date.now()) {
+  return {
+    isInDailyFeed: true,
+    publishedAt: { gte: freshCutoff(now) },
+    sourceId: { in: SOURCE_IDS },
+  };
+}
+
+/** Per-category target = the sum of its sources' daily limits. */
+export const DAILY_FEED_TARGETS: Record<Area, number> = Object.fromEntries(
+  AREAS.map((area) => [
+    area,
+    SOURCES.filter((s) => s.category === area).reduce((sum, s) => sum + s.limit, 0),
+  ]),
+) as Record<Area, number>;
+
+export const SOURCE_CONFIGS: Record<string, { category: Area; limit: number }> = Object.fromEntries(
+  SOURCES.map((s) => [s.id, { category: s.category, limit: s.limit }]),
+);

@@ -8,6 +8,7 @@ import TimeAgo from '@/components/TimeAgo';
 import { useKeyboardNav } from '@/components/useKeyboardNav';
 import HelpModal from '@/components/HelpModal';
 import { stripHtml, decodeEntities } from '@/lib/text';
+import { summaryPreview } from '@/lib/summary';
 
 interface SearchResult {
   id: string;
@@ -175,7 +176,7 @@ export default function SearchPage() {
 
                       {(r.summary || r.excerpt) && (
                         <p className="text-body-md text-[var(--text-body)] line-clamp-2">
-                          {stripHtml(r.summary || r.excerpt)}
+                          {summaryPreview(r.summary) || stripHtml(r.excerpt)}
                         </p>
                       )}
                     </div>

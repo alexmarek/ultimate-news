@@ -1,7 +1,6 @@
 // scripts/reclassify-articles.ts
-// One-off script to re-enrich existing articles against the new 8-category
-// taxonomy: World News, Music, Sport, Business, Technology, Environment,
-// Positive News, Travel.
+// One-off script to re-enrich existing articles against the current category
+// taxonomy (see AREAS in lib/types.ts).
 //
 // Usage:
 //   npx tsx scripts/reclassify-articles.ts               (dry run, 50 articles)
@@ -14,9 +13,7 @@
 
 import { prisma } from '@/lib/db';
 import { AREAS } from '@/lib/types';
-import Anthropic from '@anthropic-ai/sdk';
-import { ENRICH_PROMPT } from '@/lib/ai/prompts';
-import { enrichArticle as mockEnrich } from '@/lib/ai/enrich-simple';
+import { enrichArticle, type EnrichOutput } from '@/lib/ai/enrich';
 
 const CONFIDENCE_THRESHOLD = 0.65;
 const DEFAULT_BATCH_SIZE = 50;
@@ -26,15 +23,6 @@ const SAMPLE = SAMPLE_INDEX !== -1 ? parseInt(process.argv[SAMPLE_INDEX + 1], 10
 const ALL = process.argv.includes('--all');
 const LIMIT = ALL ? undefined : (SAMPLE ?? DEFAULT_BATCH_SIZE);
 
-interface EnrichOutput {
-  summary: string;
-  areas: Array<{ area: string; confidence: number }>;
-  topics: string[];
-  entities: string[];
-  titleEn: string | null;
-  incomplete: boolean;
-}
-
 async function enrichWithClaude(
   sourceName: string,
   sourceLang: string,
@@ -42,40 +30,11 @@ async function enrichWithClaude(
   excerpt: string,
   content: string | null,
 ): Promise<EnrichOutput> {
-  const key = process.env.ANTHROPIC_API_KEY;
-
-  // Fall back to local mock when no real key is configured
-  if (!key || key.startsWith('sk-dummy')) {
-    console.log('  (mock enrichment — no real ANTHROPIC_API_KEY)');
-    return mockEnrich({ sourceName, sourceLang, title, excerpt, content: content || undefined });
+  const result = await enrichArticle({ sourceName, sourceLang, title, excerpt, content: content || undefined });
+  if (result.engine === 'fallback') {
+    console.log(`  (fallback enrichment — ${result.fallbackReason})`);
   }
-
-  const anthropic = new Anthropic({ apiKey: key });
-
-  const prompt = ENRICH_PROMPT
-    .replace('{sourceName}', sourceName)
-    .replace('{sourceLang}', sourceLang)
-    .replace('{title}', title)
-    .replace('{excerpt}', excerpt)
-    .replace('{content}', content || '');
-
-  const msg = await anthropic.messages.create({
-    model: 'claude-haiku-4-5-20251001',
-    max_tokens: 1024,
-    messages: [{ role: 'user', content: prompt }],
-  });
-
-  const text = msg.content
-    .filter((block) => block.type === 'text')
-    .map((block) => (block as { text: string }).text)
-    .join('\n');
-
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) {
-    throw new Error('No JSON found in Claude response');
-  }
-
-  return JSON.parse(jsonMatch[0]) as EnrichOutput;
+  return result;
 }
 
 function resolveArea(enrichment: EnrichOutput): {
