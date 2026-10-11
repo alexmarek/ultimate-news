@@ -31,7 +31,8 @@ export interface SourceDef {
 
 export const SOURCES: SourceDef[] = [
   // --- World News ---
-  { id: 'japantoday', name: 'Japan Today', url: 'https://japantoday.com/', category: 'World News', limit: 3, contentKind: 'news', tier: 'tier-1', weight: 0.9 },
+  // Feed auto-discovery found nothing for this site (it produced no articles), so it is scraped.
+  { id: 'japantoday', name: 'Japan Today', url: 'https://japantoday.com/', scrape: true, category: 'World News', limit: 3, contentKind: 'news', tier: 'tier-1', weight: 0.9 },
   { id: 'euobserver', name: 'EUobserver', url: 'https://euobserver.com/', category: 'World News', limit: 2, contentKind: 'news', tier: 'tier-1', weight: 0.9 },
   // [Unverified] scraped; not yet checked against the live page.
   { id: 'allsides-world', name: 'AllSides', url: 'https://www.allsides.com/topics/world', scrape: true, category: 'World News', limit: 3, contentKind: 'news', tier: 'tier-1', weight: 0.85 },

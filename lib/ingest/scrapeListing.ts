@@ -10,7 +10,7 @@
 
 import * as cheerio from 'cheerio';
 import type { RawArticle } from '@/lib/types';
-import { extractArticleText, extractListingLinks, extractPageMeta, fetchHtml } from '@/lib/ingest/pageMeta';
+import { extractArticleText, extractListingLinks, extractPageMeta, fetchHtmlResult } from '@/lib/ingest/pageMeta';
 import { mapPool } from '@/lib/ingest/pool';
 
 export interface ScrapeOptions {
@@ -20,28 +20,47 @@ export interface ScrapeOptions {
   maxAgeMs: number;
   /** Maximum linked pages to open. */
   maxCandidates?: number;
+  /** Source name, stripped from the end of page titles ("Headline - Source"). */
+  siteName?: string;
+  /** If given, receives one entry per step/link explaining what happened (for the dry-run report). */
+  trace?: Array<Record<string, unknown>>;
   now?: number;
 }
 
 export async function scrapeListing(pageUrl: string, opts: ScrapeOptions): Promise<RawArticle[]> {
   const now = opts.now ?? Date.now();
-  const html = await fetchHtml(pageUrl);
-  if (!html) throw new Error(`Could not fetch ${pageUrl}`);
+  const listing = await fetchHtmlResult(pageUrl);
+  opts.trace?.push({ step: 'listing', url: pageUrl, status: listing.status, error: listing.error, bytes: listing.html?.length ?? 0 });
+  if (!listing.html) throw new Error(`Could not fetch ${pageUrl} (${listing.error ?? 'no response'})`);
 
-  const links = extractListingLinks(cheerio.load(html), pageUrl, opts.maxCandidates ?? 14);
+  const links = extractListingLinks(cheerio.load(listing.html), pageUrl, opts.maxCandidates ?? 14);
+  opts.trace?.push({ step: 'links', found: links.length });
   if (links.length === 0) throw new Error('No article links found on the listing page');
 
   const pages = await mapPool(links, 4, async (link): Promise<RawArticle | null> => {
+    const note = (outcome: string, extra: Record<string, unknown> = {}) =>
+      opts.trace?.push({ step: 'link', url: link.url, text: link.text.slice(0, 80), cardDate: link.date?.toISOString() ?? null, outcome, ...extra });
+
     // A date shown on the listing that is already too old saves opening the page.
-    if (link.date && now - link.date.getTime() > opts.maxAgeMs) return null;
-    const body = await fetchHtml(link.url);
-    if (!body) return null;
-    const $ = cheerio.load(body);
+    if (link.date && now - link.date.getTime() > opts.maxAgeMs) {
+      note('skipped: listing date too old');
+      return null;
+    }
+    const page = await fetchHtmlResult(link.url);
+    if (!page.html) {
+      note('page fetch failed', { status: page.status, error: page.error });
+      return null;
+    }
+    const $ = cheerio.load(page.html);
     // Metadata first: extractArticleText strips <script> tags (incl. JSON-LD).
-    const meta = extractPageMeta($, link.url);
+    const meta = extractPageMeta($, link.url, opts.siteName);
     const publishedAt = meta.publishedAt ?? link.date;
-    if (!publishedAt) return null;
+    if (!publishedAt) {
+      note('dropped: no publish date found', { title: meta.title });
+      return null;
+    }
     const content = extractArticleText($);
+    note(now - publishedAt.getTime() > opts.maxAgeMs ? 'dropped: too old' : 'kept', { title: meta.title, publishedAt: publishedAt.toISOString(), bodyChars: content?.length ?? 0 });
     return {
       url: link.url,
       title: meta.title || link.text,

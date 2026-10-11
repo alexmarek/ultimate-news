@@ -138,9 +138,11 @@ export interface CollectResult {
   error?: string;
 }
 
-async function collectByScraping(def: SourceDef, now: number): Promise<CollectResult> {
+async function collectByScraping(def: SourceDef, now: number, trace?: Array<Record<string, unknown>>): Promise<CollectResult> {
   try {
     const articles = await scrapeListing(def.url, {
+      siteName: def.name,
+      trace,
       limit: def.limit,
       maxAgeMs: MAX_ARTICLE_AGE_MS,
       // The page lists newest first on most sites; look a few times past the quota in case some links aren't articles.
@@ -153,9 +155,13 @@ async function collectByScraping(def: SourceDef, now: number): Promise<CollectRe
   }
 }
 
-export async function collectFromSource(def: SourceDef, now: number = Date.now()): Promise<CollectResult> {
+export async function collectFromSource(
+  def: SourceDef,
+  now: number = Date.now(),
+  trace?: Array<Record<string, unknown>>,
+): Promise<CollectResult> {
   // Scrape-only sources never use RSS/Atom feeds, neither configured nor auto-discovered.
-  if (def.scrape) return collectByScraping(def, now);
+  if (def.scrape) return collectByScraping(def, now, trace);
 
   const errors: string[] = [];
   const tried = new Set<string>();
@@ -205,11 +211,14 @@ export async function collectFromSource(def: SourceDef, now: number = Date.now()
  * reports what would be ingested. Nothing is written and no summaries are generated.
  */
 export async function checkSources(now: number = Date.now()): Promise<Record<string, unknown>> {
-  const collected = await mapPool(SOURCES, SOURCE_CONCURRENCY, async (def) => ({ def, result: await collectFromSource(def, now) }));
+  const collected = await mapPool(SOURCES, SOURCE_CONCURRENCY, async (def) => {
+    const trace: Array<Record<string, unknown>> = [];
+    return { def, trace, result: await collectFromSource(def, now, trace) };
+  });
   return {
     dryRun: true,
     maxAgeDays: MAX_ARTICLE_AGE_DAYS,
-    sources: collected.map(({ def, result }) => ({
+    sources: collected.map(({ def, result, trace }) => ({
       sourceId: def.id,
       name: def.name,
       category: def.category,
@@ -219,6 +228,8 @@ export async function checkSources(now: number = Date.now()): Promise<Record<str
       skippedOld: result.skippedOld,
       kept: result.articles.length,
       ...(result.error ? { error: result.error } : {}),
+      // Scrape sources only: what happened to the listing page and to each link.
+      ...(def.scrape ? { trace } : {}),
       articles: result.articles.map((a) => ({
         title: a.title,
         url: a.url,

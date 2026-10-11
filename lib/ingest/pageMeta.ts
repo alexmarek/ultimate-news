@@ -10,7 +10,15 @@ export type Doc = cheerio.CheerioAPI;
 const USER_AGENT =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 
-export async function fetchHtml(url: string, timeoutMs = 8000): Promise<string | null> {
+export interface FetchResult {
+  html: string | null;
+  /** HTTP status, or null if the request failed before a response (timeout, DNS, TLS). */
+  status: number | null;
+  error?: string;
+}
+
+/** Like fetchHtml, but says why a fetch failed (used for diagnostics). */
+export async function fetchHtmlResult(url: string, timeoutMs = 8000): Promise<FetchResult> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -19,13 +27,17 @@ export async function fetchHtml(url: string, timeoutMs = 8000): Promise<string |
       signal: controller.signal,
       redirect: 'follow',
     });
-    if (!response.ok) return null;
-    return await response.text();
-  } catch {
-    return null;
+    if (!response.ok) return { html: null, status: response.status, error: `HTTP ${response.status}` };
+    return { html: await response.text(), status: response.status };
+  } catch (e) {
+    return { html: null, status: null, error: e instanceof Error ? e.message : String(e) };
   } finally {
     clearTimeout(timeout);
   }
+}
+
+export async function fetchHtml(url: string, timeoutMs = 8000): Promise<string | null> {
+  return (await fetchHtmlResult(url, timeoutMs)).html;
 }
 
 /** Upper bound on stored article text. The summariser reads the first ~16k characters. */
@@ -60,6 +72,7 @@ export function extractArticleText($: Doc): string | undefined {
 }
 
 export interface PageMeta {
+  siteName: string | null;
   title: string | null;
   description: string | null;
   image: string | null;
@@ -143,12 +156,25 @@ function metaContent($: Doc, selectors: string[]): string | null {
   return null;
 }
 
-export function extractPageMeta($: Doc, pageUrl: string): PageMeta {
-  const title =
+/** "Headline - Site Name" -> "Headline" (only when the suffix really is the site name). */
+export function stripSiteSuffix(title: string, ...siteNames: Array<string | null | undefined>): string {
+  let out = title;
+  for (const name of siteNames) {
+    if (!name) continue;
+    const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    out = out.replace(new RegExp(`\\s*[-\u2013\u2014|:\u00B7]\\s*${escaped}\\s*$`, 'i'), '').trim() || out;
+  }
+  return out;
+}
+
+export function extractPageMeta($: Doc, pageUrl: string, configuredSiteName?: string): PageMeta {
+  const siteName = metaContent($, ['meta[property="og:site_name"]']);
+  const rawTitle =
     metaContent($, ['meta[property="og:title"]', 'meta[name="twitter:title"]']) ||
     $('h1').first().text().replace(/\s+/g, ' ').trim() ||
     $('title').first().text().replace(/\s+/g, ' ').trim() ||
     null;
+  const title = rawTitle ? stripSiteSuffix(rawTitle, siteName, configuredSiteName) : null;
 
   const description = metaContent($, [
     'meta[property="og:description"]',
@@ -166,6 +192,7 @@ export function extractPageMeta($: Doc, pageUrl: string): PageMeta {
   }
 
   return {
+    siteName,
     title,
     description,
     image,
