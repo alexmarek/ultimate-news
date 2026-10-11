@@ -138,7 +138,25 @@ export interface CollectResult {
   error?: string;
 }
 
+async function collectByScraping(def: SourceDef, now: number): Promise<CollectResult> {
+  try {
+    const articles = await scrapeListing(def.url, {
+      limit: def.limit,
+      maxAgeMs: MAX_ARTICLE_AGE_MS,
+      // The page lists newest first on most sites; look a few times past the quota in case some links aren't articles.
+      maxCandidates: Math.min(14, Math.max(8, def.limit * 4)),
+      now,
+    });
+    return { articles, feedUrl: null, method: 'scrape', seen: articles.length, skippedOld: 0 };
+  } catch (e) {
+    return { articles: [], feedUrl: null, method: null, seen: 0, skippedOld: 0, error: `scrape: ${errorMessage(e)}` };
+  }
+}
+
 export async function collectFromSource(def: SourceDef, now: number = Date.now()): Promise<CollectResult> {
+  // Scrape-only sources never use RSS/Atom feeds, neither configured nor auto-discovered.
+  if (def.scrape) return collectByScraping(def, now);
+
   const errors: string[] = [];
   const tried = new Set<string>();
 
@@ -179,16 +197,36 @@ export async function collectFromSource(def: SourceDef, now: number = Date.now()
     };
   }
 
-  if (def.scrape) {
-    try {
-      const articles = await scrapeListing(def.url, { limit: def.limit, maxAgeMs: MAX_ARTICLE_AGE_MS, now });
-      return { articles, feedUrl: null, method: 'scrape', seen: articles.length, skippedOld: 0 };
-    } catch (e) {
-      errors.push(`scrape: ${errorMessage(e)}`);
-    }
-  }
-
   return { articles: [], feedUrl: null, method: null, seen: 0, skippedOld: 0, error: errors.join('; ') };
+}
+
+/**
+ * Read-only check: runs only the collect step for every configured source and
+ * reports what would be ingested. Nothing is written and no summaries are generated.
+ */
+export async function checkSources(now: number = Date.now()): Promise<Record<string, unknown>> {
+  const collected = await mapPool(SOURCES, SOURCE_CONCURRENCY, async (def) => ({ def, result: await collectFromSource(def, now) }));
+  return {
+    dryRun: true,
+    maxAgeDays: MAX_ARTICLE_AGE_DAYS,
+    sources: collected.map(({ def, result }) => ({
+      sourceId: def.id,
+      name: def.name,
+      category: def.category,
+      method: result.method,
+      feedUrl: result.feedUrl,
+      offered: result.seen,
+      skippedOld: result.skippedOld,
+      kept: result.articles.length,
+      ...(result.error ? { error: result.error } : {}),
+      articles: result.articles.map((a) => ({
+        title: a.title,
+        url: a.url,
+        publishedAt: a.publishedAt.toISOString(),
+        bodyChars: a.content?.length ?? 0,
+      })),
+    })),
+  };
 }
 
 // ---------------------------------------------------------------------------

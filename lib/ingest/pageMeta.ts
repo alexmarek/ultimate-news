@@ -67,7 +67,7 @@ export interface PageMeta {
   author: string | null;
 }
 
-function validDate(value: unknown): Date | null {
+export function parsePlausibleDate(value: unknown): Date | null {
   if (typeof value !== 'string' || !value.trim()) return null;
   const d = new Date(value.trim());
   if (Number.isNaN(d.getTime())) return null;
@@ -112,7 +112,7 @@ export function extractPublishedAt($: Doc, pageUrl: string): Date | null {
   for (const el of $('script[type="application/ld+json"]').toArray()) {
     try {
       const found = findInJsonLd(JSON.parse($(el).text()), ['datePublished', 'dateCreated']);
-      const d = validDate(found);
+      const d = parsePlausibleDate(found);
       if (d) return d;
     } catch {
       // Malformed JSON-LD is common; try the next source.
@@ -120,17 +120,17 @@ export function extractPublishedAt($: Doc, pageUrl: string): Date | null {
   }
 
   for (const selector of DATE_META_SELECTORS) {
-    const d = validDate($(selector).first().attr('content'));
+    const d = parsePlausibleDate($(selector).first().attr('content'));
     if (d) return d;
   }
 
   for (const selector of ['article time[datetime]', 'main time[datetime]', 'time[datetime]']) {
-    const d = validDate($(selector).first().attr('datetime'));
+    const d = parsePlausibleDate($(selector).first().attr('datetime'));
     if (d) return d;
   }
 
   const urlDate = pageUrl.match(/\/(20\d{2})[-/](0[1-9]|1[0-2])[-/](0[1-9]|[12]\d|3[01])(?:\/|$|[-_])/);
-  if (urlDate) return validDate(`${urlDate[1]}-${urlDate[2]}-${urlDate[3]}T00:00:00Z`);
+  if (urlDate) return parsePlausibleDate(`${urlDate[1]}-${urlDate[2]}-${urlDate[3]}T00:00:00Z`);
 
   return null;
 }
@@ -177,6 +177,8 @@ export function extractPageMeta($: Doc, pageUrl: string): PageMeta {
 export interface ListingLink {
   url: string;
   text: string;
+  /** Publish date shown next to the link on the listing page (<time datetime>), if any. */
+  date: Date | null;
 }
 
 const ASSET_EXTENSION = /\.(?:jpe?g|png|gif|svg|webp|css|js|pdf|zip|xml|json|mp3|mp4)$/i;
@@ -211,7 +213,8 @@ export function extractListingLinks($: Doc, pageUrl: string, max: number): Listi
 
     if (seen.has(url.href)) return;
     seen.add(url.href);
-    out.push({ url: url.href, text });
+    const date = parsePlausibleDate($el.closest('article, li, .views-row').find('time[datetime]').first().attr('datetime'));
+    out.push({ url: url.href, text, date });
   });
 
   return out;

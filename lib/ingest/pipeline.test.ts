@@ -31,6 +31,7 @@ function article(title: string, days: number | null): string {
 
 let server: http.Server;
 let base: string;
+const hits: Record<string, number> = {};
 
 before(async () => {
   const routes: Record<string, [string, string]> = {
@@ -54,8 +55,19 @@ before(async () => {
     '/a/undated': ['text/html', article('Undated page', null)],
     '/a/fresh-two': ['text/html', article('Fresh two', 6)],
     '/a/menu-page': ['text/html', article('Menu page', 1)],
+    // A site that also advertises a feed: scrape-only sources must ignore it.
+    '/scrape-home': ['text/html', `<html><head><link rel="alternate" type="application/rss+xml" href="/discovered.xml"></head>
+      <body><main><h2><a href="/a/fresh-one">Fresh one</a></h2></main></body></html>`],
+    // Dates are shown on the listing itself, next to the links.
+    '/listing-dates': ['text/html', `<html><body><main>
+      <article><time datetime="${ago(2).toISOString()}">recent</time><h2><a href="/a/card-dated">Card dated</a></h2></article>
+      <article><time datetime="${ago(40).toISOString()}">old</time><h2><a href="/a/card-old">Card old</a></h2></article>
+    </main></body></html>`],
+    '/a/card-dated': ['text/html', article('Card dated', null)],
+    '/a/card-old': ['text/html', article('Card old', 1)],
   };
   server = http.createServer((req, res) => {
+    hits[req.url ?? ''] = (hits[req.url ?? ''] ?? 0) + 1;
     const hit = routes[req.url ?? ''];
     if (!hit) {
       res.writeHead(404).end('not found');
@@ -118,4 +130,23 @@ test('a source with no feed and no scrape fallback reports an error and no artic
   assert.equal(result.method, null);
   assert.equal(result.articles.length, 0);
   assert.match(result.error ?? '', /missing\.xml/);
+});
+
+const resetHits = () => { for (const k of Object.keys(hits)) delete hits[k]; };
+
+test('scrape-only sources never use configured or auto-discovered feeds', async () => {
+  resetHits();
+  const result = await collectFromSource(def({ url: `${base}/scrape-home`, scrape: true, feeds: [`${base}/stale-head.xml`] }));
+  assert.equal(result.method, 'scrape');
+  assert.equal(result.feedUrl, null);
+  assert.deepEqual(result.articles.map((a) => a.title), ['Fresh one']);
+  assert.equal(hits['/stale-head.xml'], undefined, 'configured feed was requested');
+  assert.equal(hits['/discovered.xml'], undefined, 'discovered feed was requested');
+});
+
+test('dates shown on the listing are used when the article page has none, and stale ones skip the page', async () => {
+  resetHits();
+  const result = await collectFromSource(def({ url: `${base}/listing-dates`, scrape: true, limit: 5 }));
+  assert.deepEqual(result.articles.map((a) => a.title), ['Card dated']);
+  assert.equal(hits['/a/card-old'], undefined, 'a page the listing already showed as stale was fetched');
 });

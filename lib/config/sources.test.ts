@@ -40,6 +40,15 @@ test('requested sources are configured with the requested URL and category', () 
   }
 });
 
+test('the six new sources are scrape-only: no feed URLs configured', () => {
+  for (const id of Object.keys(ADDED)) {
+    assert.equal(SOURCES_BY_ID[id].scrape, true, `${id}: scrape`);
+    assert.equal(SOURCES_BY_ID[id].feeds, undefined, `${id}: feeds`);
+    assert.equal(toSourceRecord(SOURCES_BY_ID[id]).feedUrl, null, `${id}: feedUrl`);
+    assert.equal(toSourceRecord(SOURCES_BY_ID[id]).ingestStrategy, 'html', `${id}: strategy`);
+  }
+});
+
 test('category targets equal the sum of source limits', () => {
   for (const area of AREAS) {
     const sum = SOURCES.filter((s) => s.category === area).reduce((n, s) => n + s.limit, 0);

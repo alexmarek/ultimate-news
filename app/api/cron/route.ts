@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { runIngest, seedSources } from '@/lib/ingest/pipeline';
+import { checkSources, runIngest, seedSources } from '@/lib/ingest/pipeline';
 import { freshCutoff } from '@/lib/config/dailyFeed';
 
 // Called by Vercel Cron at 08:00 UTC (10:00 CEST) daily.
@@ -16,6 +16,11 @@ export async function GET(req: NextRequest) {
     const oldest = await prisma.article.findFirst({ orderBy: { publishedAt: 'asc' }, select: { publishedAt: true } });
     const feedArticles = await prisma.article.count({ where: { isInDailyFeed: true } });
     return NextResponse.json({ totalArticles, feedArticles, oldArticles, newest: newest?.publishedAt, oldest: oldest?.publishedAt });
+  }
+
+  // Dry run — fetch every source and report what would be ingested; writes nothing, calls no AI.
+  if (req.nextUrl.searchParams.has('dryRun')) {
+    return NextResponse.json(await checkSources());
   }
 
   try {

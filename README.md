@@ -77,14 +77,20 @@ Runs the unit tests in `lib/**/*.test.ts` (summary format, fallback summariser, 
 
 ### Adding or removing a source
 
-Edit `SOURCES` in `lib/config/sources.ts`: id, name, site URL, optional feed URLs, category and the daily article limit. Sources without a known feed are discovered from the site's `<link rel="alternate">` tags; set `scrape: true` for sites with no feed at all (articles are then read from the page and must expose a publish date). The next ingest syncs the database; sources removed from the list are deactivated and their articles disappear from the feed immediately.
+Edit `SOURCES` in `lib/config/sources.ts`: id, name, site URL, category and the daily article limit, plus one of:
 
-### Backfill missing images
+- `feeds: [...]` — known RSS/Atom URLs (if omitted, the site's `<link rel="alternate">` feed is auto-discovered), or
+- `scrape: true` — read articles straight from the page at `url`. No feed is used or discovered. Article links are taken from the page and each linked page must expose a publish date (JSON-LD, `<meta>` or `<time>`), either on the article page or next to the link on the listing.
+
+The next ingest syncs the database; sources removed from the list are deactivated and their articles disappear from the feed immediately.
+
+To see what the scrapers and feeds currently find, without writing anything or calling the AI:
 
 ```bash
-curl -X POST http://localhost:3000/api/images \
-  -H "x-cron-secret: <INGEST_CRON_SECRET>"
+curl "https://<your-deployment>/api/cron?dryRun"
 ```
+
+The result lists, per source, the method used, how many items were offered, kept and skipped as too old, any error, and the articles that would be ingested.
 
 ## Environment Variables
 
