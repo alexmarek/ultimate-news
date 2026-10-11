@@ -24,6 +24,12 @@ test('cleanSourceText keeps long articles whose opening words legitimately recur
   assert.equal(cleanSourceText(body), body);
 });
 
+test('identical excerpt and body without a final period are not doubled (live Quartz case)', () => {
+  const snippet = 'U.S. News ranks diets for diabetes management each year \u2014 here are 10 top-performing approaches and how each works';
+  const out = buildExtractiveSummary({ title: 'The best diets for people with diabetes, according to U.S. News', excerpt: snippet, content: snippet });
+  assert.equal(out, `**${snippet}.**`);
+});
+
 test('excerpt that is repeated inside the body does not repeat in the summary (live-site bug)', () => {
   const excerpt = 'Critics have crowned a handful of standouts in the first half of 2026. Here are the five films with the strongest reviews.';
   const out = buildExtractiveSummary({ title: 'Best films of 2026 so far', excerpt, content: excerpt });

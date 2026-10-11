@@ -39,7 +39,7 @@ const STOPWORDS = new Set(
  * ("Title words ... Title words ..."). For short snippets, cut at the echo.
  * Long texts are left alone: a repeated opening there is legitimate prose.
  */
-function dropEchoedStart(text: string): string {
+export function dropEchoedStart(text: string): string {
   const words = text.split(' ');
   if (words.length < 14 || words.length > 80) return text;
   const opening = words.slice(0, 6).join(' ').toLowerCase();
@@ -110,8 +110,16 @@ export interface ExtractiveInput {
 export function buildExtractiveSummary({ title, excerpt = '', content = '' }: ExtractiveInput): string {
   const body = cleanSourceText(content);
   const lede = cleanSourceText(excerpt);
-  // The feed excerpt is normally the start of the body: only use both when the body is short.
-  const text = body.length >= 200 ? body : `${lede} ${body}`.trim();
+  // The feed excerpt is normally the start of the body: only use both when the body is short,
+  // and never twice when one contains the other (some feeds put the same snippet in both fields).
+  let text: string;
+  if (body.length >= 200) text = body;
+  else if (lede && body.includes(lede)) text = body;
+  else if (body && lede.includes(body)) text = lede;
+  else text = `${lede} ${body}`.trim();
+  text = dropEchoedStart(text);
+  // A snippet that is just a headline has no final period; give the lead one.
+  if (text && !/[.!?]["'\u201D\u2019)\]]*$/.test(text)) text = `${text}.`;
 
   const sentences = dedupeSentences(splitSentences(text)).filter((s) => {
     const words = countWords(s);
