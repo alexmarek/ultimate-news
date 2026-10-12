@@ -15,6 +15,20 @@ export interface FetchResult {
   /** HTTP status, or null if the request failed before a response (timeout, DNS, TLS). */
   status: number | null;
   error?: string;
+  /** Selected response headers of a failed request (redirect target, server, cookie names), for diagnostics. */
+  diag?: Record<string, string>;
+}
+
+function failureDiagnostics(response: Response): Record<string, string> {
+  const diag: Record<string, string> = {};
+  for (const h of ['location', 'server', 'via', 'content-type', 'x-cache', 'cf-ray']) {
+    const v = response.headers.get(h);
+    if (v) diag[h] = v.slice(0, 200);
+  }
+  // Names only: cookie values are not needed to see that a site wants a consent cookie.
+  const cookies = response.headers.getSetCookie?.().map((c) => c.split('=')[0]) ?? [];
+  if (cookies.length) diag['set-cookie'] = cookies.join(', ');
+  return diag;
 }
 
 /** Like fetchHtml, but says why a fetch failed (used for diagnostics). */
@@ -27,7 +41,7 @@ export async function fetchHtmlResult(url: string, timeoutMs = 8000): Promise<Fe
       signal: controller.signal,
       redirect: 'follow',
     });
-    if (!response.ok) return { html: null, status: response.status, error: `HTTP ${response.status}` };
+    if (!response.ok) return { html: null, status: response.status, error: `HTTP ${response.status}`, diag: failureDiagnostics(response) };
     return { html: await response.text(), status: response.status };
   } catch (e) {
     return { html: null, status: null, error: e instanceof Error ? e.message : String(e) };

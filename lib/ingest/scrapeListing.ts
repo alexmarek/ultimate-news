@@ -30,7 +30,7 @@ export interface ScrapeOptions {
 export async function scrapeListing(pageUrl: string, opts: ScrapeOptions): Promise<RawArticle[]> {
   const now = opts.now ?? Date.now();
   const listing = await fetchHtmlResult(pageUrl);
-  opts.trace?.push({ step: 'listing', url: pageUrl, status: listing.status, error: listing.error, bytes: listing.html?.length ?? 0 });
+  opts.trace?.push({ step: 'listing', url: pageUrl, status: listing.status, error: listing.error, diag: listing.diag, bytes: listing.html?.length ?? 0 });
   if (!listing.html) throw new Error(`Could not fetch ${pageUrl} (${listing.error ?? 'no response'})`);
 
   const links = extractListingLinks(cheerio.load(listing.html), pageUrl, opts.maxCandidates ?? 14);
@@ -48,7 +48,7 @@ export async function scrapeListing(pageUrl: string, opts: ScrapeOptions): Promi
     }
     const page = await fetchHtmlResult(link.url);
     if (!page.html) {
-      note('page fetch failed', { status: page.status, error: page.error });
+      note('page fetch failed', { status: page.status, error: page.error, diag: page.diag });
       return null;
     }
     const $ = cheerio.load(page.html);
