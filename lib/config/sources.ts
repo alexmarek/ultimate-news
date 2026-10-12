@@ -38,6 +38,8 @@ export const SOURCES: SourceDef[] = [
   // German-language: headline and summary are translated to English at ingest. Politics section = World News.
   // [Unverified] scraped; not yet checked against the live page.
   { id: 'faz', name: 'FAZ.NET', url: 'https://www.faz.net/aktuell/politik/', scrape: true, lang: 'de', category: 'World News', limit: 3, contentKind: 'news', tier: 'tier-1', weight: 0.9 },
+  // TEMPORARY probe: the same section through its RSS feed, to compare with the scrape above.
+  { id: 'faz-rss', name: 'FAZ.NET', url: 'https://www.faz.net/aktuell/politik/', feeds: ['https://www.faz.net/rss/aktuell/politik/', 'https://www.faz.net/rss/aktuell/'], lang: 'de', category: 'World News', limit: 3, contentKind: 'news', tier: 'tier-1', weight: 0.9 },
   { id: 'euobserver', name: 'EUobserver', url: 'https://euobserver.com/', category: 'World News', limit: 2, contentKind: 'news', tier: 'tier-1', weight: 0.9 },
 
   // --- Technology ---

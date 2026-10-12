@@ -20,7 +20,8 @@ export async function GET(req: NextRequest) {
 
   // Dry run — fetch every source and report what would be ingested; writes nothing, calls no AI.
   if (req.nextUrl.searchParams.has('dryRun')) {
-    return NextResponse.json(await checkSources());
+    const only = req.nextUrl.searchParams.get('source')?.split(',').filter(Boolean);
+    return NextResponse.json(await checkSources(Date.now(), only));
   }
 
   try {

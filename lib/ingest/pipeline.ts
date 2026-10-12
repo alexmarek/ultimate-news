@@ -211,8 +211,9 @@ export async function collectFromSource(
  * Read-only check: runs only the collect step for every configured source and
  * reports what would be ingested. Nothing is written and no summaries are generated.
  */
-export async function checkSources(now: number = Date.now()): Promise<Record<string, unknown>> {
-  const collected = await mapPool(SOURCES, SOURCE_CONCURRENCY, async (def) => {
+export async function checkSources(now: number = Date.now(), only?: string[]): Promise<Record<string, unknown>> {
+  const defs = only?.length ? SOURCES.filter((d) => only.includes(d.id)) : SOURCES;
+  const collected = await mapPool(defs, SOURCE_CONCURRENCY, async (def) => {
     const trace: Array<Record<string, unknown>> = [];
     return { def, trace, result: await collectFromSource(def, now, trace) };
   });

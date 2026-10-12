@@ -35,13 +35,29 @@ function failureDiagnostics(response: Response): Record<string, string> {
 export async function fetchHtmlResult(url: string, timeoutMs = 8000): Promise<FetchResult> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    const response = await fetch(url, {
-      headers: { 'User-Agent': USER_AGENT, Accept: 'text/html,application/xhtml+xml' },
+  const request = (cookie?: string) =>
+    fetch(url, {
+      headers: { 'User-Agent': USER_AGENT, Accept: 'text/html,application/xhtml+xml', ...(cookie ? { Cookie: cookie } : {}) },
       signal: controller.signal,
       redirect: 'follow',
     });
-    if (!response.ok) return { html: null, status: response.status, error: `HTTP ${response.status}`, diag: failureDiagnostics(response) };
+  try {
+    let response = await request();
+    let retried = false;
+    // A redirect without a target that sets a cookie is a "send the cookie back" gate: repeat the
+    // request once with the cookie, as a browser's cookie jar would.
+    if (response.status >= 300 && response.status < 400 && !response.headers.get('location')) {
+      const cookie = response.headers.getSetCookie?.().map((c) => c.split(';')[0]).join('; ');
+      if (cookie) {
+        response = await request(cookie);
+        retried = true;
+      }
+    }
+    if (!response.ok) {
+      const diag = failureDiagnostics(response);
+      if (retried) diag.retriedWithCookie = 'yes';
+      return { html: null, status: response.status, error: `HTTP ${response.status}`, diag };
+    }
     return { html: await response.text(), status: response.status };
   } catch (e) {
     return { html: null, status: null, error: e instanceof Error ? e.message : String(e) };
