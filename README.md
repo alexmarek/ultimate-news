@@ -93,7 +93,7 @@ To see what the scrapers and feeds currently find, without writing anything or c
 curl "https://<your-deployment>/api/cron?dryRun"
 ```
 
-The result lists, per source, the method used, how many items were offered, kept and skipped as too old, any error, and the articles that would be ingested.
+Add `&source=id1,id2` to check only some sources. The result lists, per source, the method used, how many items were offered, kept and skipped as too old, any error, and the articles that would be ingested.
 
 ## Environment Variables
 

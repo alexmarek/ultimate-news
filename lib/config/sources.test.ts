@@ -59,15 +59,15 @@ test('News On Japan and The Japan Times use the requested RSS feeds', () => {
   }
 });
 
-test('FAZ.NET is a scraped German-language World News source stored as such', () => {
+test('FAZ.NET is a German-language World News source read from its RSS feed (its pages block server-side requests)', () => {
   const faz = SOURCES_BY_ID.faz;
   assert.ok(faz, 'faz missing');
-  assert.equal(faz.url, 'https://www.faz.net/aktuell/politik/');
   assert.equal(faz.category, 'World News');
-  assert.equal(faz.scrape, true);
-  assert.equal(faz.feeds, undefined);
+  assert.deepEqual(faz.feeds, ['https://www.faz.net/rss/aktuell/politik/']);
+  assert.equal(faz.scrape, undefined);
   assert.equal(toSourceRecord(faz).lang, 'de');
   assert.equal(toSourceRecord(SOURCES_BY_ID.theverge).lang, 'en');
+  assert.equal(SOURCES_BY_ID['faz-rss'], undefined, 'temporary probe source removed');
 });
 
 test('category targets equal the sum of source limits', () => {

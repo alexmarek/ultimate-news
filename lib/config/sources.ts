@@ -36,10 +36,9 @@ export const SOURCES: SourceDef[] = [
   { id: 'newsonjapan', name: 'News On Japan', url: 'https://newsonjapan.com/', feeds: ['https://newsonjapan.com/rss/top.xml'], category: 'World News', limit: 3, contentKind: 'news', tier: 'tier-1', weight: 0.9 },
   { id: 'japantimes', name: 'The Japan Times', url: 'https://www.japantimes.co.jp/', feeds: ['https://www.japantimes.co.jp/feed/topstories/'], category: 'World News', limit: 3, contentKind: 'news', tier: 'tier-1', weight: 0.9 },
   // German-language: headline and summary are translated to English at ingest. Politics section = World News.
-  // [Unverified] scraped; not yet checked against the live page.
-  { id: 'faz', name: 'FAZ.NET', url: 'https://www.faz.net/aktuell/politik/', scrape: true, lang: 'de', category: 'World News', limit: 3, contentKind: 'news', tier: 'tier-1', weight: 0.9 },
-  // TEMPORARY probe: the same section through its RSS feed, to compare with the scrape above.
-  { id: 'faz-rss', name: 'FAZ.NET', url: 'https://www.faz.net/aktuell/politik/', feeds: ['https://www.faz.net/rss/aktuell/politik/', 'https://www.faz.net/rss/aktuell/'], lang: 'de', category: 'World News', limit: 3, contentKind: 'news', tier: 'tier-1', weight: 0.9 },
+  // Feed instead of a scrape: faz.net answers server-side page requests with an empty 302, but serves its RSS feed.
+  // The feed carries only a short teaser, so these summaries are brief (and the article text cannot be fetched either).
+  { id: 'faz', name: 'FAZ.NET', url: 'https://www.faz.net/aktuell/politik/', feeds: ['https://www.faz.net/rss/aktuell/politik/'], lang: 'de', category: 'World News', limit: 3, contentKind: 'news', tier: 'tier-1', weight: 0.9 },
   { id: 'euobserver', name: 'EUobserver', url: 'https://euobserver.com/', category: 'World News', limit: 2, contentKind: 'news', tier: 'tier-1', weight: 0.9 },
 
   // --- Technology ---
