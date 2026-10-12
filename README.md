@@ -1,10 +1,10 @@
 # Ultimate News
 
-A curated daily news aggregator — articles from 13 sources across 7 categories, refreshed every 24 hours via cron. Built with Next.js 15, Tailwind v4, and Prisma.
+A curated daily news aggregator — articles from 14 sources across 7 categories, refreshed every 24 hours via cron. Built with Next.js 15, Tailwind v4, and Prisma.
 
 ## Features
 
-- **13 sources** across World News, Technology, Science, Environment, Positive News, Business, Travel (defined in `lib/config/sources.ts`)
+- **14 sources** across World News, Technology, Science, Environment, Positive News, Business, Travel (defined in `lib/config/sources.ts`)
 - **14-day freshness limit** — articles older than 14 days are never ingested and never shown (`MAX_ARTICLE_AGE_DAYS` in `lib/config/dailyFeed.ts`)
 - **Daily refresh** — Vercel Cron re-ingests all articles at 08:00 UTC; the previous feed is replaced only once new articles are ready, so a failed run never empties the site
 - **12 articles per page** with pagination
@@ -65,6 +65,7 @@ The response is an ingest report. Check it after changing sources or prompts:
 
 - `sources[]` — per source: how it was fetched (`feed` / `scrape`), the feed URL used, how many items it offered, how many were skipped as too old, how many were kept, and any `error`.
 - `enrichment` — how many summaries were written by Claude (`ai`) versus the extractive fallback (`fallback`), with the reasons. If `ai` is 0, check `ANTHROPIC_API_KEY`.
+- `enrichment.untranslated` — non-English articles left out because Claude could not translate them (the extractive fallback cannot translate, so they are never shown untranslated).
 - `categoryFill` — articles per category against the sum of the source limits.
 
 ### Tests
@@ -81,6 +82,8 @@ Edit `SOURCES` in `lib/config/sources.ts`: id, name, site URL, category and the 
 
 - `feeds: [...]` — known RSS/Atom URLs (if omitted, the site's `<link rel="alternate">` feed is auto-discovered), or
 - `scrape: true` — read articles straight from the page at `url`. No feed is used or discovered. Article links are taken from the page and each linked page must expose a publish date (JSON-LD, `<meta>` or `<time>`), either on the article page or next to the link on the listing.
+
+Set `lang: 'de'` (or another code) for a non-English source. Its headline, summary and excerpt are then translated to English by Claude at ingest and stored in English; the article page shows the original language as e.g. "DE → EN". If Claude is unavailable or its reply is not English, that article is skipped rather than shown untranslated.
 
 The next ingest syncs the database; sources removed from the list are deactivated and their articles disappear from the feed immediately.
 

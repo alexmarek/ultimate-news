@@ -143,7 +143,7 @@ export default async function ArticlePage({
           </div>
           <TimeAgo date={article.publishedAt} />
           <span className="px-2 py-0.5 rounded text-body-sm font-medium bg-[var(--surface)] text-[var(--text-body)] uppercase">
-            {article.lang}
+            {article.lang === 'en' ? 'en' : `${article.lang} → en`}
           </span>
           {article.author && (
             <span className="text-body-md text-[var(--text-faint)]">by {article.author}</span>

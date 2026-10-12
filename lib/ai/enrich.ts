@@ -10,7 +10,8 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { ENRICH_PROMPT } from '@/lib/ai/prompts';
 import { enrichArticle as fallbackEnrich } from '@/lib/ai/enrich-simple';
-import { MAX_SUMMARY_WORDS, countSummaryWords, countWords, dropMetaCommentary, leadOnlySummary, normalizeSummary } from '@/lib/summary';
+import { isLikelyEnglish } from '@/lib/ai/language';
+import { MAX_SUMMARY_WORDS, countSummaryWords, countWords, dropMetaCommentary, leadOnlySummary, normalizeSummary, summaryToPlainText } from '@/lib/summary';
 
 export interface EnrichInput {
   sourceName: string;
@@ -115,6 +116,18 @@ export function parseResponse(text: string, truncated = false, snippet = false):
   };
 }
 
+/**
+ * Why a reply cannot be used for an article that should have been translated to
+ * English (no English headline, or the summary is still in the source language);
+ * null when it can. Always null for English sources.
+ */
+export function translationProblem(parsed: Pick<ParsedReply, 'summary' | 'titleEn'>, sourceLang: string): string | null {
+  if (sourceLang === 'en') return null;
+  if (!parsed.titleEn) return 'the reply has no English headline';
+  if (!isLikelyEnglish(summaryToPlainText(parsed.summary))) return 'the summary is not in English';
+  return null;
+}
+
 /** Enrichment without any network call (also used when the ingest time budget is spent). */
 export async function enrichFallback(input: EnrichInput, reason: string): Promise<EnrichOutput> {
   const result = await fallbackEnrich(input);
@@ -144,6 +157,11 @@ export async function enrichArticle(input: EnrichInput): Promise<EnrichOutput> {
 
     const parsed = parseResponse(text, msg.stop_reason === 'max_tokens', isSnippet(input));
     if (parsed) {
+      const problem = translationProblem(parsed, input.sourceLang);
+      if (problem) {
+        console.error(`[enrich] translation rejected: ${problem}`);
+        return enrichFallback(input, `Translation failed: ${problem}`);
+      }
       const fallbackAreas = [{ area: 'World News', confidence: 0.5 }];
       return {
         ...parsed,

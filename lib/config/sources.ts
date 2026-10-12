@@ -19,6 +19,8 @@ export interface SourceDef {
    * expose a machine-readable publish date (JSON-LD, <meta> or <time>) to be kept.
    */
   scrape?: boolean;
+  /** Language the source publishes in (default 'en'). Non-English articles are translated to English at ingest. */
+  lang?: string;
   /** Fetch the feed through api.rss2json.com (for hosts that block server-side requests). */
   viaRss2Json?: boolean;
   category: Area;
@@ -33,6 +35,9 @@ export const SOURCES: SourceDef[] = [
   // --- World News ---
   { id: 'newsonjapan', name: 'News On Japan', url: 'https://newsonjapan.com/', feeds: ['https://newsonjapan.com/rss/top.xml'], category: 'World News', limit: 3, contentKind: 'news', tier: 'tier-1', weight: 0.9 },
   { id: 'japantimes', name: 'The Japan Times', url: 'https://www.japantimes.co.jp/', feeds: ['https://www.japantimes.co.jp/feed/topstories/'], category: 'World News', limit: 3, contentKind: 'news', tier: 'tier-1', weight: 0.9 },
+  // German-language: headline and summary are translated to English at ingest. Politics section = World News.
+  // [Unverified] scraped; not yet checked against the live page.
+  { id: 'faz', name: 'FAZ.NET', url: 'https://www.faz.net/aktuell/politik/', scrape: true, lang: 'de', category: 'World News', limit: 3, contentKind: 'news', tier: 'tier-1', weight: 0.9 },
   { id: 'euobserver', name: 'EUobserver', url: 'https://euobserver.com/', category: 'World News', limit: 2, contentKind: 'news', tier: 'tier-1', weight: 0.9 },
 
   // --- Technology ---
@@ -76,7 +81,7 @@ export function toSourceRecord(s: SourceDef) {
     url: s.url,
     feedUrl: s.scrape ? null : (s.feeds?.[0] ?? null),
     ingestStrategy: s.scrape ? 'html' : 'rss',
-    lang: 'en',
+    lang: s.lang ?? 'en',
     tier: s.tier,
     editorialIndependence: 'independent',
     isWireService: false,

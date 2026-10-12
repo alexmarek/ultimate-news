@@ -28,7 +28,7 @@ import { mapPool } from '@/lib/ingest/pool';
 import { stripHtml } from '@/lib/text';
 import { enrichArticle, enrichFallback } from '@/lib/ai/enrich';
 import { embed } from '@/lib/ai/embed';
-import { summaryToPlainText } from '@/lib/summary';
+import { summaryPreview, summaryToPlainText } from '@/lib/summary';
 import { recomputeClusters } from '@/lib/dedup/cluster';
 
 /** Below this much text the feed only gave a snippet: fetch the article page for the full body. */
@@ -67,6 +67,7 @@ export async function seedSources() {
         isActive: true,
         name: row.name,
         url: row.url,
+        lang: row.lang,
         feedUrl: row.feedUrl,
         ingestStrategy: row.ingestStrategy,
         contentKind: row.contentKind,
@@ -255,6 +256,8 @@ interface PreparedArticle {
   row: Prisma.ArticleCreateManyInput;
   engine: 'ai' | 'fallback';
   fallbackReason?: string;
+  /** False for a non-English article that could not be translated: it is not written to the feed. */
+  publishable: boolean;
 }
 
 async function prepareArticle(c: Candidate, deadline: number): Promise<PreparedArticle> {
@@ -267,9 +270,10 @@ async function prepareArticle(c: Candidate, deadline: number): Promise<PreparedA
     if (fetched && fetched.length > content.length) content = fetched;
   }
 
+  const lang = def.lang ?? 'en';
   const input = {
     sourceName: def.name,
-    sourceLang: 'en',
+    sourceLang: lang,
     title: raw.title,
     excerpt: raw.excerpt,
     content: content || undefined,
@@ -277,9 +281,17 @@ async function prepareArticle(c: Candidate, deadline: number): Promise<PreparedA
   const enrichment =
     Date.now() < deadline ? await enrichArticle(input) : await enrichFallback(input, 'ingest time budget exhausted');
 
+  // Everything the site shows is English. For a translated article the stored headline and excerpt
+  // are the English ones; the original-language headline is one click away on the source site.
+  // The extractive fallback cannot translate, so a non-English article without a Claude summary is dropped.
+  const translated = lang !== 'en';
+  const publishable = !translated || enrichment.engine === 'ai';
+  const title = translated ? enrichment.titleEn || raw.title : raw.title;
+  const excerpt = translated ? summaryPreview(enrichment.summary, 240) : raw.excerpt;
+
   let embedding: string | null = null;
   try {
-    const text = [raw.title, raw.excerpt, summaryToPlainText(enrichment.summary)].filter(Boolean).join(' ');
+    const text = [title, excerpt, summaryToPlainText(enrichment.summary)].filter(Boolean).join(' ');
     embedding = JSON.stringify(await embed(text));
   } catch {
     // Voyage unavailable or not configured: clustering simply skips this article.
@@ -288,18 +300,19 @@ async function prepareArticle(c: Candidate, deadline: number): Promise<PreparedA
   return {
     engine: enrichment.engine,
     fallbackReason: enrichment.fallbackReason,
+    publishable,
     row: {
       id: c.articleId,
       sourceId: def.id,
       canonicalUrl: c.canonicalUrl,
       originalUrl: raw.url,
-      title: raw.title,
+      title,
       titleEn: enrichment.titleEn,
-      excerpt: raw.excerpt,
+      excerpt,
       content: content || null,
       publishedAt: raw.publishedAt,
       author: raw.author ?? null,
-      lang: 'en',
+      lang,
       summary: enrichment.summary,
       areas: enrichment.areas.map((a) => a.area).join(','),
       // The category is fixed by the source configuration, not by the model.
@@ -391,7 +404,20 @@ export async function runIngest(sources: Source[]): Promise<IngestOutcome> {
 
   // --- 2. enrich ---
   const deadline = startedAt + ENRICH_DEADLINE_MS;
-  const prepared = await mapPool(candidates, ENRICH_CONCURRENCY, (c) => prepareArticle(c, deadline));
+  const allPrepared = await mapPool(candidates, ENRICH_CONCURRENCY, (c) => prepareArticle(c, deadline));
+  const prepared = allPrepared.filter((p) => p.publishable);
+  const untranslated = allPrepared
+    .filter((p) => !p.publishable)
+    .map((p) => ({ sourceId: p.row.sourceId, url: p.row.originalUrl, reason: p.fallbackReason ?? 'unknown' }));
+  if (untranslated.length) console.error(`[ingest] ${untranslated.length} non-English article(s) left out: could not be translated`);
+
+  if (prepared.length === 0) {
+    console.error('[ingest] Nothing publishable after enrichment — keeping the existing feed');
+    return {
+      status: 502,
+      body: { error: 'No articles could be prepared; the existing feed was left untouched', maxAgeDays: MAX_ARTICLE_AGE_DAYS, sourceErrors, untranslated, sources: sourceReport },
+    };
+  }
 
   // --- 3. write: replace the previous feed in one transaction ---
   await prisma.$transaction([
@@ -415,7 +441,7 @@ export async function runIngest(sources: Source[]): Promise<IngestOutcome> {
 
   const categoryFill: Record<string, { target: number; selected: number; shortfall: number }> = {};
   for (const [area, target] of Object.entries(DAILY_FEED_TARGETS)) {
-    const selected = candidates.filter((c) => c.def.category === area).length;
+    const selected = prepared.filter((p) => p.row.primaryArea === area).length;
     categoryFill[area] = { target, selected, shortfall: Math.max(0, target - selected) };
   }
 
@@ -433,7 +459,7 @@ export async function runIngest(sources: Source[]): Promise<IngestOutcome> {
       written,
       sourceErrors,
       // How many summaries Claude wrote vs. the extractive fallback. Fallback summaries are lower quality.
-      enrichment: { ai: aiCount, fallback: written - aiCount, fallbackReasons },
+      enrichment: { ai: aiCount, fallback: written - aiCount, fallbackReasons, untranslatedSkipped: untranslated.length, untranslated },
       categoryFill,
       clusters: clusterResult,
       durationMs: Date.now() - startedAt,

@@ -37,7 +37,7 @@ Structure - use exactly this lightweight markup and nothing else (no HTML, links
 2. One to three short paragraphs (2-4 sentences each) with the details and context. Use **bold** for the one to three most important names or figures and *italics* for titles of works or foreign terms.
 3. A line "## Key points" followed by 3-6 lines that each start with "- ". Each bullet is one distinct fact, figure or takeaway in under 25 words. (Not for snippets.)
 4. Optionally a line "## Why it matters" followed by one short paragraph, only if the article supports it.
-Separate blocks with a blank line. Write in neutral, plain English. If the article is not in English, still write the summary in English and set "titleEn" to an English translation of the headline.
+Separate blocks with a blank line. Write in neutral, plain English. If the article's Language is not English (for example German), translate: write the whole summary in English, never leave sentences in the source language (proper names, institutions and quoted terms may stay, in *italics* when they are foreign terms), and set "titleEn" to a faithful English translation of the headline.
 
 === CLASSIFICATION RULES ===
 
@@ -153,7 +153,7 @@ Articles in Czech, German, or other non-English languages should be classified u
 - "areas": one to three categories with confidence between 0 and 1, most likely first.
 - "topics": the 1-5 topics described above.
 - "entities": the main people, organisations and places named in the article (at most 6).
-- "titleEn": an English translation of the headline if it is not in English, otherwise null.
+- "titleEn": an English translation of the headline if the article is not in English (required then, never null), otherwise null.
 - "incomplete": true only if the text provided was too short or cut off to summarise the whole article.
 
 <article>

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildPrompt, enrichArticle, isSnippet, parseResponse } from '@/lib/ai/enrich';
+import { buildPrompt, enrichArticle, isSnippet, parseResponse, translationProblem } from '@/lib/ai/enrich';
 import { countSummaryWords, parseSummary } from '@/lib/summary';
 
 const GOOD_REPLY = `<metadata>
@@ -102,6 +102,21 @@ test('isSnippet / buildPrompt flag short texts so the prompt applies the snippet
   const long = { ...short, content: Array.from({ length: 300 }, (_, i) => `word${i}`).join(' ') };
   assert.ok(!isSnippet(long));
   assert.ok(buildPrompt(long).includes('Text type: full article text'));
+});
+
+test('translation check: English sources are exempt; German sources need an English headline and summary', () => {
+  const english = { summary: '**The coalition agreed on a pension reform that the opposition has criticised.**', titleEn: 'Coalition agrees on pension reform' };
+  const german = { summary: '**Die Koalition hat sich auf eine Rentenreform geeinigt, die von der Opposition nicht mitgetragen wird.**', titleEn: 'Koalition einigt sich auf Rentenreform' };
+  assert.equal(translationProblem(german, 'en'), null);
+  assert.equal(translationProblem(english, 'de'), null);
+  assert.match(translationProblem({ ...english, titleEn: null }, 'de') ?? '', /headline/);
+  assert.match(translationProblem(german, 'de') ?? '', /not in English/);
+});
+
+test('the prompt tells Claude the source language so it translates', () => {
+  const prompt = buildPrompt({ sourceName: 'FAZ.NET', sourceLang: 'de', title: 'Koalition einigt sich', excerpt: 'Die Koalition hat sich geeinigt.' });
+  assert.ok(prompt.includes('Language: de'));
+  assert.ok(prompt.includes('translate: write the whole summary in English'));
 });
 
 test('buildPrompt substitutes article text literally ($ patterns and {placeholders} are not interpreted)', () => {
