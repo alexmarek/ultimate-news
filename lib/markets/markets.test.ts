@@ -1,8 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readXlsx, excelSerialToIso } from '@/lib/markets/xlsx';
-import { extractGermanPrices } from '@/lib/markets/petrol';
-import { computePerformance, parseStooqCsv, parseYahooChart } from '@/lib/markets/etfs';
+import { extractGermanPrices, findBulletinLinks } from '@/lib/markets/petrol';
+import { computePerformance, parseEodhd, parseStooqCsv, parseYahooChart } from '@/lib/markets/etfs';
 
 // A real (tiny) XLSX built with Python's zipfile: two sheets, shared strings incl. rich text,
 // an inline string, a sparse row and an absolute relationship target.
@@ -64,4 +64,21 @@ test('performance: day vs previous close, 1 month, year to date (in %)', () => {
   ]);
   assert.deepEqual(perf, { lastDate: '2026-10-12', day: 2.5, month: 11.82, ytd: 23 });
   assert.equal(computePerformance([{ date: '2026-10-12', close: 1 }]), null);
+});
+
+test('the bulletin page yields its XLSX links: price history first, "with taxes" next, others ignored', () => {
+  const html = `
+    <a href="/document/download/aaa_en?filename=Weekly_Oil_Bulletin_Prices_with_taxes_2026-10-05.xlsx">with taxes</a>
+    <a href="/document/download/bbb_en?filename=Weekly_Oil_Bulletin_Prices_without_taxes_2026-10-05.xlsx">without</a>
+    <a href="https://energy.ec.europa.eu/document/download/ccc_en?filename=Weekly_Oil_Bulletin_Prices_History_maticni_4web.xlsx&amp;x=1">history</a>
+    <a href="/report.pdf">pdf</a>`;
+  assert.deepEqual(findBulletinLinks(html, 'https://energy.ec.europa.eu/data-and-analysis/weekly-oil-bulletin_en'), [
+    'https://energy.ec.europa.eu/document/download/ccc_en?filename=Weekly_Oil_Bulletin_Prices_History_maticni_4web.xlsx&x=1',
+    'https://energy.ec.europa.eu/document/download/aaa_en?filename=Weekly_Oil_Bulletin_Prices_with_taxes_2026-10-05.xlsx',
+  ]);
+});
+
+test('EODHD end-of-day JSON parses into daily closes', () => {
+  assert.deepEqual(parseEodhd([{ date: '2026-10-12', close: 140.1, adjusted_close: 140.1 }, { date: 'x', close: 1 }]), [{ date: '2026-10-12', close: 140.1 }]);
+  assert.deepEqual(parseEodhd({ error: 'Unauthenticated' }), []);
 });

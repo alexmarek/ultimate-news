@@ -69,7 +69,7 @@ export function countWords(text: string): number {
 // Sentences and duplicate detection
 // ---------------------------------------------------------------------------
 
-const ABBREVIATIONS = /\b(?:Mr|Mrs|Ms|Dr|Prof|Sr|Jr|St|vs|etc|No|Inc|Ltd|Co|Corp|Gen|Sen|Rep|Gov|Lt|Col|Sgt|Mt|Ft|approx)\./g;
+const ABBREVIATIONS = /\b(?:Mr|Mrs|Ms|Dr|Prof|Sr|Jr|St|vs|etc|No|Inc|Ltd|Co|Corp|Gen|Sen|Rep|Gov|Lt|Col|Sgt|Mt|Ft|approx|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)\./g;
 
 export function splitSentences(text: string): string[] {
   const guarded = text

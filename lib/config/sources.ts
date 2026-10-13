@@ -64,7 +64,8 @@ export const SOURCES: SourceDef[] = [
   { id: 'un-climate-reports', name: 'UN Climate Change', url: 'https://news.un.org/en/news/topic/climate-change', scrape: true, category: 'Environment', limit: 2, contentKind: 'environment', tier: 'tier-1', weight: 0.9 },
   { id: 'carbonbrief', name: 'Carbon Brief', url: 'https://www.carbonbrief.org/', feeds: ['https://www.carbonbrief.org/feed/'], category: 'Environment', limit: 2, contentKind: 'environment', tier: 'tier-1', weight: 0.9 },
   // German energy transition in English: energy and fuel costs in Germany.
-  { id: 'cleanenergywire', name: 'Clean Energy Wire', url: 'https://www.cleanenergywire.org/', feeds: ['https://www.cleanenergywire.org/rss.xml'], category: 'Environment', limit: 2, contentKind: 'environment', tier: 'tier-1', weight: 0.9 },
+  // Feed found by auto-discovery: /rss.xml only carried items older than 14 days.
+  { id: 'cleanenergywire', name: 'Clean Energy Wire', url: 'https://www.cleanenergywire.org/news', category: 'Environment', limit: 2, contentKind: 'environment', tier: 'tier-1', weight: 0.9 },
 
   // --- Positive News ---
   { id: 'goodnewsnetwork', name: 'Good News Network', url: 'https://www.goodnewsnetwork.org', feeds: ['https://www.goodnewsnetwork.org/feed/'], category: 'Positive News', limit: 2, contentKind: 'positive-news', tier: 'tier-2', weight: 0.8 },

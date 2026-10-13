@@ -5,11 +5,23 @@
 
 import { excelSerialToIso, readXlsx, type Sheet } from '@/lib/markets/xlsx';
 
-// [Unverified] Commission download URLs; the history file gives several weeks, the latest file one.
-export const OIL_BULLETIN_URLS = [
+/** The bulletin's page: its download links change with each upload, so they are read from here. */
+export const OIL_BULLETIN_PAGE = 'https://energy.ec.europa.eu/data-and-analysis/weekly-oil-bulletin_en';
+// Older fixed locations, tried last.
+const FALLBACK_URLS = [
   'https://ec.europa.eu/energy/observatory/reports/Oil_Bulletin_Prices_History.xlsx',
   'https://ec.europa.eu/energy/observatory/reports/latest_prices_with_taxes.xlsx',
 ];
+
+/** XLSX links on the bulletin page: the price history first, then "prices with taxes". */
+export function findBulletinLinks(html: string, pageUrl: string): string[] {
+  const links = [...html.matchAll(/href="([^"]+)"/g)]
+    .map((m) => m[1].replace(/&amp;/g, '&'))
+    .filter((h) => /\.xlsx/i.test(h))
+    .map((h) => new URL(h, pageUrl).toString());
+  const rank = (u: string) => (/history/i.test(u) ? 0 : /with_?taxes|with%20taxes/i.test(u) && !/without|wo_?taxes/i.test(u) ? 1 : 2);
+  return [...new Set(links)].filter((u) => rank(u) < 2).sort((a, b) => rank(a) - rank(b));
+}
 
 export interface PetrolWeek {
   /** Date the prices were in force (YYYY-MM-DD). */
@@ -112,9 +124,22 @@ export interface PetrolResult {
   attempts: Array<Record<string, unknown>>;
 }
 
+async function discoverUrls(attempts: Array<Record<string, unknown>>): Promise<string[]> {
+  try {
+    const res = await fetch(OIL_BULLETIN_PAGE, { headers: { 'User-Agent': 'Mozilla/5.0 (ultimate-news)' } });
+    const found = res.ok ? findBulletinLinks(await res.text(), res.url || OIL_BULLETIN_PAGE) : [];
+    attempts.push({ url: OIL_BULLETIN_PAGE, status: res.status, linksFound: found });
+    return found;
+  } catch (e) {
+    attempts.push({ url: OIL_BULLETIN_PAGE, error: e instanceof Error ? e.message : String(e) });
+    return [];
+  }
+}
+
 export async function fetchPetrolPrices(timeoutMs = 25_000): Promise<PetrolResult> {
   const attempts: Array<Record<string, unknown>> = [];
-  for (const url of OIL_BULLETIN_URLS) {
+  const urls = [...(await discoverUrls(attempts)), ...FALLBACK_URLS];
+  for (const url of urls) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
@@ -124,6 +149,10 @@ export async function fetchPetrolPrices(timeoutMs = 25_000): Promise<PetrolResul
         continue;
       }
       const buf = Buffer.from(await res.arrayBuffer());
+      if (buf.readUInt32LE(0) !== 0x04034b50) {
+        attempts.push({ url, status: res.status, error: 'not an XLSX file', contentType: res.headers.get('content-type'), start: buf.toString('utf8', 0, 120) });
+        continue;
+      }
       const sheets = readXlsx(buf);
       const weeks = extractGermanPrices(sheets).slice(0, 8);
       if (weeks.length) {

@@ -86,10 +86,13 @@ export async function seedSources() {
 // 1. Collect
 // ---------------------------------------------------------------------------
 
+/** Video, audio and podcast items have no article text to summarise. */
+const MEDIA_URL = /\/(?:video|videos|podcast|podcasts|audio)(?:\/|-)/i;
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function toRawArticle(item: any): RawArticle | null {
   const link: string = item.link || item.guid || '';
-  if (!/^https?:\/\//i.test(link)) return null;
+  if (!/^https?:\/\//i.test(link) || MEDIA_URL.test(link)) return null;
 
   const parsed = new Date(item.isoDate || item.pubDate || '');
   return {

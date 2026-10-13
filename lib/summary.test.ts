@@ -179,3 +179,7 @@ test('firstSentence gives the first sentence of the lead without markup', () => 
   assert.equal(firstSentence('**The *Bundestag* passed it. It takes effect in May.**'), 'The Bundestag passed it.');
   assert.equal(firstSentence(''), '');
 });
+
+test('splitSentences keeps month abbreviations inside the sentence ("Sept. 18")', () => {
+  assert.deepEqual(splitSentences('On Sept. 18, Trump signed the act. It took effect in Oct. 2026.'), ['On Sept. 18, Trump signed the act.', 'It took effect in Oct. 2026.']);
+});

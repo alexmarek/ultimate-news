@@ -1,7 +1,9 @@
 // lib/markets/etfs.ts
 // Daily closes for the configured ETFs (Xetra, EUR) and their performance in %.
-// Tries Stooq's free CSV download first, then Yahoo Finance's public chart
-// endpoint (unofficial; may change without notice).
+// Uses EODHD's end-of-day API when EODHD_API_KEY is set (free plan: 20 calls a
+// day, one year of history). Without a key it tries Stooq's CSV download and
+// Yahoo Finance's public chart endpoint, both of which refuse requests from
+// Vercel's servers at the time of writing.
 
 import type { EtfDef } from '@/lib/config/portfolio';
 
@@ -19,7 +21,7 @@ export interface EtfPerformance {
 }
 
 export type EtfQuote = { isin: string; name: string; xetra: string } & (
-  | ({ provider: 'stooq' | 'yahoo' } & EtfPerformance)
+  | ({ provider: 'eodhd' | 'stooq' | 'yahoo' } & EtfPerformance)
   | { error: string }
 );
 
@@ -32,6 +34,13 @@ export function parseStooqCsv(csv: string): DailyClose[] {
     .slice(1)
     .map((l) => l.split(','))
     .map((c) => ({ date: c[0], close: Number(c[closeCol]) }))
+    .filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d.date) && Number.isFinite(d.close) && d.close > 0);
+}
+
+export function parseEodhd(json: unknown): DailyClose[] {
+  if (!Array.isArray(json)) return [];
+  return json
+    .map((r) => ({ date: String(r?.date ?? ''), close: Number(r?.close) }))
     .filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d.date) && Number.isFinite(d.close) && d.close > 0);
 }
 
@@ -82,6 +91,18 @@ async function get(url: string): Promise<Response> {
 
 const ymd = (d: Date) => d.toISOString().slice(0, 10).replace(/-/g, '');
 
+async function fromEodhd(def: EtfDef): Promise<DailyClose[]> {
+  const key = process.env.EODHD_API_KEY;
+  if (!key) throw new Error('eodhd: EODHD_API_KEY not set');
+  const now = new Date();
+  const from = `${now.getUTCFullYear() - 1}-12-01`;
+  const res = await get(`https://eodhd.com/api/eod/${encodeURIComponent(def.xetra)}.XETRA?api_token=${encodeURIComponent(key)}&fmt=json&from=${from}`);
+  if (!res.ok) throw new Error(`eodhd HTTP ${res.status}`);
+  const series = parseEodhd(await res.json());
+  if (!series.length) throw new Error('eodhd: no data');
+  return series;
+}
+
 async function fromStooq(def: EtfDef): Promise<DailyClose[]> {
   const now = new Date();
   const start = new Date(Date.UTC(now.getUTCFullYear() - 1, 11, 1));
@@ -102,7 +123,8 @@ async function fromYahoo(def: EtfDef): Promise<DailyClose[]> {
 
 export async function fetchEtf(def: EtfDef): Promise<EtfQuote> {
   const errors: string[] = [];
-  for (const [provider, load] of [['stooq', fromStooq], ['yahoo', fromYahoo]] as const) {
+  const providers = [['eodhd', fromEodhd], ['stooq', fromStooq], ['yahoo', fromYahoo]] as const;
+  for (const [provider, load] of providers.filter(([p]) => p !== 'eodhd' || process.env.EODHD_API_KEY)) {
     try {
       const perf = computePerformance(await load(def));
       if (perf) return { isin: def.isin, name: def.name, xetra: def.xetra, provider, ...perf };
