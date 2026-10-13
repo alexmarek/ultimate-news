@@ -28,3 +28,9 @@ export function decodeEntities(text: string): string {
 export function stripHtml(html: string): string {
   return decodeEntities(html.replace(/<[^>]*>/g, ' ')).replace(/\s+/g, ' ').trim();
 }
+
+/** Common English function words, ignored when comparing or scoring text. */
+export const STOPWORDS = new Set(
+  ('a about above after again against all also am an and any are as at be because been before being below between both but by can could did do does doing down during each few for from further had has have having he her here hers him his how i if in into is it its just may me more most my no nor not of off on once only or other our out over own said says same she should so some such than that the their them then there these they this those through to too under until up us very was we were what when where which while who whom why will with would you your')
+    .split(' '),
+);

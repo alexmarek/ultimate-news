@@ -56,6 +56,51 @@ export async function embed(text: string): Promise<number[]> {
   return embedding;
 }
 
+/** Inputs per request (Voyage accepts up to 1,000; small batches keep each request well under token limits). */
+const BATCH_SIZE = 64;
+
+async function embedBatch(inputs: string[], key: string): Promise<number[][]> {
+  const call = () =>
+    fetch(VOYAGE_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
+      body: JSON.stringify({ input: inputs, model: MODEL, input_type: 'document' }),
+      signal: AbortSignal.timeout(30_000),
+    });
+  let res = await call();
+  // Rate limited (the free tier allows only a few requests per minute): wait once and retry.
+  if (res.status === 429) {
+    await new Promise((r) => setTimeout(r, 21_000));
+    res = await call();
+  }
+  if (!res.ok) {
+    const errBody = await res.text().catch(() => '');
+    throw new Error(`Voyage ${res.status}: ${errBody.slice(0, 300)}`);
+  }
+  const data = (await res.json()) as VoyageResponse;
+  const out: number[][] = [];
+  for (const item of data.data ?? []) out[item.index] = item.embedding;
+  if (out.length !== inputs.length || out.some((v) => !Array.isArray(v) || v.length === 0)) {
+    throw new Error(`Voyage returned ${data.data?.length ?? 0} embeddings for ${inputs.length} inputs`);
+  }
+  return out;
+}
+
+/**
+ * Embeds many documents with as few requests as possible (one per 64 texts).
+ * The ingest uses this instead of one request per article, which the free
+ * tier's per-minute request limit mostly rejected.
+ */
+export async function embedMany(texts: string[]): Promise<number[][]> {
+  const key = process.env.VOYAGE_API_KEY;
+  if (!key) throw new Error('VOYAGE_API_KEY not set');
+  const vectors: number[][] = [];
+  for (let i = 0; i < texts.length; i += BATCH_SIZE) {
+    vectors.push(...(await embedBatch(texts.slice(i, i + BATCH_SIZE).map((t) => t.slice(0, 4_000)), key)));
+  }
+  return vectors;
+}
+
 export async function queryEmbed(text: string): Promise<number[]> {
   const key = process.env.VOYAGE_API_KEY;
   if (!key) throw new Error('VOYAGE_API_KEY not set');

@@ -71,6 +71,7 @@ The response is an ingest report. Check it after changing sources or prompts:
 - `enrichment` — how many summaries were written by Claude (`ai`) versus the extractive fallback (`fallback`), with the reasons. If `ai` is 0, check `ANTHROPIC_API_KEY`.
 - `enrichment.untranslated` — non-English articles left out because Claude could not translate them (the extractive fallback cannot translate, so they are never shown untranslated).
 - `categoryFill` — articles per category against the sum of the source limits.
+- `embeddings` — how many articles got a Voyage embedding (requested in one batch); without them stories are not grouped across sources.
 - `markets` — the ETF and petrol refresh: which provider served each ETF, or why it failed.
 
 To refresh only the ETF and petrol data: `curl "https://<your-deployment>/api/cron?markets"`.

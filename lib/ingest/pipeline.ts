@@ -27,7 +27,7 @@ import { canonicalizeUrl, articleIdFromUrl } from '@/lib/ingest/canonicalize';
 import { mapPool } from '@/lib/ingest/pool';
 import { stripHtml } from '@/lib/text';
 import { enrichArticle, enrichFallback, isSnippet } from '@/lib/ai/enrich';
-import { embed } from '@/lib/ai/embed';
+import { embedMany } from '@/lib/ai/embed';
 import { summaryPreview, summaryToPlainText } from '@/lib/summary';
 import { recomputeClusters } from '@/lib/dedup/cluster';
 
@@ -231,7 +231,7 @@ export async function checkSources(now: number = Date.now(), only?: string[], en
         DRY_RUN_ENRICH_MAX,
         async ({ def, result }) => {
           const raw = result.articles[0];
-          const prepared = await prepareArticle({ def, raw, canonicalUrl: raw.url, articleId: 'dry-run' }, Date.now() + ENRICH_DEADLINE_MS, false);
+          const prepared = await prepareArticle({ def, raw, canonicalUrl: raw.url, articleId: 'dry-run' }, Date.now() + ENRICH_DEADLINE_MS);
           const { row } = prepared;
           return {
             sourceId: def.id,
@@ -292,9 +292,11 @@ interface PreparedArticle {
   fallbackReason?: string;
   /** False for a non-English article that could not be translated: it is not written to the feed. */
   publishable: boolean;
+  /** Text used for the story-grouping embedding (English headline + start of the summary). */
+  embedText: string;
 }
 
-async function prepareArticle(c: Candidate, deadline: number, withEmbedding = true): Promise<PreparedArticle> {
+async function prepareArticle(c: Candidate, deadline: number): Promise<PreparedArticle> {
   const { def, raw } = c;
   let content = raw.content ?? '';
 
@@ -326,20 +328,14 @@ async function prepareArticle(c: Candidate, deadline: number, withEmbedding = tr
   const title = translated ? enrichment.titleEn || raw.title : raw.title;
   const excerpt = translated ? summaryPreview(enrichment.summary, 240) : raw.excerpt;
 
-  let embedding: string | null = null;
-  if (withEmbedding) {
-    try {
-      const text = [title, excerpt, summaryToPlainText(enrichment.summary)].filter(Boolean).join(' ');
-      embedding = JSON.stringify(await embed(text));
-    } catch {
-      // Voyage unavailable or not configured: clustering simply skips this article.
-    }
-  }
+  // Embedded later in one batch for all articles (see runIngest).
+  const embedText = [title, summaryToPlainText(enrichment.summary).split(/\s+/).slice(0, 80).join(' ')].filter(Boolean).join('. ');
 
   return {
     engine: enrichment.engine,
     fallbackReason: enrichment.fallbackReason,
     publishable,
+    embedText,
     row: {
       id: c.articleId,
       sourceId: def.id,
@@ -366,7 +362,7 @@ async function prepareArticle(c: Candidate, deadline: number, withEmbedding = tr
       isPaywalled: false,
       isWireOrigin: false,
       lowConfidenceTag: false,
-      embedding,
+      embedding: null,
       isInDailyFeed: true,
     },
   };
@@ -461,6 +457,19 @@ export async function runIngest(sources: Source[]): Promise<IngestOutcome> {
     };
   }
 
+  // Story-grouping embeddings, all in one request. Without them articles are simply not grouped.
+  let embeddings: Record<string, unknown>;
+  try {
+    const vectors = await embedMany(prepared.map((p) => p.embedText));
+    prepared.forEach((p, i) => {
+      p.row.embedding = JSON.stringify(vectors[i]);
+    });
+    embeddings = { embedded: vectors.length };
+  } catch (e) {
+    embeddings = { embedded: 0, error: errorMessage(e) };
+    console.error('[ingest] embeddings failed:', errorMessage(e));
+  }
+
   // --- 3. write: replace the previous feed in one transaction ---
   await prisma.$transaction([
     prisma.articleRead.deleteMany(),
@@ -503,6 +512,7 @@ export async function runIngest(sources: Source[]): Promise<IngestOutcome> {
       // How many summaries Claude wrote vs. the extractive fallback. Fallback summaries are lower quality.
       enrichment: { ai: aiCount, fallback: written - aiCount, fallbackReasons, untranslatedSkipped: untranslated.length, untranslated },
       categoryFill,
+      embeddings,
       clusters: clusterResult,
       durationMs: Date.now() - startedAt,
       sources: sourceReport,

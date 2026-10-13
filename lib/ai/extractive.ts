@@ -8,7 +8,7 @@
 // repeats a sentence. Quality is below an LLM summary, which is why the ingest
 // report counts how many articles used it.
 
-import { stripHtml } from '@/lib/text';
+import { STOPWORDS, stripHtml } from '@/lib/text';
 import {
   countWords,
   dedupeSentences,
@@ -29,10 +29,6 @@ const BOILERPLATE: RegExp[] = [
 
 const NOISE_SENTENCE = /^(?:photo|photograph|image|credit|advertisement|related|read also|sign up|subscribe|follow us|share this|copyright|all rights reserved)\b/i;
 
-const STOPWORDS = new Set(
-  ('a about above after again against all also am an and any are as at be because been before being below between both but by can could did do does doing down during each few for from further had has have having he her here hers him his how i if in into is it its just may me more most my no nor not of off on once only or other our out over own said says same she should so some such than that the their them then there these they this those through to too under until up us very was we were what when where which while who whom why will with would you your')
-    .split(' '),
-);
 
 /**
  * Some feeds give the headline followed by the start of the same text again
