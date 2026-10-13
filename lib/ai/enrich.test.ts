@@ -134,6 +134,8 @@ test('the prompt carries the reader profile and the importance scale', () => {
   assert.ok(prompt.includes('Lives in Germany'));
   assert.ok(prompt.includes('"importance" rates how much the story matters'));
   assert.ok(prompt.includes('Do not give investment advice'));
+  assert.ok(prompt.includes('Never chain guesses'));
+  assert.ok(prompt.includes('most articles should have null'));
 });
 
 test('buildPrompt substitutes article text literally ($ patterns and {placeholders} are not interpreted)', () => {

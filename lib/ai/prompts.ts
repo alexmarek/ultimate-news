@@ -158,8 +158,15 @@ The digest is for one reader: {readerProfile}
 3 = noteworthy news.
 2 = interesting but minor.
 1 = light reading or filler.
+Science, curiosity, travel, lifestyle and human-interest stories are at most 3, however interesting.
 
-"forYou" is one sentence (at most 30 words) saying concretely how the story could affect this reader: their costs, their investments, rules that apply to them in Germany or the EU. Use null when there is no concrete link; do not force one. Do not give investment advice (no buy, sell or hold suggestions). If the article does not state the effect, phrase it as a possibility ("could", "may"). Write it in English.
+"forYou" is null by default; most articles should have null. Write it only when the article itself reports something that directly changes one of these for the reader:
+- fuel or energy prices in Germany;
+- interest rates, inflation or taxes;
+- rules, benefits or costs for people living in Germany;
+- the stock market as a whole (a major index move, a central bank decision);
+- the cybersecurity industry or large euro-area dividend-paying companies.
+Then write one sentence (at most 25 words) naming that concrete effect as the article reports it. Never chain guesses (A may affect B, which may affect your ETF). Never write generic lines such as "could affect your investment outlook" or "affects European security": if you cannot name a specific price, rate, rule or sector, use null. Do not give investment advice (no buy, sell or hold suggestions). Write it in English.
 
 === METADATA FIELDS ===
 
