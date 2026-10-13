@@ -429,6 +429,12 @@ export function summaryToPlainText(summary: string | null | undefined): string {
     .trim();
 }
 
+/** The first sentence of the lead (or first paragraph), without markup: the one-liner in the daily brief. */
+export function firstSentence(summary: string | null | undefined): string {
+  const first = parseSummary(summary).find((b): b is Extract<SummaryBlock, { type: 'lead' | 'paragraph' }> => b.type === 'lead' || b.type === 'paragraph');
+  return first ? stripInline(splitSentences(first.text)[0] ?? '') : '';
+}
+
 /** Short plain-text teaser for cards and search results: the lead (or first paragraph). */
 export function summaryPreview(summary: string | null | undefined, maxChars = 320): string {
   const blocks = parseSummary(summary);

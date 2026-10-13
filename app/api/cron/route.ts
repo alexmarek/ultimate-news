@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { checkSources, runIngest, seedSources } from '@/lib/ingest/pipeline';
 import { freshCutoff } from '@/lib/config/dailyFeed';
+import { refreshMarkets } from '@/lib/markets/snapshot';
 
 // Called by Vercel Cron at 08:00 UTC (10:00 CEST) daily.
 
@@ -21,14 +22,21 @@ export async function GET(req: NextRequest) {
   // Dry run — fetch every source and report what would be ingested; writes nothing, calls no AI.
   if (req.nextUrl.searchParams.has('dryRun')) {
     const only = req.nextUrl.searchParams.get('source')?.split(',').filter(Boolean);
-    return NextResponse.json(await checkSources(Date.now(), only));
+    return NextResponse.json(await checkSources(Date.now(), only, req.nextUrl.searchParams.has('enrich')));
+  }
+
+  // Market data only (ETF performance, petrol prices): refreshes the stored snapshot, no articles.
+  if (req.nextUrl.searchParams.has('markets')) {
+    return NextResponse.json(await refreshMarkets());
   }
 
   try {
     await seedSources();
     const sources = await prisma.source.findMany({ where: { isActive: true } });
     const { status, body } = await runIngest(sources);
-    return NextResponse.json(body, { status });
+    // Independent of the articles: a market data failure never fails the ingest.
+    const markets = await refreshMarkets().catch((e) => ({ error: e instanceof Error ? e.message : String(e) }));
+    return NextResponse.json({ ...body, markets }, { status });
   } catch (error) {
     return NextResponse.json({
       success: false,

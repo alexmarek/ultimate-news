@@ -4,12 +4,12 @@ import { SOURCES, SOURCES_BY_ID, toSourceRecord } from '@/lib/config/sources';
 import { DAILY_FEED_TARGETS, MAX_ARTICLE_AGE_DAYS, freshCutoff, visibleArticleFilter } from '@/lib/config/dailyFeed';
 import { AREAS } from '@/lib/types';
 
-const REMOVED = ['bbc-future-planet', 'thehackernews', 'dw', 'matadornetwork', 'longreads-travel', 'europeanbestdestinations', 'japantoday', 'allsides-world'];
+const REMOVED = ['bbc-future-planet', 'thehackernews', 'dw', 'matadornetwork', 'longreads-travel', 'europeanbestdestinations', 'japantoday', 'allsides-world', 'japantimes', 'qz', 'insideclimatenews'];
 const ADDED: Record<string, { url: string; category: string }> = {
   'ricksteves-cameron': { url: 'https://blog.ricksteves.com/cameron/', category: 'Travel' },
   zmescience: { url: 'https://www.zmescience.com/', category: 'Science' },
   'un-climate-reports': { url: 'https://news.un.org/en/news/topic/climate-change', category: 'Environment' },
-  nautilus: { url: 'https://nautil.us/', category: 'Positive News' },
+  nautilus: { url: 'https://nautil.us/', category: 'Science' },
 };
 
 test('source ids are unique', () => {
@@ -47,16 +47,19 @@ test('the six new sources are scrape-only: no feed URLs configured', () => {
   }
 });
 
-test('News On Japan and The Japan Times use the requested RSS feeds', () => {
-  const feeds: Record<string, string> = {
-    newsonjapan: 'https://newsonjapan.com/rss/top.xml',
-    japantimes: 'https://www.japantimes.co.jp/feed/topstories/',
-  };
-  for (const [id, feed] of Object.entries(feeds)) {
-    assert.deepEqual(SOURCES_BY_ID[id].feeds, [feed], id);
-    assert.equal(SOURCES_BY_ID[id].category, 'World News', id);
-    assert.equal(SOURCES_BY_ID[id].scrape, undefined, id);
-  }
+test('News On Japan uses the requested RSS feed', () => {
+  assert.deepEqual(SOURCES_BY_ID.newsonjapan.feeds, ['https://newsonjapan.com/rss/top.xml']);
+  assert.equal(SOURCES_BY_ID.newsonjapan.category, 'World News');
+});
+
+test('daily quotas: world news is the largest section, travel is small, no music or sport', () => {
+  assert.equal(DAILY_FEED_TARGETS['World News'], 14);
+  assert.equal(DAILY_FEED_TARGETS.Business, 6);
+  assert.equal(DAILY_FEED_TARGETS.Travel, 4);
+  assert.equal(DAILY_FEED_TARGETS.Music, 0);
+  assert.equal(DAILY_FEED_TARGETS.Sport, 0);
+  // German sources are translated.
+  for (const id of ['faz', 'tagesschau', 'tagesschau-wirtschaft']) assert.equal(SOURCES_BY_ID[id].lang, 'de', id);
 });
 
 test('FAZ.NET is a German-language World News source read from its RSS feed (its pages block server-side requests)', () => {

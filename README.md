@@ -1,10 +1,14 @@
 # Ultimate News
 
-A curated daily news aggregator — articles from 14 sources across 7 categories, refreshed every 24 hours via cron. Built with Next.js 15, Tailwind v4, and Prisma.
+A curated daily news aggregator — articles from 21 sources across 7 categories, refreshed every 24 hours via cron. Built with Next.js 15, Tailwind v4, and Prisma.
 
 ## Features
 
-- **14 sources** across World News, Technology, Science, Environment, Positive News, Business, Travel (defined in `lib/config/sources.ts`)
+- **21 sources** across World News, Business, Technology, Science, Environment, Positive News, Travel (defined in `lib/config/sources.ts`); German sources are translated to English
+- **Today's brief** — on the front page, the 5 stories that matter most to the reader, one sentence each, ending with "You're up to date". Claude rates each article's `importance` (1–5) for the reader described in `lib/config/reader.ts`
+- **For you** — a one-sentence "why it matters to you" line, labelled as an AI inference, where a story concretely affects the reader; `/?forYou=1` lists all such stories
+- **Depth badge** — each summary says whether it was written from the full article or only a teaser
+- **Your ETFs & petrol** — market performance in % (day, 1 month, year to date) of the ETFs in `lib/config/portfolio.ts` (Xetra, EUR; never amounts) and the weekly German pump prices from the EU Weekly Oil Bulletin, refreshed by the daily cron
 - **14-day freshness limit** — articles older than 14 days are never ingested and never shown (`MAX_ARTICLE_AGE_DAYS` in `lib/config/dailyFeed.ts`)
 - **Daily refresh** — Vercel Cron re-ingests all articles at 08:00 UTC; the previous feed is replaced only once new articles are ready, so a failed run never empties the site
 - **12 articles per page** with pagination
@@ -67,6 +71,9 @@ The response is an ingest report. Check it after changing sources or prompts:
 - `enrichment` — how many summaries were written by Claude (`ai`) versus the extractive fallback (`fallback`), with the reasons. If `ai` is 0, check `ANTHROPIC_API_KEY`.
 - `enrichment.untranslated` — non-English articles left out because Claude could not translate them (the extractive fallback cannot translate, so they are never shown untranslated).
 - `categoryFill` — articles per category against the sum of the source limits.
+- `markets` — the ETF and petrol refresh: which provider served each ETF, or why it failed.
+
+To refresh only the ETF and petrol data: `curl "https://<your-deployment>/api/cron?markets"`.
 
 ### Tests
 
@@ -93,7 +100,7 @@ To see what the scrapers and feeds currently find, without writing anything or c
 curl "https://<your-deployment>/api/cron?dryRun"
 ```
 
-Add `&source=id1,id2` to check only some sources. The result lists, per source, the method used, how many items were offered, kept and skipped as too old, any error, and the articles that would be ingested.
+Add `&source=id1,id2` to check only some sources, and `&enrich` to also summarise the newest article of each (up to 4, calls Claude, still writes nothing). The result lists, per source, the method used, how many items were offered, kept and skipped as too old, any error, and the articles that would be ingested.
 
 ## Environment Variables
 

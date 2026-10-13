@@ -14,6 +14,10 @@ import HideReadToggle from '@/components/HideReadToggle';
 import type { Article, Source, Cluster } from '@prisma/client';
 import { SOURCES } from '@/lib/config/sources';
 import { visibleArticleFilter } from '@/lib/config/dailyFeed';
+import MorningBrief from '@/components/MorningBrief';
+import MarketPanel from '@/components/MarketPanel';
+import { pickBrief } from '@/lib/brief';
+import { readMarkets } from '@/lib/markets/snapshot';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,13 +38,14 @@ function buildSearchWhere(query: string) {
 export default async function Home({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; category?: string; page?: string; hideRead?: string }>;
+  searchParams: Promise<{ q?: string; category?: string; page?: string; hideRead?: string; forYou?: string }>;
 }) {
   const params = await searchParams;
   const query = params.q || '';
   const category = params.category || '';
   const hideRead = params.hideRead === '1';
   const page = Math.max(1, parseInt(params.page || '1', 10) || 1);
+  const forYouView = params.forYou === '1';
 
   // Read article IDs from cookie (per-user, no DB needed)
   const cookieStore = await cookies();
@@ -71,16 +76,36 @@ export default async function Home({
   if (query) {
     Object.assign(where, buildSearchWhere(query));
   }
+  if (forYouView) {
+    where.forYou = { not: null };
+  }
 
   articles = await prisma.article.findMany({
     where,
-    orderBy: { publishedAt: 'desc' },
+    orderBy: forYouView ? [{ importance: 'desc' }, { publishedAt: 'desc' }] : { publishedAt: 'desc' },
     skip: (page - 1) * PER_PAGE,
     take: PER_PAGE,
     include: { source: true, cluster: true },
   }) as ArticleWithRelations[];
 
   totalArticles = await prisma.article.count({ where });
+
+  // Front page only: today's brief and the market panel above the archive.
+  const isFrontPage = !query && (!category || category === 'all') && page === 1 && !forYouView;
+  const [briefCandidates, forYouCount, markets] = isFrontPage
+    ? await Promise.all([
+        prisma.article.findMany({
+          where: { ...feedFilter, importance: { not: null } },
+          orderBy: [{ importance: 'desc' }, { publishedAt: 'desc' }],
+          take: 40,
+          include: { source: true },
+        }),
+        prisma.article.count({ where: { ...feedFilter, forYou: { not: null } } }),
+        readMarkets(),
+      ])
+    : [[], 0, { etfs: null, petrol: null }];
+  const brief = pickBrief(briefCandidates);
+  const showMarkets = Boolean(markets.etfs || markets.petrol);
 
   const feedTitle = category && category !== 'all'
     ? category
@@ -149,6 +174,21 @@ export default async function Home({
           </Suspense>
         </div>
 
+        {isFrontPage && (brief.length > 0 || showMarkets) && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-12">
+            {brief.length > 0 && (
+              <div className={showMarkets ? 'lg:col-span-2' : 'lg:col-span-3'}>
+                <MorningBrief articles={brief} readIds={readArticleIds} forYouCount={forYouCount} />
+              </div>
+            )}
+            {showMarkets && (
+              <div className={brief.length > 0 ? '' : 'lg:col-span-3'}>
+                <MarketPanel etfs={markets.etfs} petrol={markets.petrol} />
+              </div>
+            )}
+          </div>
+        )}
+
         {articles.length === 0 ? (
           <div className="text-center py-12">
             <div className="text-[var(--text-faint)] mb-4">No stories yet. News will appear after the first ingest.</div>
@@ -168,11 +208,13 @@ export default async function Home({
                 )}
                 {!isSectionView && (
                   <div className="mb-6">
-                    <h2 className="font-serif text-display-3 font-semibold text-[var(--text)]">Latest Stories</h2>
+                    <h2 className="font-serif text-display-3 font-semibold text-[var(--text)]">{forYouView ? 'Stories that affect you' : 'Latest Stories'}</h2>
                     <p className="text-[var(--text-body)] text-body-md mt-2">
-                      {category && category !== 'all'
-                        ? `Page ${page} of ${totalPages} • ${category}`
-                        : `Page ${page} of ${totalPages}`}
+                      {forYouView
+                        ? `Ranked by how much they matter to you (AI inference) • Page ${page} of ${totalPages}`
+                        : category && category !== 'all'
+                          ? `Page ${page} of ${totalPages} • ${category}`
+                          : `Page ${page} of ${totalPages}`}
                     </p>
                   </div>
                 )}

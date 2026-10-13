@@ -5,6 +5,7 @@ import {
   countSummaryWords,
   dedupeSentences,
   dropMetaCommentary,
+  firstSentence,
   isMetaCommentary,
   leadOnlySummary,
   normalizeSummary,
@@ -171,4 +172,10 @@ test('summaryToPlainText flattens every block', () => {
   assert.ok(text.startsWith('The EU agreed'));
   assert.ok(text.includes('Targets start in 2028.'));
   assert.ok(!text.includes('*') && !text.includes('#'));
+});
+
+test('firstSentence gives the first sentence of the lead without markup', () => {
+  assert.equal(firstSentence(STRUCTURED), 'The EU agreed a new rule on battery recycling.');
+  assert.equal(firstSentence('**The *Bundestag* passed it. It takes effect in May.**'), 'The Bundestag passed it.');
+  assert.equal(firstSentence(''), '');
 });

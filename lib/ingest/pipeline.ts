@@ -26,7 +26,7 @@ import { scrapeListing } from '@/lib/ingest/scrapeListing';
 import { canonicalizeUrl, articleIdFromUrl } from '@/lib/ingest/canonicalize';
 import { mapPool } from '@/lib/ingest/pool';
 import { stripHtml } from '@/lib/text';
-import { enrichArticle, enrichFallback } from '@/lib/ai/enrich';
+import { enrichArticle, enrichFallback, isSnippet } from '@/lib/ai/enrich';
 import { embed } from '@/lib/ai/embed';
 import { summaryPreview, summaryToPlainText } from '@/lib/summary';
 import { recomputeClusters } from '@/lib/dedup/cluster';
@@ -211,14 +211,44 @@ export async function collectFromSource(
  * Read-only check: runs only the collect step for every configured source and
  * reports what would be ingested. Nothing is written and no summaries are generated.
  */
-export async function checkSources(now: number = Date.now(), only?: string[]): Promise<Record<string, unknown>> {
+/** At most this many articles are sent to Claude by one dry run with `enrich` (it is an unauthenticated endpoint). */
+const DRY_RUN_ENRICH_MAX = 4;
+
+export async function checkSources(now: number = Date.now(), only?: string[], enrich = false): Promise<Record<string, unknown>> {
   const defs = only?.length ? SOURCES.filter((d) => only.includes(d.id)) : SOURCES;
   const collected = await mapPool(defs, SOURCE_CONCURRENCY, async (def) => {
     const trace: Array<Record<string, unknown>> = [];
     return { def, trace, result: await collectFromSource(def, now, trace) };
   });
+
+  // Optional: summarise the newest article of each selected source, exactly as the ingest would, without writing it.
+  const enriched = enrich && only?.length
+    ? await mapPool(
+        collected.filter(({ result }) => result.articles.length > 0).slice(0, DRY_RUN_ENRICH_MAX),
+        DRY_RUN_ENRICH_MAX,
+        async ({ def, result }) => {
+          const raw = result.articles[0];
+          const prepared = await prepareArticle({ def, raw, canonicalUrl: raw.url, articleId: 'dry-run' }, Date.now() + ENRICH_DEADLINE_MS, false);
+          const { row } = prepared;
+          return {
+            sourceId: def.id,
+            url: raw.url,
+            engine: prepared.engine,
+            fallbackReason: prepared.fallbackReason,
+            publishable: prepared.publishable,
+            title: row.title,
+            importance: row.importance,
+            forYou: row.forYou,
+            fromTeaser: row.fromTeaser,
+            summary: row.summary,
+          };
+        },
+      )
+    : undefined;
+
   return {
     dryRun: true,
+    ...(enriched ? { enriched } : {}),
     maxAgeDays: MAX_ARTICLE_AGE_DAYS,
     sources: collected.map(({ def, result, trace }) => ({
       sourceId: def.id,
@@ -261,7 +291,7 @@ interface PreparedArticle {
   publishable: boolean;
 }
 
-async function prepareArticle(c: Candidate, deadline: number): Promise<PreparedArticle> {
+async function prepareArticle(c: Candidate, deadline: number, withEmbedding = true): Promise<PreparedArticle> {
   const { def, raw } = c;
   let content = raw.content ?? '';
 
@@ -291,11 +321,13 @@ async function prepareArticle(c: Candidate, deadline: number): Promise<PreparedA
   const excerpt = translated ? summaryPreview(enrichment.summary, 240) : raw.excerpt;
 
   let embedding: string | null = null;
-  try {
-    const text = [title, excerpt, summaryToPlainText(enrichment.summary)].filter(Boolean).join(' ');
-    embedding = JSON.stringify(await embed(text));
-  } catch {
-    // Voyage unavailable or not configured: clustering simply skips this article.
+  if (withEmbedding) {
+    try {
+      const text = [title, excerpt, summaryToPlainText(enrichment.summary)].filter(Boolean).join(' ');
+      embedding = JSON.stringify(await embed(text));
+    } catch {
+      // Voyage unavailable or not configured: clustering simply skips this article.
+    }
   }
 
   return {
@@ -315,6 +347,9 @@ async function prepareArticle(c: Candidate, deadline: number): Promise<PreparedA
       author: raw.author ?? null,
       lang,
       summary: enrichment.summary,
+      importance: enrichment.importance,
+      forYou: enrichment.forYou,
+      fromTeaser: isSnippet({ excerpt: raw.excerpt, content }),
       areas: enrichment.areas.map((a) => a.area).join(','),
       // The category is fixed by the source configuration, not by the model.
       primaryArea: def.category,

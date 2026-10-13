@@ -6,6 +6,7 @@ import TimeAgo from '@/components/TimeAgo';
 import MarkRead from '@/components/MarkRead';
 import ArticleImage from '@/components/ArticleImage';
 import SummaryView from '@/components/SummaryView';
+import ForYouNote from '@/components/ForYouNote';
 import { stripHtml, decodeEntities } from '@/lib/text';
 import { countSummaryWords } from '@/lib/summary';
 
@@ -145,6 +146,16 @@ export default async function ArticlePage({
           <span className="px-2 py-0.5 rounded text-body-sm font-medium bg-[var(--surface)] text-[var(--text-body)] uppercase">
             {article.lang === 'en' ? 'en' : `${article.lang} → en`}
           </span>
+          {hasSummary && (
+            <span
+              className="px-2 py-0.5 rounded text-body-sm font-medium bg-[var(--surface)] text-[var(--text-body)]"
+              title={article.fromTeaser
+                ? 'Only a teaser of this article was available, so the summary is short by necessity.'
+                : 'The summary was written from the full article text.'}
+            >
+              {article.fromTeaser ? 'Summary from teaser' : 'Summary from full article'}
+            </span>
+          )}
           {article.author && (
             <span className="text-body-md text-[var(--text-faint)]">by {article.author}</span>
           )}
@@ -174,6 +185,12 @@ export default async function ArticlePage({
                   Summary
                 </h2>
                 <SummaryView summary={article.summary} />
+              </div>
+            )}
+
+            {article.forYou && (
+              <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-elevated)] p-4">
+                <ForYouNote text={article.forYou} />
               </div>
             )}
 

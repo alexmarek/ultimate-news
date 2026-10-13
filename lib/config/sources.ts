@@ -34,38 +34,47 @@ export interface SourceDef {
 export const SOURCES: SourceDef[] = [
   // --- World News ---
   { id: 'newsonjapan', name: 'News On Japan', url: 'https://newsonjapan.com/', feeds: ['https://newsonjapan.com/rss/top.xml'], category: 'World News', limit: 3, contentKind: 'news', tier: 'tier-1', weight: 0.9 },
-  { id: 'japantimes', name: 'The Japan Times', url: 'https://www.japantimes.co.jp/', feeds: ['https://www.japantimes.co.jp/feed/topstories/'], category: 'World News', limit: 3, contentKind: 'news', tier: 'tier-1', weight: 0.9 },
   // German-language: headline and summary are translated to English at ingest. Politics section = World News.
   // Feed instead of a scrape: faz.net answers server-side page requests with an empty 302, but serves its RSS feed.
   // The feed carries only a short teaser, so these summaries are brief (and the article text cannot be fetched either).
   { id: 'faz', name: 'FAZ.NET', url: 'https://www.faz.net/aktuell/politik/', feeds: ['https://www.faz.net/rss/aktuell/politik/'], lang: 'de', category: 'World News', limit: 3, contentKind: 'news', tier: 'tier-1', weight: 0.9 },
+  // German public broadcaster (ARD), translated: a second German voice next to FAZ's centre-right line.
+  { id: 'tagesschau', name: 'tagesschau', url: 'https://www.tagesschau.de/', feeds: ['https://www.tagesschau.de/index~rss2.xml', 'https://www.tagesschau.de/xml/rss2/'], lang: 'de', category: 'World News', limit: 2, contentKind: 'news', tier: 'tier-1', weight: 0.95 },
   { id: 'euobserver', name: 'EUobserver', url: 'https://euobserver.com/', category: 'World News', limit: 2, contentKind: 'news', tier: 'tier-1', weight: 0.9 },
+  // Second view on Brussels next to EUobserver.
+  { id: 'politico-europe', name: 'Politico Europe', url: 'https://www.politico.eu/', feeds: ['https://www.politico.eu/feed/'], category: 'World News', limit: 2, contentKind: 'news', tier: 'tier-1', weight: 0.9 },
+  // French public international broadcaster: global coverage beyond Europe.
+  { id: 'france24', name: 'France 24', url: 'https://www.france24.com/en/', feeds: ['https://www.france24.com/en/rss'], category: 'World News', limit: 2, contentKind: 'news', tier: 'tier-1', weight: 0.9 },
+
+  // --- Business (markets, energy and petrol prices, the cybersecurity industry) ---
+  { id: 'tagesschau-wirtschaft', name: 'tagesschau Wirtschaft', url: 'https://www.tagesschau.de/wirtschaft/', feeds: ['https://www.tagesschau.de/wirtschaft/index~rss2.xml'], lang: 'de', category: 'Business', limit: 2, contentKind: 'business', tier: 'tier-1', weight: 0.95 },
+  { id: 'euronews-business', name: 'Euronews Business', url: 'https://www.euronews.com/business', feeds: ['https://www.euronews.com/rss?level=vertical&name=business'], category: 'Business', limit: 2, contentKind: 'business', tier: 'tier-1', weight: 0.85 },
+  // Business of cybersecurity (deals, earnings, regulation) rather than vulnerability alerts.
+  { id: 'cybersecuritydive', name: 'Cybersecurity Dive', url: 'https://www.cybersecuritydive.com/', feeds: ['https://www.cybersecuritydive.com/feeds/news/'], category: 'Business', limit: 2, contentKind: 'business', tier: 'tier-2', weight: 0.85 },
 
   // --- Technology ---
   { id: 'theverge', name: 'The Verge', url: 'https://www.theverge.com/tech', feeds: ['https://www.theverge.com/rss/tech/index.xml'], category: 'Technology', limit: 2, contentKind: 'technology', tier: 'tier-1', weight: 1.0 },
 
   // --- Science ---
-  // [Unverified] scraped; not yet checked against the live page.
-  { id: 'zmescience', name: 'ZME Science', url: 'https://www.zmescience.com/', scrape: true, category: 'Science', limit: 4, contentKind: 'science', tier: 'tier-2', weight: 0.85 },
+  { id: 'zmescience', name: 'ZME Science', url: 'https://www.zmescience.com/', scrape: true, category: 'Science', limit: 3, contentKind: 'science', tier: 'tier-2', weight: 0.85 },
+  { id: 'nautilus', name: 'Nautilus', url: 'https://nautil.us/', scrape: true, category: 'Science', limit: 2, contentKind: 'science', tier: 'tier-2', weight: 0.85 },
+  { id: 'quanta', name: 'Quanta Magazine', url: 'https://www.quantamagazine.org/', feeds: ['https://www.quantamagazine.org/feed/'], category: 'Science', limit: 2, contentKind: 'science', tier: 'tier-1', weight: 0.9 },
 
   // --- Environment ---
-  { id: 'insideclimatenews', name: 'Inside Climate News', url: 'https://insideclimatenews.org', feeds: ['https://insideclimatenews.org/feed/'], viaRss2Json: true, category: 'Environment', limit: 2, contentKind: 'environment', tier: 'tier-2', weight: 0.85 },
-  // [Unverified] scraped; not yet checked against the live page.
   { id: 'un-climate-reports', name: 'UN Climate Change', url: 'https://news.un.org/en/news/topic/climate-change', scrape: true, category: 'Environment', limit: 2, contentKind: 'environment', tier: 'tier-1', weight: 0.9 },
+  { id: 'carbonbrief', name: 'Carbon Brief', url: 'https://www.carbonbrief.org/', feeds: ['https://www.carbonbrief.org/feed/'], category: 'Environment', limit: 2, contentKind: 'environment', tier: 'tier-1', weight: 0.9 },
+  // German energy transition in English: energy and fuel costs in Germany.
+  { id: 'cleanenergywire', name: 'Clean Energy Wire', url: 'https://www.cleanenergywire.org/', feeds: ['https://www.cleanenergywire.org/rss.xml'], category: 'Environment', limit: 2, contentKind: 'environment', tier: 'tier-1', weight: 0.9 },
 
   // --- Positive News ---
-  { id: 'goodnewsnetwork', name: 'Good News Network', url: 'https://www.goodnewsnetwork.org', feeds: ['https://www.goodnewsnetwork.org/feed/'], category: 'Positive News', limit: 4, contentKind: 'positive-news', tier: 'tier-2', weight: 0.8 },
-  // [Unverified] scraped; not yet checked against the live page.
-  { id: 'nautilus', name: 'Nautilus', url: 'https://nautil.us/', scrape: true, category: 'Positive News', limit: 3, contentKind: 'positive-news', tier: 'tier-2', weight: 0.8 },
-
-  // --- Business ---
-  { id: 'qz', name: 'Quartz', url: 'https://qz.com', feeds: ['https://qz.com/feed'], category: 'Business', limit: 2, contentKind: 'business', tier: 'tier-1', weight: 0.9 },
+  { id: 'goodnewsnetwork', name: 'Good News Network', url: 'https://www.goodnewsnetwork.org', feeds: ['https://www.goodnewsnetwork.org/feed/'], category: 'Positive News', limit: 2, contentKind: 'positive-news', tier: 'tier-2', weight: 0.8 },
+  // Constructive journalism: a problem together with what is working against it.
+  { id: 'positive-news', name: 'Positive News', url: 'https://www.positive.news/', feeds: ['https://www.positive.news/feed/'], category: 'Positive News', limit: 2, contentKind: 'positive-news', tier: 'tier-1', weight: 0.85 },
 
   // --- Travel ---
-  { id: 'smithsonian-travel', name: 'Smithsonian Magazine', url: 'https://www.smithsonianmag.com/travel/', feeds: ['https://www.smithsonianmag.com/rss/travel/'], category: 'Travel', limit: 4, contentKind: 'travel', tier: 'tier-1', weight: 0.9 },
-  { id: 'fathomaway', name: 'Fathom Away', url: 'https://fathomaway.com', feeds: ['https://fathomaway.com/feed/'], category: 'Travel', limit: 4, contentKind: 'travel', tier: 'tier-1', weight: 0.9 },
-  // [Unverified] scraped; not yet checked against the live page.
-  { id: 'ricksteves-cameron', name: "Rick Steves' Europe (Cameron)", url: 'https://blog.ricksteves.com/cameron/', scrape: true, category: 'Travel', limit: 3, contentKind: 'travel', tier: 'tier-2', weight: 0.85 },
+  { id: 'smithsonian-travel', name: 'Smithsonian Magazine', url: 'https://www.smithsonianmag.com/travel/', feeds: ['https://www.smithsonianmag.com/rss/travel/'], category: 'Travel', limit: 2, contentKind: 'travel', tier: 'tier-1', weight: 0.9 },
+  { id: 'fathomaway', name: 'Fathom Away', url: 'https://fathomaway.com', feeds: ['https://fathomaway.com/feed/'], category: 'Travel', limit: 1, contentKind: 'travel', tier: 'tier-1', weight: 0.9 },
+  { id: 'ricksteves-cameron', name: "Rick Steves' Europe (Cameron)", url: 'https://blog.ricksteves.com/cameron/', scrape: true, category: 'Travel', limit: 1, contentKind: 'travel', tier: 'tier-2', weight: 0.85 },
 ];
 
 export const SOURCE_IDS: string[] = SOURCES.map((s) => s.id);

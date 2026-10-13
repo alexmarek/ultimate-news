@@ -119,6 +119,23 @@ test('the prompt tells Claude the source language so it translates', () => {
   assert.ok(prompt.includes('translate: write the whole summary in English'));
 });
 
+test('parseResponse reads importance (clamped to 1-5) and the personal "forYou" line', () => {
+  const reply = (meta: string) => GOOD_REPLY.replace('"incomplete": false}', `"incomplete": false, ${meta}}`);
+  const a = parseResponse(reply('"importance": 4, "forYou": "Could weigh on cybersecurity stocks held in the reader\'s ETF."'));
+  assert.equal(a?.importance, 4);
+  assert.match(a?.forYou ?? '', /cybersecurity stocks/);
+  assert.equal(parseResponse(reply('"importance": 9, "forYou": null'))?.importance, 5);
+  assert.equal(parseResponse(reply('"importance": "high", "forYou": "null"'))?.importance, null);
+  assert.equal(parseResponse(reply('"importance": 2, "forYou": "  "'))?.forYou, null);
+});
+
+test('the prompt carries the reader profile and the importance scale', () => {
+  const prompt = buildPrompt({ sourceName: 'tagesschau', sourceLang: 'de', title: 'Benzinpreise steigen', excerpt: 'Tanken wird teurer.' });
+  assert.ok(prompt.includes('Lives in Germany'));
+  assert.ok(prompt.includes('"importance" rates how much the story matters'));
+  assert.ok(prompt.includes('Do not give investment advice'));
+});
+
 test('buildPrompt substitutes article text literally ($ patterns and {placeholders} are not interpreted)', () => {
   const prompt = buildPrompt({
     sourceName: 'Test Source',

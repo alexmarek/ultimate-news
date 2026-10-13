@@ -11,6 +11,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { ENRICH_PROMPT } from '@/lib/ai/prompts';
 import { enrichArticle as fallbackEnrich } from '@/lib/ai/enrich-simple';
 import { isLikelyEnglish } from '@/lib/ai/language';
+import { READER_PROFILE } from '@/lib/config/reader';
 import { MAX_SUMMARY_WORDS, countSummaryWords, countWords, dropMetaCommentary, leadOnlySummary, normalizeSummary, summaryToPlainText } from '@/lib/summary';
 
 export interface EnrichInput {
@@ -28,6 +29,10 @@ export interface EnrichOutput {
   entities: string[];
   titleEn: string | null;
   incomplete: boolean;
+  /** 1-5 relevance for the reader; null when the fallback summariser was used. */
+  importance: number | null;
+  /** One-sentence personal relevance line (AI inference), or null. */
+  forYou: string | null;
   /** Which engine produced the summary. */
   engine: 'ai' | 'fallback';
   /** Why the fallback was used (only when engine is 'fallback'). */
@@ -60,9 +65,10 @@ export function buildPrompt(input: EnrichInput): string {
     excerpt: input.excerpt,
     content: (input.content || input.excerpt || '').slice(0, MAX_ARTICLE_CHARS),
     textType: isSnippet(input) ? 'SNIPPET (only the start of the article is available)' : 'full article text',
+    readerProfile: READER_PROFILE,
   };
   // Single pass with a replacer function: article text may contain "$&" or "{title}".
-  return ENRICH_PROMPT.replace(/\{(sourceName|sourceLang|title|excerpt|content|textType)\}/g, (_, key: string) => values[key]);
+  return ENRICH_PROMPT.replace(/\{(sourceName|sourceLang|title|excerpt|content|textType|readerProfile)\}/g, (_, key: string) => values[key]);
 }
 
 interface ParsedReply {
@@ -72,6 +78,8 @@ interface ParsedReply {
   entities: string[];
   titleEn: string | null;
   incomplete: boolean;
+  importance: number | null;
+  forYou: string | null;
 }
 
 /** Parses the <metadata>/<summary> reply. Returns null if no usable summary is present. */
@@ -113,6 +121,8 @@ export function parseResponse(text: string, truncated = false, snippet = false):
     entities: Array.isArray(meta.entities) ? meta.entities.filter((e): e is string => typeof e === 'string').slice(0, 6) : [],
     titleEn: typeof meta.titleEn === 'string' && meta.titleEn ? meta.titleEn : null,
     incomplete: meta.incomplete === true,
+    importance: typeof meta.importance === 'number' && Number.isFinite(meta.importance) ? Math.min(5, Math.max(1, Math.round(meta.importance))) : null,
+    forYou: typeof meta.forYou === 'string' && meta.forYou.trim() && meta.forYou.trim().toLowerCase() !== 'null' ? meta.forYou.trim().slice(0, 300) : null,
   };
 }
 
@@ -131,7 +141,7 @@ export function translationProblem(parsed: Pick<ParsedReply, 'summary' | 'titleE
 /** Enrichment without any network call (also used when the ingest time budget is spent). */
 export async function enrichFallback(input: EnrichInput, reason: string): Promise<EnrichOutput> {
   const result = await fallbackEnrich(input);
-  return { ...result, engine: 'fallback', fallbackReason: reason };
+  return { ...result, importance: null, forYou: null, engine: 'fallback', fallbackReason: reason };
 }
 
 export async function enrichArticle(input: EnrichInput): Promise<EnrichOutput> {

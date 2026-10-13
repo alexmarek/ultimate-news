@@ -53,7 +53,14 @@ export default function NewsCard({ article, cluster, isRead, dataKbId }: NewsCar
               {article.source.name}
             </span>
           </div>
-          <span className="text-body-md text-[var(--text-muted)] flex-shrink-0 ml-2">{timeAgo}</span>
+          <span className="text-body-md text-[var(--text-muted)] flex-shrink-0 ml-2">
+            {article.fromTeaser && (
+              <span className="mr-2 px-1.5 py-0.5 rounded text-[11px] font-medium bg-[var(--surface)] text-[var(--text-muted)]" title="Summary written from a teaser only">
+                Teaser
+              </span>
+            )}
+            {timeAgo}
+          </span>
         </div>
 
         {/* Title */}
