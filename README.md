@@ -1,10 +1,10 @@
 # Ultimate News
 
-A curated daily news aggregator — articles from 21 sources across 7 categories, refreshed every 24 hours via cron. Built with Next.js 15, Tailwind v4, and Prisma.
+A curated daily news aggregator — articles from 20 sources across 7 categories, refreshed every 24 hours via cron. Built with Next.js 15, Tailwind v4, and Prisma.
 
 ## Features
 
-- **21 sources** across World News, Business, Technology, Science, Environment, Positive News, Travel (defined in `lib/config/sources.ts`); German sources are translated to English
+- **20 sources** across World News, Business, Technology, Science, Environment, Positive News, Travel (defined in `lib/config/sources.ts`); German sources are translated to English
 - **Today's brief** — on the front page, the 5 stories that matter most to the reader, one sentence each, ending with "You're up to date". Claude rates each article's `importance` (1–5) for the reader described in `lib/config/reader.ts`
 - **For you** — a one-sentence "why it matters to you" line, labelled as an AI inference, where a story concretely affects the reader; `/?forYou=1` lists all such stories
 - **Depth badge** — each summary says whether it was written from the full article or only a teaser

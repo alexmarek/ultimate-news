@@ -196,7 +196,7 @@ export async function collectFromSource(
 
   if (feed) {
     // Age filter first, THEN the limit: a stale head of the feed must not use up the quota.
-    const fresh = feed.items.filter((a) => now - a.publishedAt.getTime() <= MAX_ARTICLE_AGE_MS);
+    const fresh = feed.items.filter((a) => now - a.publishedAt.getTime() <= MAX_ARTICLE_AGE_MS && !def.excludeUrl?.test(a.url));
     fresh.sort((a, b) => b.publishedAt.getTime() - a.publishedAt.getTime());
     return {
       articles: fresh.slice(0, def.limit),
@@ -318,8 +318,11 @@ async function prepareArticle(c: Candidate, deadline: number, withEmbedding = tr
   // Everything the site shows is English. For a translated article the stored headline and excerpt
   // are the English ones; the original-language headline is one click away on the source site.
   // The extractive fallback cannot translate, so a non-English article without a Claude summary is dropped.
-  const translated = lang !== 'en';
-  const publishable = !translated || enrichment.engine === 'ai';
+  // An English-language source can still carry an article in another language (Politico's French
+  // Playbook): Claude then returns an English headline, which is used like a translation.
+  const titleEn = enrichment.titleEn?.trim();
+  const translated = lang !== 'en' || (enrichment.engine === 'ai' && !!titleEn && titleEn !== raw.title.trim());
+  const publishable = lang === 'en' || enrichment.engine === 'ai';
   const title = translated ? enrichment.titleEn || raw.title : raw.title;
   const excerpt = translated ? summaryPreview(enrichment.summary, 240) : raw.excerpt;
 

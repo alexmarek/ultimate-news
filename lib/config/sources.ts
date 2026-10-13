@@ -21,6 +21,8 @@ export interface SourceDef {
   scrape?: boolean;
   /** Language the source publishes in (default 'en'). Non-English articles are translated to English at ingest. */
   lang?: string;
+  /** Feed items whose URL matches are skipped (e.g. a news feed that also carries sport). */
+  excludeUrl?: RegExp;
   /** Fetch the feed through api.rss2json.com (for hosts that block server-side requests). */
   viaRss2Json?: boolean;
   category: Area;
@@ -39,7 +41,7 @@ export const SOURCES: SourceDef[] = [
   // The feed carries only a short teaser, so these summaries are brief (and the article text cannot be fetched either).
   { id: 'faz', name: 'FAZ.NET', url: 'https://www.faz.net/aktuell/politik/', feeds: ['https://www.faz.net/rss/aktuell/politik/'], lang: 'de', category: 'World News', limit: 3, contentKind: 'news', tier: 'tier-1', weight: 0.9 },
   // German public broadcaster (ARD), translated: a second German voice next to FAZ's centre-right line.
-  { id: 'tagesschau', name: 'tagesschau', url: 'https://www.tagesschau.de/', feeds: ['https://www.tagesschau.de/index~rss2.xml', 'https://www.tagesschau.de/xml/rss2/'], lang: 'de', category: 'World News', limit: 2, contentKind: 'news', tier: 'tier-1', weight: 0.95 },
+  { id: 'tagesschau', name: 'tagesschau', url: 'https://www.tagesschau.de/', feeds: ['https://www.tagesschau.de/index~rss2.xml', 'https://www.tagesschau.de/xml/rss2/'], excludeUrl: /sportschau\.de|\/sport\//i, lang: 'de', category: 'World News', limit: 2, contentKind: 'news', tier: 'tier-1', weight: 0.95 },
   { id: 'euobserver', name: 'EUobserver', url: 'https://euobserver.com/', category: 'World News', limit: 2, contentKind: 'news', tier: 'tier-1', weight: 0.9 },
   // Second view on Brussels next to EUobserver.
   { id: 'politico-europe', name: 'Politico Europe', url: 'https://www.politico.eu/', feeds: ['https://www.politico.eu/feed/'], category: 'World News', limit: 2, contentKind: 'news', tier: 'tier-1', weight: 0.9 },
@@ -63,9 +65,6 @@ export const SOURCES: SourceDef[] = [
   // --- Environment ---
   { id: 'un-climate-reports', name: 'UN Climate Change', url: 'https://news.un.org/en/news/topic/climate-change', scrape: true, category: 'Environment', limit: 2, contentKind: 'environment', tier: 'tier-1', weight: 0.9 },
   { id: 'carbonbrief', name: 'Carbon Brief', url: 'https://www.carbonbrief.org/', feeds: ['https://www.carbonbrief.org/feed/'], category: 'Environment', limit: 2, contentKind: 'environment', tier: 'tier-1', weight: 0.9 },
-  // German energy transition in English: energy and fuel costs in Germany.
-  // Feed found by auto-discovery: /rss.xml only carried items older than 14 days.
-  { id: 'cleanenergywire', name: 'Clean Energy Wire', url: 'https://www.cleanenergywire.org/news', category: 'Environment', limit: 2, contentKind: 'environment', tier: 'tier-1', weight: 0.9 },
 
   // --- Positive News ---
   { id: 'goodnewsnetwork', name: 'Good News Network', url: 'https://www.goodnewsnetwork.org', feeds: ['https://www.goodnewsnetwork.org/feed/'], category: 'Positive News', limit: 2, contentKind: 'positive-news', tier: 'tier-2', weight: 0.8 },

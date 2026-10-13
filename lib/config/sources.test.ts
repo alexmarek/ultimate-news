@@ -58,6 +58,9 @@ test('daily quotas: world news is the largest section, travel is small, no music
   assert.equal(DAILY_FEED_TARGETS.Travel, 4);
   assert.equal(DAILY_FEED_TARGETS.Music, 0);
   assert.equal(DAILY_FEED_TARGETS.Sport, 0);
+  assert.equal(DAILY_FEED_TARGETS.Environment, 4);
+  assert.ok(SOURCES_BY_ID.tagesschau.excludeUrl?.test('https://www.sportschau.de/regional/wdr/x-100.html'));
+  assert.ok(!SOURCES_BY_ID.tagesschau.excludeUrl?.test('https://www.tagesschau.de/ausland/x-100.html'));
   // German sources are translated.
   for (const id of ['faz', 'tagesschau', 'tagesschau-wirtschaft']) assert.equal(SOURCES_BY_ID[id].lang, 'de', id);
 });
