@@ -27,8 +27,12 @@ export async function GET(req: NextRequest) {
 
   // Dry run — fetch every source and report what would be ingested; writes nothing, calls no AI.
   if (req.nextUrl.searchParams.has('dryRun')) {
-    const only = req.nextUrl.searchParams.get('source')?.split(',').filter(Boolean);
-    return NextResponse.json(await checkSources(Date.now(), only, req.nextUrl.searchParams.has('enrich')));
+    const p = req.nextUrl.searchParams;
+    const only = p.get('source')?.split(',').filter(Boolean);
+    // Model comparison (dry run only): a fixed allowlist, so this public endpoint cannot be pointed at any model.
+    const model = ['claude-haiku-4-5-20251001', 'claude-haiku-5-5'].find((m) => m === p.get('model'));
+    const effort = (['low', 'medium', 'high'] as const).find((e) => e === p.get('effort'));
+    return NextResponse.json(await checkSources(Date.now(), only, p.has('enrich'), { model, effort }));
   }
 
   // Market data only (ETF performance, petrol prices): refreshes the stored snapshot, no articles.

@@ -26,7 +26,7 @@ import { scrapeListing } from '@/lib/ingest/scrapeListing';
 import { canonicalizeUrl, articleIdFromUrl } from '@/lib/ingest/canonicalize';
 import { mapPool } from '@/lib/ingest/pool';
 import { stripHtml } from '@/lib/text';
-import { enrichArticle, enrichFallback, isSnippet } from '@/lib/ai/enrich';
+import { enrichArticle, enrichFallback, isSnippet, type EnrichOptions } from '@/lib/ai/enrich';
 import { embedMany } from '@/lib/ai/embed';
 import { summaryPreview, summaryToPlainText } from '@/lib/summary';
 import { recomputeClusters } from '@/lib/dedup/cluster';
@@ -217,7 +217,7 @@ export async function collectFromSource(
 /** At most this many articles are sent to Claude by one dry run with `enrich` (it is an unauthenticated endpoint). */
 const DRY_RUN_ENRICH_MAX = 4;
 
-export async function checkSources(now: number = Date.now(), only?: string[], enrich = false): Promise<Record<string, unknown>> {
+export async function checkSources(now: number = Date.now(), only?: string[], enrich = false, enrichOpts: EnrichOptions = {}): Promise<Record<string, unknown>> {
   const defs = only?.length ? SOURCES.filter((d) => only.includes(d.id)) : SOURCES;
   const collected = await mapPool(defs, SOURCE_CONCURRENCY, async (def) => {
     const trace: Array<Record<string, unknown>> = [];
@@ -231,12 +231,13 @@ export async function checkSources(now: number = Date.now(), only?: string[], en
         DRY_RUN_ENRICH_MAX,
         async ({ def, result }) => {
           const raw = result.articles[0];
-          const prepared = await prepareArticle({ def, raw, canonicalUrl: raw.url, articleId: 'dry-run' }, Date.now() + ENRICH_DEADLINE_MS);
+          const prepared = await prepareArticle({ def, raw, canonicalUrl: raw.url, articleId: 'dry-run' }, Date.now() + ENRICH_DEADLINE_MS, enrichOpts);
           const { row } = prepared;
           return {
             sourceId: def.id,
             url: raw.url,
             engine: prepared.engine,
+            usage: prepared.usage,
             fallbackReason: prepared.fallbackReason,
             publishable: prepared.publishable,
             title: row.title,
@@ -294,9 +295,10 @@ interface PreparedArticle {
   publishable: boolean;
   /** Text used for the story-grouping embedding (English headline + start of the summary). */
   embedText: string;
+  usage?: { model: string; input: number; output: number };
 }
 
-async function prepareArticle(c: Candidate, deadline: number): Promise<PreparedArticle> {
+async function prepareArticle(c: Candidate, deadline: number, enrichOpts: EnrichOptions = {}): Promise<PreparedArticle> {
   const { def, raw } = c;
   let content = raw.content ?? '';
 
@@ -316,7 +318,7 @@ async function prepareArticle(c: Candidate, deadline: number): Promise<PreparedA
     publishedAt: raw.publishedAt,
   };
   const enrichment =
-    Date.now() < deadline ? await enrichArticle(input) : await enrichFallback(input, 'ingest time budget exhausted');
+    Date.now() < deadline ? await enrichArticle(input, enrichOpts) : await enrichFallback(input, 'ingest time budget exhausted');
 
   // Everything the site shows is English. For a translated article the stored headline and excerpt
   // are the English ones; the original-language headline is one click away on the source site.
@@ -337,6 +339,7 @@ async function prepareArticle(c: Candidate, deadline: number): Promise<PreparedA
     fallbackReason: enrichment.fallbackReason,
     publishable,
     embedText,
+    usage: enrichment.usage,
     row: {
       id: c.articleId,
       sourceId: def.id,

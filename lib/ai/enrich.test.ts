@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildPrompt, enrichArticle, isSnippet, parseResponse, translationProblem } from '@/lib/ai/enrich';
+import { buildPrompt, buildRequest, enrichArticle, isSnippet, parseResponse, translationProblem } from '@/lib/ai/enrich';
 import { countSummaryWords, parseSummary } from '@/lib/summary';
 
 const GOOD_REPLY = `<metadata>
@@ -147,6 +147,24 @@ test('the prompt states today\'s date and the publication date (the model otherw
   assert.ok(prompt.includes('Published: Tuesday, 13 October 2026'));
   assert.ok(prompt.includes('Keep years and dates exactly as the article gives them'));
   assert.ok(buildPrompt({ sourceName: 'S', sourceLang: 'en', title: 'T', excerpt: 'E' }).includes('Published: unknown'));
+});
+
+test('Haiku 5.5 requests carry an effort level; Haiku 4.5 requests (which reject it) do not', () => {
+  const input = { sourceName: 'S', sourceLang: 'en', title: 'T', excerpt: 'E' };
+  const saved = process.env.ENRICH_MODEL;
+  delete process.env.ENRICH_MODEL;
+  try {
+    const def = buildRequest(input) as Record<string, unknown>;
+    assert.equal(def.model, 'claude-haiku-5-5');
+    assert.deepEqual(def.output_config, { effort: 'low' });
+    assert.equal(def.max_tokens, 4096);
+    assert.equal('temperature' in def, false);
+    assert.deepEqual((buildRequest(input, { effort: 'medium' }) as Record<string, unknown>).output_config, { effort: 'medium' });
+    const old = buildRequest(input, { model: 'claude-haiku-4-5-20251001' }) as Record<string, unknown>;
+    assert.equal('output_config' in old, false);
+  } finally {
+    if (saved !== undefined) process.env.ENRICH_MODEL = saved;
+  }
 });
 
 test('buildPrompt substitutes article text literally ($ patterns and {placeholders} are not interpreted)', () => {

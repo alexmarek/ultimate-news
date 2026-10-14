@@ -2,12 +2,15 @@ import { Fuel, LineChart } from 'lucide-react';
 import type { EtfSnapshot } from '@/lib/markets/snapshot';
 import type { PetrolSnapshot } from '@/lib/markets/petrol';
 
-function Change({ value, suffix = '%' }: { value: number | null; suffix?: string }) {
+/** `lowerIsBetter`: prices you pay (petrol) are green when they fall and red when they rise. */
+function Change({ value, suffix = '%', lowerIsBetter = false }: { value: number | null; suffix?: string; lowerIsBetter?: boolean }) {
   if (value === null) return <span className="text-[var(--text-faint)]">–</span>;
   const up = value > 0;
   const down = value < 0;
+  const good = lowerIsBetter ? down : up;
+  const bad = lowerIsBetter ? up : down;
   return (
-    <span className={`tabular-nums font-medium ${up ? 'text-[var(--success)]' : down ? 'text-[var(--error)]' : 'text-[var(--text-body)]'}`}>
+    <span className={`tabular-nums font-medium ${good ? 'text-[var(--success)]' : bad ? 'text-[var(--error)]' : 'text-[var(--text-body)]'}`}>
       {up ? '▲' : down ? '▼' : ''} {Math.abs(value).toFixed(2)}{suffix}
     </span>
   );
@@ -70,7 +73,7 @@ export default function MarketPanel({ etfs, petrol }: { etfs: EtfSnapshot | null
                   <dt className="text-[var(--text)]">{label}</dt>
                   <dd className="flex items-baseline gap-3">
                     <span className="tabular-nums font-semibold text-[var(--text)]">{now.toFixed(3)} €/L</span>
-                    <Change value={diffCt(now, before)} suffix=" ct" />
+                    <Change value={diffCt(now, before)} suffix=" ct" lowerIsBetter />
                   </dd>
                 </div>
               ) : null,

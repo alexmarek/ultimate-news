@@ -39,15 +39,29 @@ export interface EnrichOutput {
   engine: 'ai' | 'fallback';
   /** Why the fallback was used (only when engine is 'fallback'). */
   fallbackReason?: string;
+  /** Model and token usage of the Claude call (diagnostics; absent for the fallback). */
+  usage?: { model: string; input: number; output: number };
 }
 
-// Overridable without a code change, e.g. ENRICH_MODEL=claude-haiku-5-5.
-const DEFAULT_MODEL = 'claude-haiku-4-5-20251001';
+export type Effort = 'low' | 'medium' | 'high';
+
+export interface EnrichOptions {
+  /** Overrides ENRICH_MODEL / the default (used by the dry-run model comparison). */
+  model?: string;
+  effort?: Effort;
+}
+
+// Overridable without a code change via ENRICH_MODEL.
+export const DEFAULT_MODEL = 'claude-haiku-5-5';
+// Haiku 5.5 thinks before answering (adaptive thinking, on by default); effort sets how much.
+// 'low' suits this high-volume summarise-and-classify job (chosen by comparison on real articles).
+const DEFAULT_EFFORT: Effort = 'low';
 // ~4k tokens of article text. Longer articles are cut here to bound cost; the
 // summary then covers the first ~2,700 words, which holds for nearly all news pieces.
 const MAX_ARTICLE_CHARS = 16000;
-// 400 words is roughly 600 tokens; leave room for the metadata block.
-const MAX_OUTPUT_TOKENS = 2048;
+// 400 words is roughly 600-800 tokens; leave room for the metadata block and for thinking,
+// which counts toward this limit on Haiku 5.5.
+const MAX_OUTPUT_TOKENS = 4096;
 // A usable summary has at least this many words; shorter means the reply was broken.
 const MIN_SUMMARY_WORDS = 12;
 // Below this many words the source gave only a snippet (typical for feeds whose pages we
@@ -146,13 +160,28 @@ export function translationProblem(parsed: Pick<ParsedReply, 'summary' | 'titleE
   return null;
 }
 
+/** Claude 5 models take output_config.effort; older ones (e.g. Haiku 4.5) get no effort field. */
+const SUPPORTS_EFFORT = /^claude-(haiku|sonnet|opus|fable)-5/;
+
+/** The Messages API request for one article (pure; exported for tests). */
+export function buildRequest(input: EnrichInput, opts: EnrichOptions = {}, now?: Date) {
+  const model = opts.model || process.env.ENRICH_MODEL || DEFAULT_MODEL;
+  return {
+    model,
+    max_tokens: MAX_OUTPUT_TOKENS,
+    messages: [{ role: 'user' as const, content: buildPrompt(input, now) }],
+    // Not in the pinned SDK's types (0.40), but sent as-is in the request body.
+    ...(SUPPORTS_EFFORT.test(model) ? { output_config: { effort: opts.effort ?? DEFAULT_EFFORT } } : {}),
+  };
+}
+
 /** Enrichment without any network call (also used when the ingest time budget is spent). */
 export async function enrichFallback(input: EnrichInput, reason: string): Promise<EnrichOutput> {
   const result = await fallbackEnrich(input);
   return { ...result, importance: null, forYou: null, engine: 'fallback', fallbackReason: reason };
 }
 
-export async function enrichArticle(input: EnrichInput): Promise<EnrichOutput> {
+export async function enrichArticle(input: EnrichInput, opts: EnrichOptions = {}): Promise<EnrichOutput> {
   const key = process.env.ANTHROPIC_API_KEY;
 
   if (!key || key === 'sk-dummy-for-development') {
@@ -160,14 +189,19 @@ export async function enrichArticle(input: EnrichInput): Promise<EnrichOutput> {
   }
 
   try {
-    const anthropic = new Anthropic({ apiKey: key, timeout: 40_000, maxRetries: 1 });
+    const anthropic = new Anthropic({ apiKey: key, timeout: 60_000, maxRetries: 1 });
 
-    const msg = await anthropic.messages.create({
-      model: process.env.ENRICH_MODEL || DEFAULT_MODEL,
-      max_tokens: MAX_OUTPUT_TOKENS,
-      messages: [{ role: 'user', content: buildPrompt(input) }],
-    });
+    const request = buildRequest(input, opts);
+    const msg = await anthropic.messages.create(request as Anthropic.MessageCreateParamsNonStreaming);
+    const usage = { model: msg.model, input: msg.usage.input_tokens, output: msg.usage.output_tokens };
 
+    // Newer models can decline a request (safety classifiers): HTTP 200 with stop_reason "refusal".
+    if ((msg.stop_reason as string) === 'refusal') {
+      console.error('[enrich] Claude declined the request (refusal)');
+      return enrichFallback(input, 'Claude declined the request (refusal)');
+    }
+
+    // Read text blocks by type: the reply can start with (empty) thinking blocks.
     const text = msg.content
       .filter((block) => block.type === 'text')
       .map((block) => (block as { text: string }).text)
@@ -185,6 +219,7 @@ export async function enrichArticle(input: EnrichInput): Promise<EnrichOutput> {
         ...parsed,
         areas: parsed.areas.length ? parsed.areas : fallbackAreas,
         engine: 'ai',
+        usage,
       };
     }
 
