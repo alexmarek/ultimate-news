@@ -138,6 +138,17 @@ test('the prompt carries the reader profile and the importance scale', () => {
   assert.ok(prompt.includes('most articles should have null'));
 });
 
+test('the prompt states today\'s date and the publication date (the model otherwise assumes its training year)', () => {
+  const prompt = buildPrompt(
+    { sourceName: 'tagesschau', sourceLang: 'de', title: 'T', excerpt: 'E', publishedAt: new Date(Date.UTC(2026, 9, 13, 18)) },
+    new Date(Date.UTC(2026, 9, 14, 8)),
+  );
+  assert.ok(prompt.includes('today is Wednesday, 14 October 2026'));
+  assert.ok(prompt.includes('Published: Tuesday, 13 October 2026'));
+  assert.ok(prompt.includes('Keep years and dates exactly as the article gives them'));
+  assert.ok(buildPrompt({ sourceName: 'S', sourceLang: 'en', title: 'T', excerpt: 'E' }).includes('Published: unknown'));
+});
+
 test('buildPrompt substitutes article text literally ($ patterns and {placeholders} are not interpreted)', () => {
   const prompt = buildPrompt({
     sourceName: 'Test Source',

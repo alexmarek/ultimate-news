@@ -28,6 +28,8 @@ Length: at most 400 words. Scale to the source: a long article deserves roughly 
 
 Content: cover the central message, the key facts, figures, names and dates, the context or cause, and the consequence or what happens next. Stay faithful to the text: do not add facts, opinions or background that are not in it.
 
+Dates: today is {today}. Keep years and dates exactly as the article gives them. Resolve relative dates ("next year", "on Tuesday") from the article's publication date below, never from an assumption about the current year. If the article gives no year, do not add one.
+
 Snippets: if the "Text type" line below says SNIPPET, only the start of the article was available. Write just the lead plus, at most, one short paragraph of anything the snippet adds beyond the lead. Do not write "## Key points" or "## Why it matters", do not add background, and never comment on the text itself (no "the excerpt does not contain...", no "further details are not available"). Set "incomplete" to true.
 
 No repetition: every sentence must add new information. Do not restate the headline, do not repeat in a bullet a point already made in a paragraph, and do not echo the excerpt.
@@ -182,6 +184,7 @@ Then write one sentence (at most 25 words) naming that concrete effect as the ar
 Source: {sourceName}
 Language: {sourceLang}
 Title: {title}
+Published: {published}
 Text type: {textType}
 Excerpt: {excerpt}
 Text: {content}

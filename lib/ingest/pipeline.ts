@@ -313,6 +313,7 @@ async function prepareArticle(c: Candidate, deadline: number): Promise<PreparedA
     title: raw.title,
     excerpt: raw.excerpt,
     content: content || undefined,
+    publishedAt: raw.publishedAt,
   };
   const enrichment =
     Date.now() < deadline ? await enrichArticle(input) : await enrichFallback(input, 'ingest time budget exhausted');

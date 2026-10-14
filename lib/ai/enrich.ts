@@ -20,6 +20,8 @@ export interface EnrichInput {
   title: string;
   excerpt: string;
   content?: string;
+  /** Publication date, so relative dates ("next year") resolve correctly. */
+  publishedAt?: Date;
 }
 
 export interface EnrichOutput {
@@ -57,7 +59,10 @@ export function isSnippet(input: Pick<EnrichInput, 'excerpt' | 'content'>): bool
   return countWords(input.content || input.excerpt || '') < SNIPPET_MAX_WORDS;
 }
 
-export function buildPrompt(input: EnrichInput): string {
+const longDate = (d: Date) =>
+  new Intl.DateTimeFormat('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Berlin' }).format(d);
+
+export function buildPrompt(input: EnrichInput, now: Date = new Date()): string {
   const values: Record<string, string> = {
     sourceName: input.sourceName,
     sourceLang: input.sourceLang,
@@ -66,9 +71,12 @@ export function buildPrompt(input: EnrichInput): string {
     content: (input.content || input.excerpt || '').slice(0, MAX_ARTICLE_CHARS),
     textType: isSnippet(input) ? 'SNIPPET (only the start of the article is available)' : 'full article text',
     readerProfile: READER_PROFILE,
+    // The model does not know today's date and otherwise tends to assume the year of its training data.
+    today: longDate(now),
+    published: input.publishedAt ? longDate(input.publishedAt) : 'unknown',
   };
   // Single pass with a replacer function: article text may contain "$&" or "{title}".
-  return ENRICH_PROMPT.replace(/\{(sourceName|sourceLang|title|excerpt|content|textType|readerProfile)\}/g, (_, key: string) => values[key]);
+  return ENRICH_PROMPT.replace(/\{(sourceName|sourceLang|title|excerpt|content|textType|readerProfile|today|published)\}/g, (_, key: string) => values[key]);
 }
 
 interface ParsedReply {
