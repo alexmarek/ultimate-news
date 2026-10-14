@@ -189,7 +189,7 @@ export async function enrichArticle(input: EnrichInput, opts: EnrichOptions = {}
   }
 
   try {
-    const anthropic = new Anthropic({ apiKey: key, timeout: 60_000, maxRetries: 1 });
+    const anthropic = new Anthropic({ apiKey: key, timeout: 40_000, maxRetries: 1 });
 
     const request = buildRequest(input, opts);
     const msg = await anthropic.messages.create(request as Anthropic.MessageCreateParamsNonStreaming);
