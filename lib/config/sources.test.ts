@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { SOURCES, SOURCES_BY_ID, toSourceRecord } from '@/lib/config/sources';
-import { DAILY_FEED_TARGETS, MAX_ARTICLE_AGE_DAYS, freshCutoff, visibleArticleFilter } from '@/lib/config/dailyFeed';
+import { DAILY_FEED_TARGETS, MAX_ARTICLE_AGE_DAYS, freshCutoff, maxAgeMsFor, visibleArticleFilter } from '@/lib/config/dailyFeed';
 import { AREAS } from '@/lib/types';
 
 const REMOVED = ['bbc-future-planet', 'thehackernews', 'dw', 'matadornetwork', 'longreads-travel', 'europeanbestdestinations', 'japantoday', 'allsides-world', 'japantimes', 'qz', 'insideclimatenews'];
@@ -52,10 +52,10 @@ test('News On Japan uses the requested RSS feed', () => {
   assert.equal(SOURCES_BY_ID.newsonjapan.category, 'World News');
 });
 
-test('daily quotas: world news is the largest section, travel is small, no music or sport', () => {
+test('daily quotas: world news is the largest section, six travel picks, no music or sport', () => {
   assert.equal(DAILY_FEED_TARGETS['World News'], 14);
   assert.equal(DAILY_FEED_TARGETS.Business, 6);
-  assert.equal(DAILY_FEED_TARGETS.Travel, 4);
+  assert.equal(DAILY_FEED_TARGETS.Travel, 6);
   assert.equal(DAILY_FEED_TARGETS.Music, 0);
   assert.equal(DAILY_FEED_TARGETS.Sport, 0);
   assert.equal(DAILY_FEED_TARGETS.Environment, 4);
@@ -80,8 +80,9 @@ test('FAZ.NET is a German-language World News source read from its RSS feed (its
   assert.equal(SOURCES_BY_ID['faz-rss'], undefined, 'temporary probe source removed');
 });
 
-test('category targets equal the sum of source limits', () => {
+test('category targets equal the sum of source limits (curated travel: its pick count)', () => {
   for (const area of AREAS) {
+    if (area === 'Travel') continue;
     const sum = SOURCES.filter((s) => s.category === area).reduce((n, s) => n + s.limit, 0);
     assert.equal(DAILY_FEED_TARGETS[area], sum, area);
   }
@@ -94,12 +95,16 @@ test('toSourceRecord produces a DB row', () => {
   assert.equal(toSourceRecord(SOURCES_BY_ID.zmescience).ingestStrategy, 'html');
 });
 
-test('freshness window is 14 days', () => {
+test('freshness window is 14 days for news and about six months for travel', () => {
   assert.equal(MAX_ARTICLE_AGE_DAYS, 14);
+  assert.equal(maxAgeMsFor('World News'), 14 * 86_400_000);
+  assert.equal(maxAgeMsFor('Travel'), 183 * 86_400_000);
   const now = Date.UTC(2026, 9, 11, 12, 0, 0);
   assert.equal(freshCutoff(now).toISOString(), '2026-09-27T12:00:00.000Z');
   const filter = visibleArticleFilter(now);
-  assert.equal(filter.publishedAt.gte.toISOString(), '2026-09-27T12:00:00.000Z');
+  const [news, travel] = filter.AND[0].OR;
+  assert.equal(news.publishedAt.gte.toISOString(), '2026-09-27T12:00:00.000Z');
+  assert.deepEqual(travel, { primaryArea: 'Travel', publishedAt: { gte: new Date('2026-04-11T12:00:00.000Z') } });
   assert.ok(filter.sourceId.in.includes('zmescience'));
   assert.ok(!filter.sourceId.in.includes('dw'));
 });

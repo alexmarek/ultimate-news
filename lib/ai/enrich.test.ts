@@ -31,6 +31,14 @@ test('parseResponse reads metadata and a structured summary', () => {
   assert.deepEqual(parseSummary(parsed.summary).map((b) => b.type), ['lead', 'paragraph', 'heading', 'list', 'heading', 'paragraph']);
 });
 
+test('parseResponse reads the travel inspiration rating (1-5, null when absent)', () => {
+  assert.equal(parseResponse(GOOD_REPLY)?.inspiration, null);
+  assert.equal(parseResponse(GOOD_REPLY.replace('"incomplete": false', '"incomplete": false, "inspiration": 4.6'))?.inspiration, 5);
+  assert.equal(parseResponse(GOOD_REPLY.replace('"incomplete": false', '"incomplete": false, "inspiration": null'))?.inspiration, null);
+  const prompt = buildPrompt({ sourceName: 'S', sourceLang: 'en', title: 'T', excerpt: 'E', section: 'Travel' });
+  assert.ok(prompt.includes('Section: Travel'));
+});
+
 test('parseResponse still returns the summary when the metadata JSON is malformed', () => {
   const parsed = parseResponse(GOOD_REPLY.replace('"confidence": 0.92}]', '"confidence": 0.92}'));
   assert.ok(parsed);

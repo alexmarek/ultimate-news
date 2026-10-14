@@ -112,3 +112,19 @@ model MarketSnapshot {
   data      String
   updatedAt DateTime @updatedAt
 }
+
+/// Curated-category (Travel) articles already judged by the daily pick, featured or passed over,
+/// so none is shown twice or re-rated. Kept a little longer than the category's age window.
+model ConsideredArticle {
+  /// Article id (hash of the canonical URL).
+  id           String   @id
+  /// URL as the feed or listing gave it: matched before the per-source limit is applied.
+  url          String
+  area         String
+  /// Claude's 1-5 inspiration rating.
+  score        Int?
+  featured     Boolean
+  consideredAt DateTime @default(now())
+
+  @@index([url])
+}

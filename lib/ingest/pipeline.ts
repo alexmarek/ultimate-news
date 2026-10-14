@@ -3,12 +3,15 @@
 // summarise them, then replace the previous feed.
 //
 //   1. collect   – per source: feed (known URLs, then auto-discovery) or HTML
-//                  scrape; drop anything older than MAX_ARTICLE_AGE_DAYS *before*
-//                  applying the per-source limit; keep the newest `limit`.
+//                  scrape; drop anything older than its category's window (14
+//                  days for news) *before* applying the per-source limit; keep
+//                  the newest `limit`. Curated categories (Travel) also skip
+//                  articles judged on an earlier day.
 //   2. enrich    – fetch the full article text when the feed only gave a snippet,
 //                  summarise with Claude (fallback: extractive), embed. Runs
 //                  with bounded concurrency and a time budget so the whole run
 //                  fits Vercel's function limit.
+//      pick      – curated categories keep only their best-rated candidates.
 //   3. write     – only now are the old articles replaced, in one transaction, so
 //                  a failed or timed-out run never leaves the site empty.
 //   4. cluster   – group articles that cover the same story.
@@ -17,7 +20,8 @@ import Parser from 'rss-parser';
 import type { Prisma, Source } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { SOURCES, SOURCE_IDS, toSourceRecord, type SourceDef } from '@/lib/config/sources';
-import { DAILY_FEED_TARGETS, MAX_ARTICLE_AGE_DAYS, MAX_ARTICLE_AGE_MS } from '@/lib/config/dailyFeed';
+import { CURATED_AREAS, DAILY_FEED_TARGETS, MAX_ARTICLE_AGE_DAYS, maxAgeMsFor } from '@/lib/config/dailyFeed';
+import { pickCurated } from '@/lib/curate';
 import type { RawArticle } from '@/lib/types';
 import { extractImageFromRssItem } from '@/lib/ingest/extractImage';
 import { fetchArticleText } from '@/lib/ingest/fetchArticleText';
@@ -88,11 +92,13 @@ export async function seedSources() {
 
 /** Video, audio and podcast items have no article text to summarise. */
 const MEDIA_URL = /\/(?:video|videos|podcast|podcasts|audio)(?:\/|-)/i;
+/** The same, recognised by the headline ("Listen: …", "Watch: …", "Podcast | …"). */
+const MEDIA_TITLE = /^(?:listen|watch|podcast|video|audio)\s*[:|]/i;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function toRawArticle(item: any): RawArticle | null {
   const link: string = item.link || item.guid || '';
-  if (!/^https?:\/\//i.test(link) || MEDIA_URL.test(link)) return null;
+  if (!/^https?:\/\//i.test(link) || MEDIA_URL.test(link) || MEDIA_TITLE.test(String(item.title ?? '').trim())) return null;
 
   const parsed = new Date(item.isoDate || item.pubDate || '');
   return {
@@ -142,13 +148,15 @@ export interface CollectResult {
   error?: string;
 }
 
-async function collectByScraping(def: SourceDef, now: number, trace?: Array<Record<string, unknown>>): Promise<CollectResult> {
+async function collectByScraping(def: SourceDef, now: number, trace?: Array<Record<string, unknown>>, skipUrls?: Set<string>): Promise<CollectResult> {
   try {
     const articles = await scrapeListing(def.url, {
       siteName: def.name,
       trace,
       limit: def.limit,
-      maxAgeMs: MAX_ARTICLE_AGE_MS,
+      maxAgeMs: maxAgeMsFor(def.category),
+      includeUrl: def.includeUrl,
+      skipUrl: skipUrls ? (url) => skipUrls.has(url) : undefined,
       // The page lists newest first on most sites; look a few times past the quota in case some links aren't articles.
       maxCandidates: Math.min(14, Math.max(8, def.limit * 4)),
       now,
@@ -163,9 +171,11 @@ export async function collectFromSource(
   def: SourceDef,
   now: number = Date.now(),
   trace?: Array<Record<string, unknown>>,
+  /** URLs to leave out before the limit is applied (curated articles judged on an earlier day). */
+  skipUrls?: Set<string>,
 ): Promise<CollectResult> {
   // Scrape-only sources never use RSS/Atom feeds, neither configured nor auto-discovered.
-  if (def.scrape) return collectByScraping(def, now, trace);
+  if (def.scrape) return collectByScraping(def, now, trace, skipUrls);
 
   const errors: string[] = [];
   const tried = new Set<string>();
@@ -196,7 +206,10 @@ export async function collectFromSource(
 
   if (feed) {
     // Age filter first, THEN the limit: a stale head of the feed must not use up the quota.
-    const fresh = feed.items.filter((a) => now - a.publishedAt.getTime() <= MAX_ARTICLE_AGE_MS && !def.excludeUrl?.test(a.url) && !def.excludeTitle?.test(a.title.trim()));
+    const maxAgeMs = maxAgeMsFor(def.category);
+    const fresh = feed.items.filter(
+      (a) => now - a.publishedAt.getTime() <= maxAgeMs && !def.excludeUrl?.test(a.url) && !def.excludeTitle?.test(a.title.trim()) && !skipUrls?.has(a.url),
+    );
     fresh.sort((a, b) => b.publishedAt.getTime() - a.publishedAt.getTime());
     return {
       articles: fresh.slice(0, def.limit),
@@ -211,6 +224,26 @@ export async function collectFromSource(
 }
 
 /**
+ * URLs of curated-category articles judged on an earlier day (featured or passed over).
+ * Also forgets entries older than the longest curated window. Empty if the table is missing.
+ */
+async function loadConsidered(now: number, prune: boolean): Promise<Set<string>> {
+  try {
+    if (prune) {
+      const longestMs = Math.max(...Object.values(CURATED_AREAS).map((c) => c.maxAgeDays)) * 24 * 60 * 60 * 1000;
+      await prisma.consideredArticle.deleteMany({ where: { consideredAt: { lt: new Date(now - longestMs - 14 * 24 * 60 * 60 * 1000) } } });
+    }
+    const rows = await prisma.consideredArticle.findMany({ select: { url: true } });
+    return new Set(rows.map((r) => r.url));
+  } catch (e) {
+    console.error('[ingest] could not read considered articles:', errorMessage(e));
+    return new Set();
+  }
+}
+
+const isCurated = (def: SourceDef) => def.category in CURATED_AREAS;
+
+/**
  * Read-only check: runs only the collect step for every configured source and
  * reports what would be ingested. Nothing is written and no summaries are generated.
  */
@@ -219,9 +252,10 @@ const DRY_RUN_ENRICH_MAX = 4;
 
 export async function checkSources(now: number = Date.now(), only?: string[], enrich = false, enrichOpts: EnrichOptions = {}): Promise<Record<string, unknown>> {
   const defs = only?.length ? SOURCES.filter((d) => only.includes(d.id)) : SOURCES;
+  const considered = defs.some(isCurated) ? await loadConsidered(now, false) : new Set<string>();
   const collected = await mapPool(defs, SOURCE_CONCURRENCY, async (def) => {
     const trace: Array<Record<string, unknown>> = [];
-    return { def, trace, result: await collectFromSource(def, now, trace) };
+    return { def, trace, result: await collectFromSource(def, now, trace, isCurated(def) ? considered : undefined) };
   });
 
   // Optional: summarise the newest article of each selected source, exactly as the ingest would, without writing it.
@@ -243,6 +277,7 @@ export async function checkSources(now: number = Date.now(), only?: string[], en
             title: row.title,
             importance: row.importance,
             forYou: row.forYou,
+            inspiration: prepared.inspiration,
             fromTeaser: row.fromTeaser,
             summary: row.summary,
           };
@@ -258,6 +293,7 @@ export async function checkSources(now: number = Date.now(), only?: string[], en
       sourceId: def.id,
       name: def.name,
       category: def.category,
+      maxAgeDays: Math.round(maxAgeMsFor(def.category) / (24 * 60 * 60 * 1000)),
       method: result.method,
       feedUrl: result.feedUrl,
       offered: result.seen,
@@ -296,6 +332,8 @@ interface PreparedArticle {
   /** Text used for the story-grouping embedding (English headline + start of the summary). */
   embedText: string;
   usage?: { model: string; input: number; output: number };
+  /** Curated categories: Claude's rating used for the daily pick. */
+  inspiration: number | null;
 }
 
 async function prepareArticle(c: Candidate, deadline: number, enrichOpts: EnrichOptions = {}): Promise<PreparedArticle> {
@@ -316,6 +354,7 @@ async function prepareArticle(c: Candidate, deadline: number, enrichOpts: Enrich
     excerpt: raw.excerpt,
     content: content || undefined,
     publishedAt: raw.publishedAt,
+    section: def.category,
   };
   const enrichment =
     Date.now() < deadline ? await enrichArticle(input, enrichOpts) : await enrichFallback(input, 'ingest time budget exhausted');
@@ -340,6 +379,7 @@ async function prepareArticle(c: Candidate, deadline: number, enrichOpts: Enrich
     publishable,
     embedText,
     usage: enrichment.usage,
+    inspiration: enrichment.inspiration,
     row: {
       id: c.articleId,
       sourceId: def.id,
@@ -392,7 +432,11 @@ export async function runIngest(sources: Source[]): Promise<IngestOutcome> {
   }
 
   // --- 1. collect ---
-  const collected = await mapPool(defs, SOURCE_CONCURRENCY, async (def) => ({ def, result: await collectFromSource(def, startedAt) }));
+  const considered = defs.some(isCurated) ? await loadConsidered(startedAt, true) : new Set<string>();
+  const collected = await mapPool(defs, SOURCE_CONCURRENCY, async (def) => ({
+    def,
+    result: await collectFromSource(def, startedAt, undefined, isCurated(def) ? considered : undefined),
+  }));
 
   await Promise.all(
     collected.map(({ def, result }) =>
@@ -447,7 +491,33 @@ export async function runIngest(sources: Source[]): Promise<IngestOutcome> {
   // --- 2. enrich ---
   const deadline = startedAt + ENRICH_DEADLINE_MS;
   const allPrepared = await mapPool(candidates, ENRICH_CONCURRENCY, (c) => prepareArticle(c, deadline));
-  const prepared = allPrepared.filter((p) => p.publishable);
+  const publishable = allPrepared.filter((p) => p.publishable);
+
+  // --- pick: curated categories keep only their best-rated candidates ---
+  const curatedReport: Record<string, unknown> = {};
+  const considerRows: Prisma.ConsideredArticleCreateManyInput[] = [];
+  const dropped = new Set<PreparedArticle>();
+  for (const [area, cfg] of Object.entries(CURATED_AREAS)) {
+    const pool = publishable.filter((p) => p.row.primaryArea === area);
+    const picked = pickCurated(
+      pool.map((p) => ({ p, sourceId: p.row.sourceId, score: p.inspiration, publishedAt: p.row.publishedAt as Date })),
+      cfg.picks,
+      cfg.perSourceCap,
+    ).map((c) => c.p);
+    for (const p of pool) {
+      if (!picked.includes(p)) dropped.add(p);
+      // Only rated candidates are remembered: an unrated one (fallback summary) gets another chance tomorrow.
+      if (p.engine === 'ai') {
+        considerRows.push({ id: p.row.id, url: p.row.originalUrl, area, score: p.inspiration, featured: picked.includes(p) });
+      }
+    }
+    curatedReport[area] = {
+      pool: pool.length,
+      picked: picked.map((p) => ({ sourceId: p.row.sourceId, score: p.inspiration, publishedAt: p.row.publishedAt, title: p.row.title })),
+    };
+  }
+  const prepared = publishable.filter((p) => !dropped.has(p));
+
   const untranslated = allPrepared
     .filter((p) => !p.publishable)
     .map((p) => ({ sourceId: p.row.sourceId, url: p.row.originalUrl, reason: p.fallbackReason ?? 'unknown' }));
@@ -481,6 +551,7 @@ export async function runIngest(sources: Source[]): Promise<IngestOutcome> {
     prisma.cluster.deleteMany(),
     prisma.article.deleteMany(),
     prisma.article.createMany({ data: prepared.map((p) => p.row), skipDuplicates: true }),
+    prisma.consideredArticle.createMany({ data: considerRows, skipDuplicates: true }),
   ]);
   const written = prepared.length;
   console.log(`[ingest] wrote ${written} articles from ${defs.length} sources`);
@@ -516,6 +587,7 @@ export async function runIngest(sources: Source[]): Promise<IngestOutcome> {
       // How many summaries Claude wrote vs. the extractive fallback. Fallback summaries are lower quality.
       enrichment: { ai: aiCount, fallback: written - aiCount, fallbackReasons, untranslatedSkipped: untranslated.length, untranslated },
       categoryFill,
+      curated: curatedReport,
       embeddings,
       clusters: clusterResult,
       durationMs: Date.now() - startedAt,

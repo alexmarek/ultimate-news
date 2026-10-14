@@ -41,6 +41,7 @@ before(async () => {
       { title: 'Fresh 1', days: 1 }, { title: 'Fresh 2', days: 3 }, { title: 'Fresh 3', days: 5 }, { title: 'Fresh 4', days: 9 },
     ])],
     '/discovered.xml': ['application/xml', rss([{ title: 'Discovered', days: 2 }])],
+    '/media.xml': ['application/xml', rss([{ title: 'Listen: When does a hybrid attack become an attack on Nato?', days: 1 }, { title: 'Podcast | Weekly roundup', days: 1 }, { title: 'Listening to farmers', days: 2 }])],
     '/home': ['text/html', '<html><head><link rel="alternate" type="application/rss+xml" href="/discovered.xml"></head><body></body></html>'],
     '/listing': ['text/html', `<html><body>
       <nav><h2><a href="/a/menu-page">Menu page</a></h2></nav>
@@ -87,12 +88,27 @@ const def = (over: Partial<SourceDef>): SourceDef => ({
   id: 'test',
   name: 'Test',
   url: `${base}/home`,
-  category: 'Travel',
+  category: 'Science',
   limit: 2,
-  contentKind: 'travel',
+  contentKind: 'science',
   tier: 'tier-2',
   weight: 0.8,
   ...over,
+});
+
+test('travel keeps articles up to about six months old and skips ones judged on an earlier day', async () => {
+  const travel = def({ category: 'Travel', feeds: [`${base}/stale-head.xml`], limit: 3 });
+  const all = await collectFromSource(travel);
+  assert.equal(all.skippedOld, 0);
+  assert.deepEqual(all.articles.map((a) => a.title), ['Fresh 1', 'Fresh 2', 'Fresh 3']);
+  const skip = new Set(['http://example.test/Fresh%201', 'http://example.test/Fresh%203']);
+  const rest = await collectFromSource(travel, Date.now(), undefined, skip);
+  assert.deepEqual(rest.articles.map((a) => a.title), ['Fresh 2', 'Fresh 4', 'Stale C']);
+});
+
+test('audio and video items are recognised by their headline too', async () => {
+  const result = await collectFromSource(def({ feeds: [`${base}/media.xml`], limit: 5 }));
+  assert.deepEqual(result.articles.map((a) => a.title), ['Listening to farmers']);
 });
 
 test('items older than 14 days are dropped before the limit is applied', async () => {
@@ -123,6 +139,13 @@ test('without a feed, scraping keeps only dated, fresh articles (newest first) a
 test('scraping respects the per-source limit', async () => {
   const result = await collectFromSource(def({ url: `${base}/listing`, scrape: true, limit: 1 }));
   assert.deepEqual(result.articles.map((a) => a.title), ['Fresh one']);
+});
+
+test('scraping opens only links matching includeUrl and skips already-considered ones', async () => {
+  const only = await collectFromSource(def({ url: `${base}/listing`, scrape: true, limit: 5, includeUrl: /\/a\/fresh-two$/ }));
+  assert.deepEqual(only.articles.map((a) => a.title), ['Fresh two']);
+  const skipped = await collectFromSource(def({ url: `${base}/listing`, scrape: true, limit: 5 }), Date.now(), undefined, new Set([`${base}/a/fresh-one`]));
+  assert.deepEqual(skipped.articles.map((a) => a.title), ['Fresh two']);
 });
 
 test('a source with no feed and no scrape fallback reports an error and no articles', async () => {

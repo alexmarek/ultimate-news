@@ -6,32 +6,68 @@ import type { Area } from '@/lib/types';
 import { AREAS } from '@/lib/types';
 import { SOURCES, SOURCE_IDS } from '@/lib/config/sources';
 
-/** Articles older than this are never ingested and never shown. */
-export const MAX_ARTICLE_AGE_DAYS = 14;
-export const MAX_ARTICLE_AGE_MS = MAX_ARTICLE_AGE_DAYS * 24 * 60 * 60 * 1000;
+const DAY_MS = 24 * 60 * 60 * 1000;
 
-/** Oldest publish date that still counts as fresh. */
+/** News older than this is never ingested and never shown. */
+export const MAX_ARTICLE_AGE_DAYS = 14;
+export const MAX_ARTICLE_AGE_MS = MAX_ARTICLE_AGE_DAYS * DAY_MS;
+
+/**
+ * Curated categories are inspiration rather than news: articles may be up to
+ * `maxAgeDays` old. Each source's `limit` is then its share of a candidate pool;
+ * Claude rates every candidate and only the best `picks` are shown (at most
+ * `perSourceCap` from one source while others are available). An article is
+ * judged once: picked or passed over, it is not offered again.
+ */
+export interface CuratedArea {
+  maxAgeDays: number;
+  picks: number;
+  perSourceCap: number;
+}
+
+export const CURATED_AREAS: Partial<Record<Area, CuratedArea>> = {
+  Travel: { maxAgeDays: 183, picks: 6, perSourceCap: 2 },
+};
+
+/** How old an article of this category may be, in ms. */
+export function maxAgeMsFor(area: Area): number {
+  return (CURATED_AREAS[area]?.maxAgeDays ?? MAX_ARTICLE_AGE_DAYS) * DAY_MS;
+}
+
+/** Oldest publish date that still counts as fresh (news categories). */
 export function freshCutoff(now: number = Date.now()): Date {
   return new Date(now - MAX_ARTICLE_AGE_MS);
 }
 
 /**
  * Prisma `where` fragment for articles that may be displayed: part of the daily
- * feed, from a currently configured source, and not older than the freshness window.
+ * feed, from a currently configured source, and not older than its category's
+ * window (14 days for news, longer for curated categories). Wrapped in AND so a
+ * caller can still add its own OR (search).
  */
 export function visibleArticleFilter(now: number = Date.now()) {
   return {
     isInDailyFeed: true,
-    publishedAt: { gte: freshCutoff(now) },
     sourceId: { in: SOURCE_IDS },
+    AND: [
+      {
+        OR: [
+          { publishedAt: { gte: freshCutoff(now) } },
+          ...Object.keys(CURATED_AREAS).map((area) => ({
+            primaryArea: area,
+            publishedAt: { gte: new Date(now - maxAgeMsFor(area as Area)) },
+          })),
+        ],
+      },
+    ],
   };
 }
 
-/** Per-category target = the sum of its sources' daily limits. */
+/** Per-category target: the curated pick count, otherwise the sum of its sources' daily limits. */
 export const DAILY_FEED_TARGETS: Record<Area, number> = Object.fromEntries(
   AREAS.map((area) => [
     area,
-    SOURCES.filter((s) => s.category === area).reduce((sum, s) => sum + s.limit, 0),
+    CURATED_AREAS[area]?.picks ?? SOURCES.filter((s) => s.category === area).reduce((sum, s) => sum + s.limit, 0),
   ]),
 ) as Record<Area, number>;
 

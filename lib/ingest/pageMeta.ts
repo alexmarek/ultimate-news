@@ -225,7 +225,7 @@ export interface ListingLink {
 const ASSET_EXTENSION = /\.(?:jpe?g|png|gif|svg|webp|css|js|pdf|zip|xml|json|mp3|mp4)$/i;
 
 /** Article-like links on a listing page, in document order (newest first on most sites). */
-export function extractListingLinks($: Doc, pageUrl: string, max: number): ListingLink[] {
+export function extractListingLinks($: Doc, pageUrl: string, max: number, include?: RegExp): ListingLink[] {
   const base = new URL(pageUrl);
   const seen = new Set<string>();
   const out: ListingLink[] = [];
@@ -245,6 +245,7 @@ export function extractListingLinks($: Doc, pageUrl: string, max: number): Listi
     url.hash = '';
     if (ASSET_EXTENSION.test(url.pathname)) return;
     if (url.pathname === '/' || url.href === base.href) return;
+    if (include && !include.test(url.href)) return;
 
     const text = $el.text().replace(/\s+/g, ' ').trim();
     const inHeading = $el.closest('h1, h2, h3, h4, h5').length > 0 || $el.find('h1, h2, h3, h4, h5').length > 0;

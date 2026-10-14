@@ -4,9 +4,10 @@
 // its metadata (title, description, image, publish date) and body text.
 //
 // Only pages with a machine-readable publish date (on the page itself or next to
-// the link on the listing) are kept, because the 14-day freshness rule can't be
-// applied otherwise. Anything that isn't an article (menus, topic pages, PDFs)
-// fails that test and is dropped.
+// the link on the listing) are kept, because the freshness rule (14 days for
+// news, longer for curated categories such as Travel) can't be applied
+// otherwise. Anything that isn't an article (menus, topic pages, PDFs) fails
+// that test and is dropped.
 
 import * as cheerio from 'cheerio';
 import type { RawArticle } from '@/lib/types';
@@ -22,6 +23,10 @@ export interface ScrapeOptions {
   maxCandidates?: number;
   /** Source name, stripped from the end of page titles ("Headline - Source"). */
   siteName?: string;
+  /** Only links whose URL matches are treated as articles (e.g. a blog's dated post paths). */
+  includeUrl?: RegExp;
+  /** Links for which this returns true are not opened (e.g. articles already judged on an earlier day). */
+  skipUrl?: (url: string) => boolean;
   /** If given, receives one entry per step/link explaining what happened (for the dry-run report). */
   trace?: Array<Record<string, unknown>>;
   now?: number;
@@ -33,7 +38,7 @@ export async function scrapeListing(pageUrl: string, opts: ScrapeOptions): Promi
   opts.trace?.push({ step: 'listing', url: pageUrl, status: listing.status, error: listing.error, diag: listing.diag, bytes: listing.html?.length ?? 0 });
   if (!listing.html) throw new Error(`Could not fetch ${pageUrl} (${listing.error ?? 'no response'})`);
 
-  const links = extractListingLinks(cheerio.load(listing.html), pageUrl, opts.maxCandidates ?? 14);
+  const links = extractListingLinks(cheerio.load(listing.html), pageUrl, opts.maxCandidates ?? 14, opts.includeUrl);
   opts.trace?.push({ step: 'links', found: links.length });
   if (links.length === 0) throw new Error('No article links found on the listing page');
 
@@ -41,6 +46,10 @@ export async function scrapeListing(pageUrl: string, opts: ScrapeOptions): Promi
     const note = (outcome: string, extra: Record<string, unknown> = {}) =>
       opts.trace?.push({ step: 'link', url: link.url, text: link.text.slice(0, 80), cardDate: link.date?.toISOString() ?? null, outcome, ...extra });
 
+    if (opts.skipUrl?.(link.url)) {
+      note('skipped: already considered');
+      return null;
+    }
     // A date shown on the listing that is already too old saves opening the page.
     if (link.date && now - link.date.getTime() > opts.maxAgeMs) {
       note('skipped: listing date too old');

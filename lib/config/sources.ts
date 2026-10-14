@@ -23,6 +23,8 @@ export interface SourceDef {
   lang?: string;
   /** Feed items whose URL matches are skipped (e.g. a news feed that also carries sport). */
   excludeUrl?: RegExp;
+  /** Scrape sources: only links whose URL matches are opened as articles (a blog's post paths, not its shop or index pages). */
+  includeUrl?: RegExp;
   /** Feed items whose title matches are skipped (e.g. programme listings rather than articles). */
   excludeTitle?: RegExp;
   /** Fetch the feed through api.rss2json.com (for hosts that block server-side requests). */
@@ -76,10 +78,16 @@ export const SOURCES: SourceDef[] = [
   // Constructive journalism: a problem together with what is working against it.
   { id: 'positive-news', name: 'Positive News', url: 'https://www.positive.news/', feeds: ['https://www.positive.news/feed/'], category: 'Positive News', limit: 2, contentKind: 'positive-news', tier: 'tier-1', weight: 0.85 },
 
-  // --- Travel ---
-  { id: 'smithsonian-travel', name: 'Smithsonian Magazine', url: 'https://www.smithsonianmag.com/travel/', feeds: ['https://www.smithsonianmag.com/rss/travel/'], category: 'Travel', limit: 2, contentKind: 'travel', tier: 'tier-1', weight: 0.9 },
-  { id: 'fathomaway', name: 'Fathom Away', url: 'https://fathomaway.com', feeds: ['https://fathomaway.com/feed/'], category: 'Travel', limit: 1, contentKind: 'travel', tier: 'tier-1', weight: 0.9 },
-  { id: 'ricksteves-cameron', name: "Rick Steves' Europe (Cameron)", url: 'https://blog.ricksteves.com/cameron/', scrape: true, category: 'Travel', limit: 1, contentKind: 'travel', tier: 'tier-2', weight: 0.85 },
+  // --- Travel (curated, see CURATED_AREAS in dailyFeed.ts) ---
+  // Inspiration rather than news: articles up to ~6 months old. `limit` is each source's share of the
+  // daily candidate pool; Claude rates the pool and the best 6 are shown, none of them twice.
+  { id: 'euronews-travel', name: 'Euronews Travel', url: 'https://www.euronews.com/travel', feeds: ['https://www.euronews.com/rss?level=vertical&name=travel'], category: 'Travel', limit: 3, contentKind: 'travel', tier: 'tier-1', weight: 0.85 },
+  { id: 'spiegel-reise', name: 'SPIEGEL Reise', url: 'https://www.spiegel.de/reise/', feeds: ['https://www.spiegel.de/reise/index.rss'], lang: 'de', category: 'Travel', limit: 3, contentKind: 'travel', tier: 'tier-1', weight: 0.85 },
+  { id: 'ricksteves-cameron', name: "Rick Steves' Europe (Cameron)", url: 'https://blog.ricksteves.com/cameron/', scrape: true, includeUrl: /^https:\/\/blog\.ricksteves\.com\/cameron\/\d{4}\/\d{2}\/[^/]+/, category: 'Travel', limit: 2, contentKind: 'travel', tier: 'tier-2', weight: 0.85 },
+  { id: 'guardian-travel', name: 'The Guardian Travel', url: 'https://www.theguardian.com/travel', feeds: ['https://www.theguardian.com/travel/rss'], category: 'Travel', limit: 3, contentKind: 'travel', tier: 'tier-1', weight: 0.9 },
+  { id: 'cntraveller', name: 'Condé Nast Traveller', url: 'https://www.cntraveller.com/', feeds: ['https://www.cntraveller.com/feed/rss'], category: 'Travel', limit: 3, contentKind: 'travel', tier: 'tier-1', weight: 0.85 },
+  { id: 'smithsonian-travel', name: 'Smithsonian Magazine', url: 'https://www.smithsonianmag.com/travel/', feeds: ['https://www.smithsonianmag.com/rss/travel/'], category: 'Travel', limit: 3, contentKind: 'travel', tier: 'tier-1', weight: 0.9 },
+  { id: 'fathomaway', name: 'Fathom Away', url: 'https://fathomaway.com', feeds: ['https://fathomaway.com/feed/'], category: 'Travel', limit: 3, contentKind: 'travel', tier: 'tier-1', weight: 0.9 },
 ];
 
 export const SOURCE_IDS: string[] = SOURCES.map((s) => s.id);
