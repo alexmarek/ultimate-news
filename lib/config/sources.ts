@@ -23,6 +23,8 @@ export interface SourceDef {
   lang?: string;
   /** Feed items whose URL matches are skipped (e.g. a news feed that also carries sport). */
   excludeUrl?: RegExp;
+  /** Feed items whose title matches are skipped (e.g. programme listings rather than articles). */
+  excludeTitle?: RegExp;
   /** Fetch the feed through api.rss2json.com (for hosts that block server-side requests). */
   viaRss2Json?: boolean;
   category: Area;
@@ -33,6 +35,9 @@ export interface SourceDef {
   weight: number;
 }
 
+/** tagesschau feeds also list TV programmes ("tagesthemen", "Wirtschaft vor acht vom 13.10.2026"). */
+const TAGESSCHAU_PROGRAMMES = /^(tagesschau|tagesthemen|nachtmagazin|tagesschau24|tagesschau in 100 sekunden|wirtschaft vor acht)\b.{0,25}$/i;
+
 export const SOURCES: SourceDef[] = [
   // --- World News ---
   { id: 'newsonjapan', name: 'News On Japan', url: 'https://newsonjapan.com/', feeds: ['https://newsonjapan.com/rss/top.xml'], category: 'World News', limit: 3, contentKind: 'news', tier: 'tier-1', weight: 0.9 },
@@ -41,7 +46,7 @@ export const SOURCES: SourceDef[] = [
   // The feed carries only a short teaser, so these summaries are brief (and the article text cannot be fetched either).
   { id: 'faz', name: 'FAZ.NET', url: 'https://www.faz.net/aktuell/politik/', feeds: ['https://www.faz.net/rss/aktuell/politik/'], lang: 'de', category: 'World News', limit: 3, contentKind: 'news', tier: 'tier-1', weight: 0.9 },
   // German public broadcaster (ARD), translated: a second German voice next to FAZ's centre-right line.
-  { id: 'tagesschau', name: 'tagesschau', url: 'https://www.tagesschau.de/', feeds: ['https://www.tagesschau.de/index~rss2.xml', 'https://www.tagesschau.de/xml/rss2/'], excludeUrl: /sportschau\.de|\/sport\//i, lang: 'de', category: 'World News', limit: 2, contentKind: 'news', tier: 'tier-1', weight: 0.95 },
+  { id: 'tagesschau', name: 'tagesschau', url: 'https://www.tagesschau.de/', feeds: ['https://www.tagesschau.de/index~rss2.xml', 'https://www.tagesschau.de/xml/rss2/'], excludeUrl: /sportschau\.de|\/sport\/|\/multimedia\//i, excludeTitle: TAGESSCHAU_PROGRAMMES, lang: 'de', category: 'World News', limit: 2, contentKind: 'news', tier: 'tier-1', weight: 0.95 },
   { id: 'euobserver', name: 'EUobserver', url: 'https://euobserver.com/', category: 'World News', limit: 2, contentKind: 'news', tier: 'tier-1', weight: 0.9 },
   // Second view on Brussels next to EUobserver.
   { id: 'politico-europe', name: 'Politico Europe', url: 'https://www.politico.eu/', feeds: ['https://www.politico.eu/feed/'], category: 'World News', limit: 2, contentKind: 'news', tier: 'tier-1', weight: 0.9 },
@@ -49,7 +54,7 @@ export const SOURCES: SourceDef[] = [
   { id: 'france24', name: 'France 24', url: 'https://www.france24.com/en/', feeds: ['https://www.france24.com/en/rss'], category: 'World News', limit: 2, contentKind: 'news', tier: 'tier-1', weight: 0.9 },
 
   // --- Business (markets, energy and petrol prices, the cybersecurity industry) ---
-  { id: 'tagesschau-wirtschaft', name: 'tagesschau Wirtschaft', url: 'https://www.tagesschau.de/wirtschaft/', feeds: ['https://www.tagesschau.de/wirtschaft/index~rss2.xml'], lang: 'de', category: 'Business', limit: 2, contentKind: 'business', tier: 'tier-1', weight: 0.95 },
+  { id: 'tagesschau-wirtschaft', name: 'tagesschau Wirtschaft', url: 'https://www.tagesschau.de/wirtschaft/', feeds: ['https://www.tagesschau.de/wirtschaft/index~rss2.xml'], excludeUrl: /\/multimedia\//i, excludeTitle: TAGESSCHAU_PROGRAMMES, lang: 'de', category: 'Business', limit: 2, contentKind: 'business', tier: 'tier-1', weight: 0.95 },
   { id: 'euronews-business', name: 'Euronews Business', url: 'https://www.euronews.com/business', feeds: ['https://www.euronews.com/rss?level=vertical&name=business'], category: 'Business', limit: 2, contentKind: 'business', tier: 'tier-1', weight: 0.85 },
   // Business of cybersecurity (deals, earnings, regulation) rather than vulnerability alerts.
   { id: 'cybersecuritydive', name: 'Cybersecurity Dive', url: 'https://www.cybersecuritydive.com/', feeds: ['https://www.cybersecuritydive.com/feeds/news/'], category: 'Business', limit: 2, contentKind: 'business', tier: 'tier-2', weight: 0.85 },

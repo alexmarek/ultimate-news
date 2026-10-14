@@ -7,7 +7,11 @@
 import { prisma } from '@/lib/db';
 import { cosineSimilarity } from '@/lib/ai/embed';
 
-const SIMILARITY_THRESHOLD = 0.75;
+// Calibrated on real data (/api/cron?debug=pairs, 14 Oct 2026): same-story pairs from different
+// sources scored 0.59-0.75 (Pope Leo XIV's surgery, the EU-China hybrid deal, the German sugar
+// tax), unrelated pairs at most 0.46. Kept on the strict side: a wrong merge would hide a
+// different story from the brief. Re-check with debug=pairs if grouping looks off.
+const SIMILARITY_THRESHOLD = 0.55;
 const ACTIVE_WINDOW_DAYS = 3; // Daily ingest — news clusters within 2-3 days
 
 interface ArticleWithEmbedding {

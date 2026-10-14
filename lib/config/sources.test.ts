@@ -61,6 +61,10 @@ test('daily quotas: world news is the largest section, travel is small, no music
   assert.equal(DAILY_FEED_TARGETS.Environment, 4);
   assert.ok(SOURCES_BY_ID.tagesschau.excludeUrl?.test('https://www.sportschau.de/regional/wdr/x-100.html'));
   assert.ok(!SOURCES_BY_ID.tagesschau.excludeUrl?.test('https://www.tagesschau.de/ausland/x-100.html'));
+  for (const t of ['tagesthemen', 'tagesschau in 100 Sekunden', 'Wirtschaft vor acht vom 13.10.2026']) {
+    assert.ok(SOURCES_BY_ID.tagesschau.excludeTitle?.test(t), t);
+  }
+  assert.ok(!SOURCES_BY_ID.tagesschau.excludeTitle?.test('tagesschau-Recherche: Wie die Bahn ihre Pünktlichkeit schönrechnet'));
   // German sources are translated.
   for (const id of ['faz', 'tagesschau', 'tagesschau-wirtschaft']) assert.equal(SOURCES_BY_ID[id].lang, 'de', id);
 });

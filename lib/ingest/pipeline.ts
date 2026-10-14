@@ -196,7 +196,7 @@ export async function collectFromSource(
 
   if (feed) {
     // Age filter first, THEN the limit: a stale head of the feed must not use up the quota.
-    const fresh = feed.items.filter((a) => now - a.publishedAt.getTime() <= MAX_ARTICLE_AGE_MS && !def.excludeUrl?.test(a.url));
+    const fresh = feed.items.filter((a) => now - a.publishedAt.getTime() <= MAX_ARTICLE_AGE_MS && !def.excludeUrl?.test(a.url) && !def.excludeTitle?.test(a.title.trim()));
     fresh.sort((a, b) => b.publishedAt.getTime() - a.publishedAt.getTime());
     return {
       articles: fresh.slice(0, def.limit),
