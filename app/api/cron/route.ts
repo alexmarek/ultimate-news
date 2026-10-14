@@ -3,10 +3,16 @@ import { prisma } from '@/lib/db';
 import { checkSources, runIngest, seedSources } from '@/lib/ingest/pipeline';
 import { freshCutoff } from '@/lib/config/dailyFeed';
 import { refreshMarkets } from '@/lib/markets/snapshot';
+import { similarPairs } from '@/lib/dedup/cluster';
 
 // Called by Vercel Cron at 08:00 UTC (10:00 CEST) daily.
 
 export async function GET(req: NextRequest) {
+  // Debug: the most similar cross-source article pairs (calibrates story grouping). Read-only.
+  if (req.nextUrl.searchParams.get('debug') === 'pairs') {
+    return NextResponse.json({ threshold: 'see SIMILARITY_THRESHOLD in lib/dedup/cluster.ts', pairs: await similarPairs() });
+  }
+
   // Debug mode — report DB state without running ingestion
   if (req.nextUrl.searchParams.has('debug')) {
     const totalArticles = await prisma.article.count();

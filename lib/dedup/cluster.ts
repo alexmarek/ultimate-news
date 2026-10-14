@@ -18,6 +18,32 @@ interface ArticleWithEmbedding {
   publishedAt: Date;
 }
 
+/**
+ * Read-only diagnostic: the most similar pairs of articles from different sources,
+ * with their cosine similarity. Used to calibrate SIMILARITY_THRESHOLD on real data.
+ */
+export async function similarPairs(limit = 20): Promise<Array<{ score: number; a: string; b: string }>> {
+  const windowDate = new Date();
+  windowDate.setDate(windowDate.getDate() - ACTIVE_WINDOW_DAYS);
+  const articles = await prisma.article.findMany({
+    where: { embedding: { not: null }, publishedAt: { gte: windowDate } },
+    select: { title: true, sourceId: true, embedding: true },
+  });
+  const vecs = articles.map((a) => JSON.parse(a.embedding!) as number[]);
+  const pairs: Array<{ score: number; a: string; b: string }> = [];
+  for (let i = 0; i < articles.length; i++) {
+    for (let j = i + 1; j < articles.length; j++) {
+      if (articles[i].sourceId === articles[j].sourceId) continue;
+      pairs.push({
+        score: Math.round(cosineSimilarity(vecs[i], vecs[j]) * 1000) / 1000,
+        a: `${articles[i].sourceId}: ${articles[i].title}`,
+        b: `${articles[j].sourceId}: ${articles[j].title}`,
+      });
+    }
+  }
+  return pairs.sort((x, y) => y.score - x.score).slice(0, limit);
+}
+
 export async function recomputeClusters(): Promise<{
   clustered: number;
   newClusters: number;
