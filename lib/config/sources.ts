@@ -82,11 +82,9 @@ export const SOURCES: SourceDef[] = [
   // Inspiration rather than news: articles up to ~6 months old. `limit` is each source's share of the
   // daily candidate pool; Claude rates the pool and the best 6 are shown, none of them twice.
   { id: 'euronews-travel', name: 'Euronews Travel', url: 'https://www.euronews.com/travel', feeds: ['https://www.euronews.com/rss?level=vertical&name=travel'], category: 'Travel', limit: 3, contentKind: 'travel', tier: 'tier-1', weight: 0.85 },
-  { id: 'spiegel-reise', name: 'SPIEGEL Reise', url: 'https://www.spiegel.de/reise/', feeds: ['https://www.spiegel.de/reise/index.rss'], lang: 'de', category: 'Travel', limit: 3, contentKind: 'travel', tier: 'tier-1', weight: 0.85 },
   { id: 'ricksteves-cameron', name: "Rick Steves' Europe (Cameron)", url: 'https://blog.ricksteves.com/cameron/', scrape: true, includeUrl: /^https:\/\/blog\.ricksteves\.com\/cameron\/\d{4}\/\d{2}\/[^/]+/, category: 'Travel', limit: 2, contentKind: 'travel', tier: 'tier-2', weight: 0.85 },
   { id: 'guardian-travel', name: 'The Guardian Travel', url: 'https://www.theguardian.com/travel', feeds: ['https://www.theguardian.com/travel/rss'], category: 'Travel', limit: 3, contentKind: 'travel', tier: 'tier-1', weight: 0.9 },
   { id: 'cntraveller', name: 'Condé Nast Traveller', url: 'https://www.cntraveller.com/', feeds: ['https://www.cntraveller.com/feed/rss'], category: 'Travel', limit: 3, contentKind: 'travel', tier: 'tier-1', weight: 0.85 },
-  { id: 'smithsonian-travel', name: 'Smithsonian Magazine', url: 'https://www.smithsonianmag.com/travel/', feeds: ['https://www.smithsonianmag.com/rss/travel/'], category: 'Travel', limit: 3, contentKind: 'travel', tier: 'tier-1', weight: 0.9 },
   { id: 'fathomaway', name: 'Fathom Away', url: 'https://fathomaway.com', feeds: ['https://fathomaway.com/feed/'], category: 'Travel', limit: 3, contentKind: 'travel', tier: 'tier-1', weight: 0.9 },
 ];
 

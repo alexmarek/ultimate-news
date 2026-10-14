@@ -4,13 +4,13 @@ A curated daily news aggregator — articles from 20 sources across 7 categories
 
 ## Features
 
-- **24 sources** across World News, Business, Technology, Science, Environment, Positive News, Travel (defined in `lib/config/sources.ts`); German sources are translated to English
+- **22 sources** across World News, Business, Technology, Science, Environment, Positive News, Travel (defined in `lib/config/sources.ts`); German sources are translated to English
 - **Today's brief** — on the front page, the 5 stories that matter most to the reader, one sentence each, ending with "You're up to date". Claude rates each article's `importance` (1–5) for the reader described in `lib/config/reader.ts`
 - **For you** — a one-sentence "why it matters to you" line, labelled as an AI inference, where a story concretely affects the reader; `/?forYou=1` lists all such stories
 - **Depth badge** — each summary says whether it was written from the full article or only a teaser
 - **Your ETFs & petrol** — market performance in % (day, 1 month, year to date) of the ETFs in `lib/config/portfolio.ts` (Xetra, EUR; never amounts) and the weekly German pump prices from the EU Weekly Oil Bulletin, refreshed by the daily cron
 - **14-day freshness limit** — news older than 14 days is never ingested and never shown (`MAX_ARTICLE_AGE_DAYS` in `lib/config/dailyFeed.ts`)
-- **Travel inspiration** — travel articles may be up to ~6 months old. Each day Claude rates a pool of about 20 candidates from the travel sources (1–5: how well it inspires and helps plan a trip) and the best 6 are shown, at most 2 per source. Nothing is shown twice: featured and weakly rated articles are not offered again, while strong ones that lost out (e.g. to the per-source cap) stay in the pool for later days (`CURATED_AREAS` in `lib/config/dailyFeed.ts`; judged articles are remembered in the `ConsideredArticle` table)
+- **Travel inspiration** — travel articles may be up to ~6 months old. Each day Claude rates a pool of up to 14 candidates from the travel sources (1–5: how well it inspires and helps plan a trip) and the best 6 are shown, at most 2 per source. Nothing is shown twice: featured and weakly rated articles are not offered again, while strong ones that lost out (e.g. to the per-source cap) stay in the pool for later days (`CURATED_AREAS` in `lib/config/dailyFeed.ts`; judged articles are remembered in the `ConsideredArticle` table)
 - **Daily refresh** — Vercel Cron re-ingests all articles at 08:00 UTC; the previous feed is replaced only once new articles are ready, so a failed run never empties the site
 - **12 articles per page** with pagination
 - **Search & category filter** via URL params

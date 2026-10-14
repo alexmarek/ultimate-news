@@ -4,7 +4,7 @@ import { SOURCES, SOURCES_BY_ID, toSourceRecord } from '@/lib/config/sources';
 import { DAILY_FEED_TARGETS, MAX_ARTICLE_AGE_DAYS, freshCutoff, maxAgeMsFor, visibleArticleFilter } from '@/lib/config/dailyFeed';
 import { AREAS } from '@/lib/types';
 
-const REMOVED = ['bbc-future-planet', 'thehackernews', 'dw', 'matadornetwork', 'longreads-travel', 'europeanbestdestinations', 'japantoday', 'allsides-world', 'japantimes', 'qz', 'insideclimatenews'];
+const REMOVED = ['bbc-future-planet', 'thehackernews', 'dw', 'matadornetwork', 'longreads-travel', 'europeanbestdestinations', 'japantoday', 'allsides-world', 'japantimes', 'qz', 'insideclimatenews', 'smithsonian-travel', 'spiegel-reise'];
 const ADDED: Record<string, { url: string; category: string }> = {
   'ricksteves-cameron': { url: 'https://blog.ricksteves.com/cameron/', category: 'Travel' },
   zmescience: { url: 'https://www.zmescience.com/', category: 'Science' },
