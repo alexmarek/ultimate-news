@@ -11,7 +11,8 @@ export interface EtfDef {
   xetra: string;
 }
 
-// [Unverified] Matched from the broker's display names; ISINs to be confirmed by the owner.
+// Cyber Security confirmed by the owner from Trade Republic (IE00BYPLS672, L&G, ticker USPY).
+// The other three are matched by their Trade Republic names (one fund per name there).
 export const PORTFOLIO_ETFS: EtfDef[] = [
   { isin: 'IE00BK5BQT80', name: 'FTSE All-World (Acc)', xetra: 'VWCE' },
   { isin: 'IE00BYPLS672', name: 'Cyber Security (Acc)', xetra: 'USPY' },
