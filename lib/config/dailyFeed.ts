@@ -16,8 +16,9 @@ export const MAX_ARTICLE_AGE_MS = MAX_ARTICLE_AGE_DAYS * DAY_MS;
  * Curated categories are inspiration rather than news: articles may be up to
  * `maxAgeDays` old. Each source's `limit` is then its share of a candidate pool;
  * Claude rates every candidate and only the best `picks` are shown (at most
- * `perSourceCap` from one source while others are available). An article is
- * judged once: picked or passed over, it is not offered again.
+ * `perSourceCap` from one source while others are available). A featured or
+ * weakly rated article is not offered again; a strong one (4-5) that lost out
+ * stays in the pool for the next days.
  */
 export interface CuratedArea {
   maxAgeDays: number;

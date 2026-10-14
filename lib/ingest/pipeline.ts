@@ -224,8 +224,10 @@ export async function collectFromSource(
 }
 
 /**
- * URLs of curated-category articles judged on an earlier day (featured or passed over).
- * Also forgets entries older than the longest curated window. Empty if the table is missing.
+ * URLs of curated-category articles that are not offered again: already featured, or rated
+ * below RETRY_MIN_SCORE. A strong article that only lost out (e.g. to the per-source cap) stays
+ * in the pool and is rated again next time. Also forgets entries older than the longest curated
+ * window. Empty if the table is missing.
  */
 async function loadConsidered(now: number, prune: boolean): Promise<Set<string>> {
   try {
@@ -233,7 +235,10 @@ async function loadConsidered(now: number, prune: boolean): Promise<Set<string>>
       const longestMs = Math.max(...Object.values(CURATED_AREAS).map((c) => c.maxAgeDays)) * 24 * 60 * 60 * 1000;
       await prisma.consideredArticle.deleteMany({ where: { consideredAt: { lt: new Date(now - longestMs - 14 * 24 * 60 * 60 * 1000) } } });
     }
-    const rows = await prisma.consideredArticle.findMany({ select: { url: true } });
+    const rows = await prisma.consideredArticle.findMany({
+      where: { OR: [{ featured: true }, { score: null }, { score: { lt: RETRY_MIN_SCORE } }] },
+      select: { url: true },
+    });
     return new Set(rows.map((r) => r.url));
   } catch (e) {
     console.error('[ingest] could not read considered articles:', errorMessage(e));
@@ -242,6 +247,8 @@ async function loadConsidered(now: number, prune: boolean): Promise<Set<string>>
 }
 
 const isCurated = (def: SourceDef) => def.category in CURATED_AREAS;
+/** Curated candidates rated at least this high but not picked get another chance on a later day. */
+const RETRY_MIN_SCORE = 4;
 
 /**
  * Read-only check: runs only the collect step for every configured source and
@@ -506,7 +513,7 @@ export async function runIngest(sources: Source[]): Promise<IngestOutcome> {
     ).map((c) => c.p);
     for (const p of pool) {
       if (!picked.includes(p)) dropped.add(p);
-      // Only rated candidates are remembered: an unrated one (fallback summary) gets another chance tomorrow.
+      // Only Claude-rated candidates are recorded: one with a fallback summary gets another chance tomorrow.
       if (p.engine === 'ai') {
         considerRows.push({ id: p.row.id, url: p.row.originalUrl, area, score: p.inspiration, featured: picked.includes(p) });
       }
@@ -551,7 +558,8 @@ export async function runIngest(sources: Source[]): Promise<IngestOutcome> {
     prisma.cluster.deleteMany(),
     prisma.article.deleteMany(),
     prisma.article.createMany({ data: prepared.map((p) => p.row), skipDuplicates: true }),
-    prisma.consideredArticle.createMany({ data: considerRows, skipDuplicates: true }),
+    // Upsert: a candidate rated again (strong but not picked last time) gets its new score and status.
+    ...considerRows.map((r) => prisma.consideredArticle.upsert({ where: { id: r.id }, create: r, update: { score: r.score, featured: r.featured, consideredAt: new Date() } })),
   ]);
   const written = prepared.length;
   console.log(`[ingest] wrote ${written} articles from ${defs.length} sources`);
