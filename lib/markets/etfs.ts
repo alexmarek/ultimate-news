@@ -1,6 +1,6 @@
 // lib/markets/etfs.ts
 // Daily closes for the configured ETFs (Xetra, EUR) and their performance in %.
-// Uses EODHD's end-of-day API when EODHD_API_KEY is set (free plan: 20 calls a
+// Uses EODHD's end-of-day API when EODHD_API_KEY (or EODHD_API_TOKEN) is set (free plan: 20 calls a
 // day, one year of history). Without a key it tries Stooq's CSV download and
 // Yahoo Finance's public chart endpoint, both of which refuse requests from
 // Vercel's servers at the time of writing.
@@ -91,9 +91,12 @@ async function get(url: string): Promise<Response> {
 
 const ymd = (d: Date) => d.toISOString().slice(0, 10).replace(/-/g, '');
 
+/** EODHD calls it an "api_token"; either variable name works. */
+const eodhdKey = () => process.env.EODHD_API_KEY || process.env.EODHD_API_TOKEN;
+
 async function fromEodhd(def: EtfDef): Promise<DailyClose[]> {
-  const key = process.env.EODHD_API_KEY;
-  if (!key) throw new Error('eodhd: EODHD_API_KEY not set');
+  const key = eodhdKey();
+  if (!key) throw new Error('eodhd: EODHD_API_KEY / EODHD_API_TOKEN not set');
   const now = new Date();
   const from = `${now.getUTCFullYear() - 1}-12-01`;
   const res = await get(`https://eodhd.com/api/eod/${encodeURIComponent(def.xetra)}.XETRA?api_token=${encodeURIComponent(key)}&fmt=json&from=${from}`);
@@ -124,7 +127,7 @@ async function fromYahoo(def: EtfDef): Promise<DailyClose[]> {
 export async function fetchEtf(def: EtfDef): Promise<EtfQuote> {
   const errors: string[] = [];
   const providers = [['eodhd', fromEodhd], ['stooq', fromStooq], ['yahoo', fromYahoo]] as const;
-  for (const [provider, load] of providers.filter(([p]) => p !== 'eodhd' || process.env.EODHD_API_KEY)) {
+  for (const [provider, load] of providers.filter(([p]) => p !== 'eodhd' || eodhdKey())) {
     try {
       const perf = computePerformance(await load(def));
       if (perf) return { isin: def.isin, name: def.name, xetra: def.xetra, provider, ...perf };
