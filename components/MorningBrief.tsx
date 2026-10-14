@@ -52,7 +52,7 @@ export default function MorningBrief({
         </p>
         {forYouCount > 0 && (
           <Link href="/?forYou=1" className="text-body-sm font-medium text-[var(--accent)] hover:underline">
-            All {forYouCount} stories that affect you →
+            {forYouCount === 1 ? 'The 1 story that affects you' : `All ${forYouCount} stories that affect you`} →
           </Link>
         )}
       </div>
