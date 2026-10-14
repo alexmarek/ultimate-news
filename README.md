@@ -112,7 +112,7 @@ Add `&source=id1,id2` to check only some sources, and `&enrich` to also summaris
 | `INGEST_CRON_SECRET` | Shared secret to authenticate ingest requests |
 | `CRON_SECRET` | Vercel Cron Bearer token (matches ingest auth) |
 | `ANTHROPIC_API_KEY` | API key for AI summaries. Without it the lower-quality extractive fallback is used |
-| `ENRICH_MODEL` | Optional. Claude model for summaries (default `claude-haiku-4-5-20251001`) |
+| `ENRICH_MODEL` | Optional. Claude model for summaries (default `claude-haiku-5-5`, low effort) |
 | `NEXT_PUBLIC_APP_URL` | Public app URL (fallback for cron self-call) |
 | `EODHD_API_KEY` (or `EODHD_API_TOKEN`) | Free key from eodhd.com for the ETF panel (4 calls per day). Without it ETF performance is not shown; petrol prices need no key |
 
