@@ -13,6 +13,12 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ threshold: 'see SIMILARITY_THRESHOLD in lib/dedup/cluster.ts', pairs: await similarPairs() });
   }
 
+  // Debug: the latest travel candidates Claude rated (score, picked or not). Read-only.
+  if (req.nextUrl.searchParams.get('debug') === 'travel') {
+    const rows = await prisma.consideredArticle.findMany({ orderBy: [{ consideredAt: 'desc' }, { score: 'desc' }], take: 60 });
+    return NextResponse.json({ considered: rows.map(({ url, score, featured, consideredAt }) => ({ featured, score, url, consideredAt })) });
+  }
+
   // Debug mode — report DB state without running ingestion
   if (req.nextUrl.searchParams.has('debug')) {
     const totalArticles = await prisma.article.count();
