@@ -1,6 +1,5 @@
 import { Suspense } from 'react';
 import NewsCard from '@/components/NewsCard';
-import SearchBar from '@/components/SearchBar';
 import CategoryFilter from '@/components/CategoryFilter';
 import Pagination from '@/components/Pagination';
 import { prisma } from '@/lib/db';
@@ -9,8 +8,7 @@ import { formatDistanceToNow } from 'date-fns';
 import Link from 'next/link';
 import KeyboardNavWrapper from '@/components/KeyboardNavWrapper';
 import MasonryGrid from '@/components/MasonryGrid';
-import ThemeToggle from '@/components/ThemeToggle';
-import HideReadToggle from '@/components/HideReadToggle';
+import SiteHeader from '@/components/SiteHeader';
 import type { Article, Source, Cluster } from '@prisma/client';
 import { SOURCES } from '@/lib/config/sources';
 import { visibleArticleFilter } from '@/lib/config/dailyFeed';
@@ -142,29 +140,7 @@ export default async function Home({
 
   return (
     <div className="min-h-screen bg-[var(--bg)]">
-      <header className="bg-[var(--surface-elevated)] border-b border-[var(--border)] sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-6">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <div>
-              <div className="flex items-center gap-4">
-              <Link href={hideRead ? '/?hideRead=1' : '/'} className="font-serif text-display-3 font-bold text-[var(--text)] hover:text-[var(--text-body)] transition-colors">Ultimate News</Link>
-              <div className="flex items-center gap-1">
-                <Suspense>
-                  <HideReadToggle />
-                </Suspense>
-                <ThemeToggle />
-              </div>
-              </div>
-              <p className="text-[var(--text-body)] mt-1">Curated news from sources you care about</p>
-            </div>
-            <div className="w-full md:w-auto">
-              <Suspense>
-                <SearchBar />
-              </Suspense>
-            </div>
-          </div>
-        </div>
-      </header>
+      <SiteHeader homeHref={hideRead ? '/?hideRead=1' : '/'} showHideRead />
 
       <main className="container mx-auto px-4 py-8">
 
