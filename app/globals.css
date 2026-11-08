@@ -44,7 +44,7 @@
   --ink: #1a1c18;
 
   /* surfaces */
-  --bg: #fefcf0; /* cornsilk mixed 50% with white: page + header */
+  --bg: color-mix(in srgb, var(--cornsilk) 20%, white); /* white with a slight cornsilk tone (#fffef9): page + header */
   --surface: var(--papaya); /* chips, tags */
   --surface-elevated: #ffffff; /* image cards */
   --border: var(--papaya);
