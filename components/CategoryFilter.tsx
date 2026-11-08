@@ -2,6 +2,7 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTransition } from 'react';
+import { categoryStyle } from '@/lib/categoryColor';
 
 interface CategoryFilterProps {
   categories: string[];
@@ -35,12 +36,16 @@ export default function CategoryFilter({ categories }: CategoryFilterProps) {
           <button
             key={category}
             onClick={() => handleCategoryChange(category)}
-            className={`px-4 py-2 rounded-lg text-body-md font-medium whitespace-nowrap transition-all duration-200 ${
+            aria-pressed={selectedCategory === category}
+            className={`inline-flex h-9 items-center gap-2 px-3.5 rounded-full border text-[14px] whitespace-nowrap transition-all duration-200 cursor-pointer ${
               selectedCategory === category
-                ? 'bg-[var(--accent)] text-[var(--surface-elevated)] shadow-sm cursor-pointer'
-                : 'bg-[var(--surface-elevated)] text-[var(--text-body)] hover:bg-[var(--surface)] border border-[var(--border)] cursor-pointer'
+                ? 'bg-[var(--highlight)] text-[var(--ink)] border-transparent font-semibold'
+                : 'bg-[var(--surface-elevated)] text-[var(--text)] hover:bg-[var(--surface)] border-[var(--border)]'
             }`}
           >
+            {category !== 'all' && (
+              <span aria-hidden="true" className="cat-dot h-2.5 w-2.5 shrink-0 rounded-full" style={categoryStyle(category)} />
+            )}
             {category === 'all' ? 'All Categories' : category}
           </button>
         ))}

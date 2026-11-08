@@ -1,61 +1,71 @@
 import Link from 'next/link';
-import { CheckCircle2 } from 'lucide-react';
 import type { Article, Source } from '@prisma/client';
 import { decodeEntities } from '@/lib/text';
-import { firstSentence } from '@/lib/summary';
-import ForYouNote from '@/components/ForYouNote';
+import { categoryShortLabel, categoryStyle } from '@/lib/categoryColor';
+import { FEED_TIME_ZONE, dayLabelParts } from '@/lib/groupByDay';
 
 type BriefArticle = Article & { source: Source };
 
-/** Today's essentials: a short numbered list with a clear end, so the day's reading can be finished. */
+/**
+ * Today's essentials: a short numbered list of headlines (no summaries) with a clear end,
+ * so the day's reading can be finished. One column on mobile, two inside the panel from `md`.
+ */
 export default function MorningBrief({
   articles,
   readIds,
-  forYouCount,
 }: {
   articles: BriefArticle[];
   readIds: Set<string>;
-  forYouCount: number;
 }) {
-  const today = new Intl.DateTimeFormat('en-GB', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Europe/Berlin' }).format(new Date());
+  const { weekday, day, month } = dayLabelParts(new Date(), FEED_TIME_ZONE);
 
   return (
-    <section aria-labelledby="brief-heading" className="bg-[var(--surface-elevated)] rounded-xl border border-[var(--border)] p-5 md:p-6">
-      <div className="flex items-baseline justify-between gap-3 mb-4">
-        <h2 id="brief-heading" className="font-serif text-headline-lg font-semibold text-[var(--text)]">Today&apos;s brief</h2>
-        <span className="text-body-sm text-[var(--text-muted)]">{today}</span>
+    <section
+      aria-labelledby="brief-heading"
+      className="rounded-2xl border border-[var(--border-strong)] bg-[var(--panel)] px-[18px] pb-2 pt-5 text-[var(--text)] md:rounded-[18px] md:px-7 md:pb-3 md:pt-6"
+    >
+      <div className="mb-1.5 flex items-baseline justify-between gap-3">
+        <h2 id="brief-heading" className="font-serif text-[24px] font-bold leading-7 md:text-[28px] md:leading-8">Today&apos;s brief</h2>
+        <span className="text-body-sm text-[var(--text-muted)] md:text-[14px]">
+          <span className="md:hidden">{weekday.slice(0, 3)} {day} {month.slice(0, 3)}</span>
+          <span className="hidden md:inline">{weekday} {day} {month}</span>
+        </span>
       </div>
 
-      <ol className="space-y-5">
-        {articles.map((a, i) => {
-          const line = firstSentence(a.summary);
-          return (
-            <li key={a.id} className={`flex gap-3 ${readIds.has(a.id) ? 'opacity-60' : ''}`}>
-              <span aria-hidden="true" className="font-serif text-headline-md font-semibold text-[var(--accent-3)] leading-tight w-5 flex-shrink-0">{i + 1}</span>
-              <div className="min-w-0 space-y-1">
-                <Link href={`/article/${a.id}`} className="block font-serif text-headline-sm font-semibold text-[var(--text)] hover:text-[var(--text-body)]">
-                  {decodeEntities(a.title)}
-                </Link>
-                <p className="text-body-sm text-[var(--text-muted)]">{a.source.name} · {a.primaryArea}</p>
-                {line && <p className="text-body-md text-[var(--text-body)]">{line}</p>}
-                {a.forYou && <ForYouNote text={a.forYou} compact />}
-              </div>
-            </li>
-          );
-        })}
+      <ol className="md:columns-2 md:gap-x-10">
+        {articles.map((a, i) => (
+          <li
+            key={a.id}
+            className="flex break-inside-avoid gap-3 border-b border-[rgb(26_28_24/0.10)] py-3 last:border-b-0 md:gap-4 md:py-3.5 dark:border-[rgb(254_252_240/0.12)]"
+          >
+            <span
+              aria-hidden="true"
+              className={`flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full font-serif text-[15px] font-bold leading-none text-[var(--ink)] md:h-7 md:w-7 md:text-[16px] ${
+                readIds.has(a.id) ? 'bg-[var(--border-strong)]' : 'bg-[var(--highlight)]'
+              }`}
+            >
+              {i + 1}
+            </span>
+            <div className="flex min-w-0 flex-col gap-1.5">
+              <Link
+                href={`/article/${a.id}`}
+                className={`font-serif text-[17px] font-semibold leading-[22px] hover:underline md:text-[18px] md:leading-[23px] ${
+                  readIds.has(a.id) ? 'text-[var(--text-body)]' : 'text-[var(--text)]'
+                }`}
+              >
+                {decodeEntities(a.title)}
+                {readIds.has(a.id) && <span className="sr-only"> (read)</span>}
+              </Link>
+              <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-body-sm text-[var(--text-muted)]">
+                <span>{a.source.name}</span>
+                <span className="cat-fill rounded-full px-2 py-0.5 text-[12px] font-medium leading-4" style={categoryStyle(a.primaryArea)}>
+                  {categoryShortLabel(a.primaryArea)}
+                </span>
+              </p>
+            </div>
+          </li>
+        ))}
       </ol>
-
-      <div className="mt-6 pt-4 border-t border-[var(--border)] flex flex-wrap items-center justify-between gap-3">
-        <p className="flex items-center gap-2 text-body-md font-medium text-[var(--text)]">
-          <CheckCircle2 aria-hidden="true" className="w-5 h-5 text-[var(--accent-2)]" />
-          You&apos;re up to date. Everything below is optional.
-        </p>
-        {forYouCount > 0 && (
-          <Link href="/?forYou=1" className="text-body-sm font-medium text-[var(--accent)] hover:underline">
-            {forYouCount === 1 ? 'The 1 story that affects you' : `All ${forYouCount} stories that affect you`} →
-          </Link>
-        )}
-      </div>
     </section>
   );
 }

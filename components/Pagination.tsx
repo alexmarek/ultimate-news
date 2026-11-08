@@ -40,7 +40,7 @@ export default function Pagination({ currentPage, totalPages, query, category }:
       )}
       {pages.map((page, i) => (
         i > 0 && pages[i] - pages[i - 1] > 1 ? (
-          <span key={`dots-${i}`} className="px-2 py-2 text-[var(--text-faint)] text-body-md">…</span>
+          <span key={`dots-${i}`} className="px-2 py-2 text-[var(--text-muted)] text-body-md">…</span>
         ) : null
       ))}
       {pages.map((page) => (

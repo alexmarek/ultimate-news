@@ -39,7 +39,7 @@ export default function HelpModal({ open, onClose }: { open: boolean; onClose: (
             </div>
           ))}
         </div>
-        <p className="text-body-sm text-[var(--text-faint)] mt-4">
+        <p className="text-body-sm text-[var(--text-muted)] mt-4">
           Press <kbd className="px-1 py-0.5 rounded bg-[var(--surface)] text-[10px] font-mono border border-[var(--border)]">?</kbd> to toggle this panel.
         </p>
       </div>

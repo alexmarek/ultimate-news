@@ -3,12 +3,14 @@
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Newspaper, ArrowLeft, Search } from 'lucide-react';
-import TimeAgo from '@/components/TimeAgo';
+import { ArrowLeft, Search } from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
 import { useKeyboardNav } from '@/components/useKeyboardNav';
 import HelpModal from '@/components/HelpModal';
 import { stripHtml, decodeEntities } from '@/lib/text';
 import { summaryPreview } from '@/lib/summary';
+import { categoryShortLabel, categoryStyle } from '@/lib/categoryColor';
+import { splitByMatches } from '@/lib/highlight';
 
 interface SearchResult {
   id: string;
@@ -22,6 +24,15 @@ interface SearchResult {
   source: { id: string; name: string; editorialIndependence: string };
   cluster: { totalSourceCount: number } | null;
   score: number | null;
+}
+
+/** Text with the words of the query wrapped in <mark>. */
+function Highlighted({ text, query }: { text: string; query: string }) {
+  return (
+    <>
+      {splitByMatches(text, query).map((part, i) => (part.match ? <mark key={i}>{part.text}</mark> : part.text))}
+    </>
+  );
 }
 
 export default function SearchPage() {
@@ -61,59 +72,64 @@ export default function SearchPage() {
 
   return (
     <div className="min-h-screen bg-[var(--bg)]">
-      <header className="bg-[var(--surface-elevated)] border-b border-[var(--border)] sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center gap-4">
-            <Link href="/" className="text-[var(--text-faint)] hover:text-[var(--text)]">
-              <ArrowLeft className="w-5 h-5" />
-            </Link>
+      <header className="bg-[var(--bg)] border-b border-[var(--border)] sticky top-0 z-50">
+        <div className="container mx-auto flex h-14 items-center gap-1 px-4 md:h-auto md:py-4 md:gap-4">
+          <Link
+            href="/"
+            aria-label="Back to news"
+            className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-[var(--text)] hover:bg-[var(--surface)] md:ml-0 md:h-auto md:w-auto md:text-[var(--text-muted)] md:hover:bg-transparent md:hover:text-[var(--text)]"
+          >
+            <ArrowLeft aria-hidden="true" className="w-5 h-5" />
+          </Link>
 
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                const formData = new FormData(e.currentTarget);
-                const q = (formData.get('q') as string)?.trim();
-                if (q) {
-                  const url = new URL('/search', window.location.origin);
-                  url.searchParams.set('q', q);
-                  window.location.href = url.toString();
-                }
-              }}
-              className="flex-1"
-            >
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Search className="h-5 w-5 text-[var(--text-faint)]" />
-                </div>
-                <input
-                  type="search"
-                  name="q"
-                  defaultValue={query}
-                  className="block w-full pl-10 pr-4 py-2.5 border border-[var(--border-strong)] rounded-lg bg-[var(--surface-elevated)] text-[var(--text)] placeholder-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
-                  placeholder="Search across all sources..."
-                />
+          <form
+            role="search"
+            onSubmit={(e) => {
+              e.preventDefault();
+              const formData = new FormData(e.currentTarget);
+              const q = (formData.get('q') as string)?.trim();
+              if (q) {
+                const url = new URL('/search', window.location.origin);
+                url.searchParams.set('q', q);
+                window.location.href = url.toString();
+              }
+            }}
+            className="flex-1"
+          >
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Search aria-hidden="true" className="h-[18px] w-[18px] text-[var(--text)]" />
               </div>
-            </form>
-          </div>
+              <input
+                type="search"
+                name="q"
+                defaultValue={query}
+                aria-label="Search news"
+                /* 16px so iOS Safari does not zoom the page on focus */
+                className="block h-11 w-full rounded-xl border-2 border-[var(--highlight)] bg-[var(--surface-elevated)] pl-10 pr-3 text-[16px] text-[var(--text)] placeholder:text-[var(--text-muted)] focus:outline-none"
+                placeholder="Search across all sources..."
+              />
+            </div>
+          </form>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8 max-w-3xl">
+      <main className="container mx-auto px-4 py-4 md:py-8 max-w-3xl">
         {loading ? (
-          <div className="text-center py-16 text-[var(--text-faint)]">Searching...</div>
+          <div className="text-center py-16 text-[var(--text-muted)]">Searching...</div>
         ) : error ? (
           <div className="text-center py-16">
-            <p className="text-[var(--text-muted)] mb-2">Search unavailable</p>
-            <p className="text-body-md text-[var(--text-faint)]">{error}</p>
+            <p className="text-[var(--text)] mb-2">Search unavailable</p>
+            <p className="text-body-md text-[var(--text-muted)]">{error}</p>
           </div>
         ) : results.length === 0 ? (
           <div className="text-center py-16">
-            <p className="text-[var(--text-muted)] mb-2">
+            <p className="text-[var(--text)] mb-2">
               {query.length >= 3
                 ? `No results for "${query}"`
                 : 'No articles yet.'}
             </p>
-            <p className="text-body-md text-[var(--text-faint)]">
+            <p className="text-body-md text-[var(--text-muted)]">
               {query.length >= 3
                 ? mode === 'no-embeddings'
                   ? 'Semantic search is warming up — embeddings are being generated for existing articles.'
@@ -124,11 +140,16 @@ export default function SearchPage() {
         ) : (
           <>
             {query && (
-              <div className="mb-6">
-                <h1 className="font-serif text-headline-lg font-semibold text-[var(--text)]">
-                  {mode === 'recent' ? 'Recent articles' : `Results for "${query}"`}
+              <div className="mb-2 md:mb-6">
+                <h1 className="text-[12px] font-semibold uppercase tracking-[0.6px] text-[var(--text-muted)] md:font-serif md:text-headline-lg md:normal-case md:tracking-normal md:text-[var(--text)]">
+                  {mode === 'recent' ? 'Recent articles' : (
+                    <>
+                      <span className="md:hidden">{results.length} {results.length === 1 ? 'result' : 'results'}</span>
+                      <span className="hidden md:inline">Results for &quot;{query}&quot;</span>
+                    </>
+                  )}
                 </h1>
-                <p className="text-body-md text-[var(--text-muted)] mt-1">
+                <p className="hidden md:block text-body-md text-[var(--text-muted)] mt-1">
                   {results.length} {results.length === 1 ? 'result' : 'results'}
                   {mode === 'semantic' && ' • semantic search'}
                   {mode === 'recent' && ' • showing recent'}
@@ -137,53 +158,48 @@ export default function SearchPage() {
               </div>
             )}
 
-            <div className="space-y-4">
+            <ul className="md:space-y-4">
               {results.map((r) => (
-                <div
+                <li
                   key={r.id}
                   data-kb-id={r.id}
-                  className="bg-[var(--surface-elevated)] rounded-xl border border-[var(--border)] p-4 hover:shadow-sm transition-shadow"
+                  className="border-b border-[var(--border)] last:border-b-0 md:rounded-xl md:border md:bg-[var(--surface-elevated)] md:p-4 md:last:border-b md:hover:shadow-sm md:transition-shadow"
                 >
-                  <div className="flex items-start gap-3">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1.5">
-                        <Link
-                          href={`/?category=${encodeURIComponent(r.primaryArea)}`}
-                          className="inline-block px-2 py-0.5 rounded-full text-body-sm font-medium bg-[var(--accent-warm)]/30 text-[var(--text)]"
-                        >
-                          {r.primaryArea}
-                        </Link>
-                        {r.score !== null && (
-                          <span className="text-body-sm text-[var(--text-faint)]">
-                            {Math.round(r.score * 100)}% match
-                          </span>
-                        )}
-                      </div>
-
-                      <Link href={`/article/${r.id}`} className="block">
-                        <h2 className="font-serif text-headline-md font-semibold text-[var(--text)] mb-1 hover:text-[var(--text-body)] transition-colors">
-                          {decodeEntities(r.title)}
-                        </h2>
+                  <div className="flex flex-col items-start gap-1.5 py-3.5 md:py-0">
+                    <div className="flex items-center gap-2">
+                      <Link
+                        href={`/?category=${encodeURIComponent(r.primaryArea)}`}
+                        style={categoryStyle(r.primaryArea)}
+                        className="cat-fill inline-block rounded-full px-[9px] py-0.5 text-[12px] font-semibold leading-4"
+                      >
+                        {categoryShortLabel(r.primaryArea)}
                       </Link>
-
-                      <div className="flex items-center gap-3 text-body-sm text-[var(--text-muted)] mb-2">
-                        <div className="flex items-center gap-1">
-                          <Newspaper className="w-3.5 h-3.5" />
-                          <span>{r.source.name}</span>
-                        </div>
-                        <TimeAgo date={r.publishedAt} />
-                      </div>
-
-                      {(r.summary || r.excerpt) && (
-                        <p className="text-body-md text-[var(--text-body)] line-clamp-2">
-                          {summaryPreview(r.summary) || stripHtml(r.excerpt)}
-                        </p>
+                      {r.score !== null && (
+                        <span className="text-body-sm text-[var(--text-muted)]">
+                          {Math.round(r.score * 100)}% match
+                        </span>
                       )}
                     </div>
+
+                    <h2 className="font-serif text-[17px] leading-[22px] font-semibold text-[var(--text)] md:text-headline-md md:leading-[22px]">
+                      <Link href={`/article/${r.id}`} className="hover:underline">
+                        <Highlighted text={decodeEntities(r.title)} query={query} />
+                      </Link>
+                    </h2>
+
+                    <p className="text-body-sm text-[var(--text-muted)]">
+                      {r.source.name} · {formatDistanceToNow(new Date(r.publishedAt), { addSuffix: true })}
+                    </p>
+
+                    {(r.summary || r.excerpt) && (
+                      <p className="hidden md:block text-body-md text-[var(--text-body)] line-clamp-2">
+                        {summaryPreview(r.summary) || stripHtml(r.excerpt)}
+                      </p>
+                    )}
                   </div>
-                </div>
+                </li>
               ))}
-            </div>
+            </ul>
           </>
         )}
       </main>

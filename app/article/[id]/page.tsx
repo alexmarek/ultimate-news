@@ -1,12 +1,14 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { prisma } from '@/lib/db';
-import { Newspaper, ExternalLink, ArrowLeft } from 'lucide-react';
+import { Newspaper, ExternalLink, ArrowLeft, ChevronLeft } from 'lucide-react';
 import TimeAgo from '@/components/TimeAgo';
 import MarkRead from '@/components/MarkRead';
 import ArticleImage from '@/components/ArticleImage';
 import SummaryView from '@/components/SummaryView';
 import ForYouNote from '@/components/ForYouNote';
+import ThemeToggle from '@/components/ThemeToggle';
+import { categoryColor, categoryShortLabel, categoryStyle } from '@/lib/categoryColor';
 import { stripHtml, decodeEntities } from '@/lib/text';
 import { countSummaryWords } from '@/lib/summary';
 
@@ -21,6 +23,13 @@ function SourceInitial({ name }: { name: string }) {
 function sourceTypeLabel(editorialIndependence: string): string {
   if (editorialIndependence === 'syndicate') return 'wire';
   return editorialIndependence;
+}
+
+/** Reader-facing label for what kind of outlet a source is (wire / national / independent). */
+function sourceOutletLabel(editorialIndependence: string, isWireService: boolean): string {
+  if (isWireService || editorialIndependence === 'syndicate') return 'Wire service';
+  if (editorialIndependence === 'independent') return 'Independent outlet';
+  return 'National outlet';
 }
 
 export default async function ArticlePage({
@@ -39,6 +48,9 @@ export default async function ArticlePage({
 
   const hasSummary = countSummaryWords(article.summary) > 0;
   const topics = article.topics ? article.topics.split(',') : [];
+  const firstTopic = topics[0]?.trim() ?? '';
+  // The Coverage box only says something when more than one outlet covers the story.
+  const showCoverage = Boolean(article.cluster && article.cluster.totalSourceCount > 1);
   const corroborationScore = article.cluster
     ? Math.round(article.cluster.corroborationScore * 100)
     : null;
@@ -83,7 +95,7 @@ export default async function ArticlePage({
               <span className="text-body-sm font-medium text-[var(--text-body)] truncate">
                 {ca.source.name}
               </span>
-              <span className="text-body-sm text-[var(--text-faint)] flex-shrink-0">
+              <span className="text-body-sm text-[var(--text-muted)] flex-shrink-0">
                 {new Date(ca.publishedAt).toLocaleDateString('en-US', {
                   month: 'short',
                   day: 'numeric',
@@ -94,7 +106,7 @@ export default async function ArticlePage({
               {ca.title}
             </h4>
             {ca.excerpt && (
-              <p className="text-body-sm text-[var(--text-faint)] line-clamp-1">
+              <p className="text-body-sm text-[var(--text-muted)] line-clamp-1">
                 {stripHtml(ca.excerpt)}
               </p>
             )}
@@ -106,33 +118,47 @@ export default async function ArticlePage({
 
   return (
     <div className="min-h-screen bg-[var(--bg)]">
-      <div className="container mx-auto px-4 py-8 max-w-6xl">
-        {/* Back link */}
+      {/* Mobile header: back, wordmark, theme, then a 6px bar in the category colour */}
+      <header className="sticky top-0 z-50 border-b border-[var(--border)] bg-[var(--bg)] md:hidden">
+        <div className="flex h-14 items-center justify-between px-1">
+          <Link href="/" aria-label="Back to news" className="flex h-11 w-11 items-center justify-center text-[var(--text)]">
+            <ChevronLeft aria-hidden="true" className="h-[22px] w-[22px]" />
+          </Link>
+          <span className="font-serif text-headline-md font-bold text-[var(--text)]">Ultimate News</span>
+          <ThemeToggle />
+        </div>
+      </header>
+      <div aria-hidden="true" className="h-1.5 md:hidden" style={{ backgroundColor: categoryColor(article.primaryArea) }} />
+
+      <div className="container mx-auto px-4 py-5 md:py-8 max-w-6xl">
+        {/* Back link (desktop) */}
         <Link
           href="/"
-          className="inline-flex items-center gap-1.5 text-body-md text-[var(--text-muted)] hover:text-[var(--text)] mb-6"
+          className="hidden md:inline-flex items-center gap-1.5 text-body-md text-[var(--text-muted)] hover:text-[var(--text)] mb-6"
         >
           <ArrowLeft className="w-4 h-4" />
           Back to news
         </Link>
 
-        {/* Area badge */}
+        {/* Category · first topic */}
         <div className="mb-4">
           <Link
             href={`/?category=${encodeURIComponent(article.primaryArea)}`}
-            className="inline-block px-3 py-1 rounded-full text-body-sm font-medium bg-[var(--accent-warm)]/30 text-[var(--text)] hover:bg-[var(--accent-warm)]/50 transition-colors"
+            style={categoryStyle(article.primaryArea)}
+            className="cat-fill inline-flex max-w-full items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] leading-4 transition-opacity hover:opacity-80"
           >
-            {article.primaryArea}
+            <strong className="shrink-0 font-semibold uppercase tracking-[0.3px]">{categoryShortLabel(article.primaryArea)}</strong>
+            {firstTopic && <span className="min-w-0 truncate">· {firstTopic}</span>}
           </Link>
           {article.lowConfidenceTag && (
-            <span className="ml-2 inline-block px-2 py-0.5 rounded-full text-body-sm bg-[var(--warning)]/20 text-[var(--warning)]">
+            <span className="ml-2 inline-block px-2 py-0.5 rounded-full text-body-sm bg-[var(--warning)]/20 text-[var(--text)]">
               auto-tagged
             </span>
           )}
         </div>
 
         {/* Headline */}
-        <h1 className="font-serif text-display-3 md:text-display-2 font-semibold text-[var(--text)] mb-5">
+        <h1 className="font-serif text-[30px] leading-[35px] md:text-display-2 font-bold text-[var(--text)] mb-5">
           {decodeEntities(article.title)}
         </h1>
 
@@ -157,7 +183,7 @@ export default async function ArticlePage({
             </span>
           )}
           {article.author && (
-            <span className="text-body-md text-[var(--text-faint)]">by {article.author}</span>
+            <span className="text-body-md text-[var(--text-muted)]">by {article.author}</span>
           )}
         </div>
 
@@ -168,6 +194,7 @@ export default async function ArticlePage({
               src={`/api/img?url=${encodeURIComponent(article.imageUrl)}&v=2`}
               alt={article.imageAlt || article.title}
               sourceName={article.source.name}
+              area={article.primaryArea}
               aspectRatio="16/9"
               className="rounded-xl"
             />
@@ -200,7 +227,7 @@ export default async function ArticlePage({
                 {topics.map((topic) => (
                   <li
                     key={topic}
-                    className="px-2 py-0.5 rounded-full text-body-sm bg-[var(--surface)] text-[var(--text)] leading-none"
+                    className="px-2.5 py-1 rounded-full text-body-sm bg-[var(--surface)] text-[var(--text-body)] leading-none"
                   >
                     {topic.trim()}
                   </li>
@@ -209,22 +236,29 @@ export default async function ArticlePage({
             )}
 
             {/* Read on source */}
-            <div className="flex items-center gap-3">
-            <a
-              href={article.canonicalUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-[var(--text)] text-[var(--surface-elevated)] rounded-lg hover:bg-[var(--accent)] transition-colors text-body-md font-medium"
-            >
-              Read on {article.source.name}
-              <ExternalLink className="w-4 h-4" />
-            </a>
+            <div className="flex flex-col gap-3 pt-2 md:w-fit">
+              <a
+                href={article.canonicalUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex h-[52px] items-center justify-center gap-2 rounded-xl bg-[var(--text)] px-6 text-[16px] font-semibold text-[var(--surface-elevated)] transition-opacity hover:opacity-90"
+              >
+                Read on {article.source.name}
+                <ExternalLink aria-hidden="true" className="w-[18px] h-[18px]" />
+              </a>
+              {!showCoverage && (
+                <p className="text-center text-body-sm text-[var(--text-muted)]">
+                  Source: <span className="font-semibold text-[var(--text-body)]">{article.source.name}</span>
+                  {' · '}
+                  {sourceOutletLabel(article.source.editorialIndependence, article.source.isWireService)}
+                </p>
+              )}
             </div>
           </div>
 
           {/* Right column — cluster panel */}
-          <div className="lg:col-span-1">
-            {article.cluster ? (
+          <div className="lg:col-span-1 empty:hidden">
+            {showCoverage && article.cluster ? (
               <div className="bg-[var(--surface-elevated)] rounded-xl border border-[var(--border)] divide-y divide-[var(--border)]">
                 {/* Stats header */}
                 <div className="p-4 space-y-3">
@@ -233,7 +267,7 @@ export default async function ArticlePage({
                   </h3>
 
                   <div className="space-y-1">
-                    <span className="font-serif text-display-2 font-bold text-[var(--accent-3)] leading-none">
+                    <span className="font-serif text-display-2 font-bold text-[var(--text)] leading-none">
                       {article.cluster.totalSourceCount}
                     </span>
                     <p className="text-body-md text-[var(--text-body)]">
@@ -244,7 +278,7 @@ export default async function ArticlePage({
                   </div>
 
                   {article.cluster.hasIndependentVoice && (
-                    <p className="text-body-md font-medium text-[var(--accent-2)]">
+                    <p className="text-body-md font-medium text-[var(--text)]">
                       {article.cluster.independentSourceCount} independent{' '}
                       {article.cluster.independentSourceCount === 1 ? 'source' : 'sources'}
                     </p>
@@ -273,12 +307,12 @@ export default async function ArticlePage({
                   {corroborationScore !== null && article.cluster.totalSourceCount > 1 && (
                     <div>
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-body-sm text-[var(--text-faint)]">Corroboration</span>
+                        <span className="text-body-sm text-[var(--text-muted)]">Corroboration</span>
                         <span className="text-body-sm font-medium text-[var(--text-body)]">{corroborationScore}%</span>
                       </div>
                       <div className="w-full h-1.5 bg-[var(--surface)] rounded-full overflow-hidden">
                         <div
-                          className="h-full bg-[var(--accent-3)] rounded-full"
+                          className="h-full bg-[var(--highlight)] rounded-full"
                           style={{ width: `${corroborationScore}%` }}
                         />
                       </div>
@@ -289,7 +323,7 @@ export default async function ArticlePage({
                 {/* Peer articles list */}
                 {clusterArticles.length <= 1 ? (
                   <div className="p-4">
-                    <p className="text-body-md text-[var(--text-faint)]">
+                    <p className="text-body-md text-[var(--text-muted)]">
                       Only {article.source.name} is covering this story.
                     </p>
                   </div>
@@ -338,7 +372,7 @@ export default async function ArticlePage({
                     {independent.length > 0 && (
                       <div>
                         <div className="px-4 pt-3 pb-1 flex items-center gap-1.5">
-                          <span className="text-[11px] font-semibold text-[var(--accent-2)] uppercase tracking-wide">
+                          <span className="text-[11px] font-semibold text-[var(--text-body)] uppercase tracking-wide">
                             Independent reporting
                           </span>
                           <span
@@ -358,14 +392,7 @@ export default async function ArticlePage({
                   </div>
                 )}
               </div>
-            ) : (
-              <div className="bg-[var(--surface-elevated)] rounded-xl border border-[var(--border)] p-5">
-                <h3 className="text-body-sm font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-2">
-                  Coverage
-                </h3>
-                <p className="text-body-md text-[var(--text-faint)]">Not clustered yet.</p>
-              </div>
-            )}
+            ) : null}
           </div>
         </div>
 

@@ -26,11 +26,13 @@ export default function SearchBar() {
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          className="block w-full pl-10 pr-12 py-3 border border-[var(--border-strong)] rounded-xl bg-[var(--surface-elevated)] text-[var(--text)] placeholder-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent transition-all duration-200"
+          className="block w-full pl-10 pr-12 py-3 border border-[var(--border)] rounded-xl bg-[var(--surface-elevated)] text-[var(--text)] placeholder-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--highlight)] focus:border-transparent transition-all duration-200"
+          aria-label="Search news"
           placeholder="Find news"
         />
         <button
           type="submit"
+          aria-label="Search"
           className="absolute inset-y-0 right-0 pr-3 flex items-center text-[var(--accent)] hover:opacity-80 transition-colors duration-200 cursor-pointer"
         >
           <Search className="h-5 w-5" />

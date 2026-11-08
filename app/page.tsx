@@ -5,16 +5,17 @@ import Pagination from '@/components/Pagination';
 import { prisma } from '@/lib/db';
 import { cookies } from 'next/headers';
 import { formatDistanceToNow } from 'date-fns';
-import Link from 'next/link';
 import KeyboardNavWrapper from '@/components/KeyboardNavWrapper';
 import MasonryGrid from '@/components/MasonryGrid';
 import SiteHeader from '@/components/SiteHeader';
+import DayHeader from '@/components/DayHeader';
 import type { Article, Source, Cluster } from '@prisma/client';
 import { SOURCES } from '@/lib/config/sources';
 import { visibleArticleFilter } from '@/lib/config/dailyFeed';
 import MorningBrief from '@/components/MorningBrief';
 import MarketPanel from '@/components/MarketPanel';
 import { pickBrief } from '@/lib/brief';
+import { groupByDay } from '@/lib/groupByDay';
 import { readMarkets } from '@/lib/markets/snapshot';
 
 export const dynamic = 'force-dynamic';
@@ -90,7 +91,7 @@ export default async function Home({
 
   // Front page only: today's brief and the market panel above the archive.
   const isFrontPage = !query && (!category || category === 'all') && page === 1 && !forYouView;
-  const [briefCandidates, forYouCount, markets] = isFrontPage
+  const [briefCandidates, markets] = isFrontPage
     ? await Promise.all([
         prisma.article.findMany({
           where: { ...feedFilter, importance: { not: null } },
@@ -98,24 +99,17 @@ export default async function Home({
           take: 40,
           include: { source: true },
         }),
-        prisma.article.count({ where: { ...feedFilter, forYou: { not: null } } }),
         readMarkets(),
       ])
-    : [[], 0, { etfs: null, petrol: null }];
+    : [[], { etfs: null, petrol: null }];
   const brief = pickBrief(briefCandidates);
   const showMarkets = Boolean(markets.etfs || markets.petrol);
 
-  const feedTitle = category && category !== 'all'
-    ? category
-    : query
-      ? `Search: ${query}`
-      : 'Daily Feed';
-
-  const grouped = { [feedTitle]: articles };
+  // The archive is grouped by local day. The "stories that affect you" view is ranked by
+  // importance rather than date, so it stays one list.
+  const dayGroups = forYouView ? [] : groupByDay(articles);
 
   const totalPages = Math.ceil(totalArticles / PER_PAGE);
-  const isSectionView = false; // Always render unified paginated archive view
-  const gridClass = '';
 
   const dbCategories = await prisma.article.findMany({
     where: feedFilter,
@@ -138,23 +132,34 @@ export default async function Home({
     ? formatDistanceToNow(latestArticle.fetchedAt, { addSuffix: true })
     : null;
 
+  const renderCard = (article: ArticleWithRelations) => (
+    <NewsCard
+      key={article.id}
+      article={article}
+      cluster={article.cluster}
+      isRead={isRead(article.id)}
+      dataKbId={article.id}
+    />
+  );
+
   return (
     <div className="min-h-screen bg-[var(--bg)]">
-      <SiteHeader homeHref={hideRead ? '/?hideRead=1' : '/'} showHideRead />
+      <SiteHeader homeHref={hideRead ? '/?hideRead=1' : '/'} showHideRead categories={categoryNames} />
 
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-4 py-4 md:py-8">
 
-        <div className="mb-8">
+        {/* On mobile the categories live in the header's filter sheet. */}
+        <div className="mb-8 hidden md:block">
           <Suspense>
             <CategoryFilter categories={categoryNames} />
           </Suspense>
         </div>
 
         {isFrontPage && (brief.length > 0 || showMarkets) && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-12">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8 md:mb-12">
             {brief.length > 0 && (
               <div className={showMarkets ? 'lg:col-span-2' : 'lg:col-span-3'}>
-                <MorningBrief articles={brief} readIds={readArticleIds} forYouCount={forYouCount} />
+                <MorningBrief articles={brief} readIds={readArticleIds} />
               </div>
             )}
             {showMarkets && (
@@ -167,48 +172,28 @@ export default async function Home({
 
         {articles.length === 0 ? (
           <div className="text-center py-12">
-            <div className="text-[var(--text-faint)] mb-4">No stories yet. News will appear after the first ingest.</div>
+            <div className="text-[var(--text-muted)] mb-4">No stories yet. News will appear after the first ingest.</div>
             <div className="text-body-md text-[var(--text-muted)]">Ingest runs every 24 hours to fetch fresh content.</div>
           </div>
         ) : (
-          <>
-            <KeyboardNavWrapper articleIds={allArticleIds}>
-            {Object.entries(grouped).map(([cat, catArticles]) => (
-              <section key={cat} className={isSectionView ? 'mb-10' : 'mb-6'}>
-                {isSectionView && (
-                  <div className="mb-4">
-                    <h2 className="font-serif text-headline-md font-semibold text-[var(--text)] uppercase tracking-wide">
-                      {cat}
-                    </h2>
-                  </div>
-                )}
-                {!isSectionView && (
-                  <div className="mb-6">
-                    <h2 className="font-serif text-display-3 font-semibold text-[var(--text)]">{forYouView ? 'Stories that affect you' : 'Latest Stories'}</h2>
-                    <p className="text-[var(--text-body)] text-body-md mt-2">
-                      {forYouView
-                        ? `Ranked by how much they matter to you (AI inference) • Page ${page} of ${totalPages}`
-                        : category && category !== 'all'
-                          ? `Page ${page} of ${totalPages} • ${category}`
-                          : `Page ${page} of ${totalPages}`}
-                    </p>
-                  </div>
-                )}
-                <MasonryGrid>
-                  {catArticles.map((article) => (
-                    <NewsCard
-                      key={article.id}
-                      article={article}
-                      cluster={article.cluster}
-                      isRead={isRead(article.id)}
-                      dataKbId={article.id}
-                    />
-                  ))}
-                </MasonryGrid>
+          <KeyboardNavWrapper articleIds={allArticleIds}>
+            {forYouView ? (
+              <section className="mb-6">
+                <div className="mb-6">
+                  <h2 className="font-serif text-display-3 font-semibold text-[var(--text)]">Stories that affect you</h2>
+                  <p className="text-[var(--text-body)] text-body-md mt-2">Ranked by how much they matter to you (AI inference)</p>
+                </div>
+                <MasonryGrid>{articles.map(renderCard)}</MasonryGrid>
               </section>
-            ))}
-            </KeyboardNavWrapper>
-          </>
+            ) : (
+              dayGroups.map((group) => (
+                <section key={group.key} aria-labelledby={`day-${group.key}`} className="mb-10">
+                  <DayHeader group={group} headingId={`day-${group.key}`} />
+                  <MasonryGrid>{group.items.map(renderCard)}</MasonryGrid>
+                </section>
+              ))
+            )}
+          </KeyboardNavWrapper>
         )}
 
         {totalPages > 1 && (
@@ -221,6 +206,7 @@ export default async function Home({
                 category={category}
               />
             </Suspense>
+            <p className="mt-3 text-center text-body-sm text-[var(--text-muted)]">Page {page} of {totalPages}</p>
           </div>
         )}
 
