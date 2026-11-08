@@ -22,7 +22,7 @@ export default function MorningBrief({
   return (
     <section
       aria-labelledby="brief-heading"
-      className="rounded-2xl bg-[var(--panel)] px-[18px] pb-2 pt-5 text-[var(--text)] md:rounded-[18px] md:px-7 md:pb-3 md:pt-6"
+      className="rounded-2xl border border-[var(--border-strong)] bg-[var(--panel)] px-[18px] pb-2 pt-5 text-[var(--text)] md:rounded-[18px] md:px-7 md:pb-3 md:pt-6"
     >
       <div className="mb-1.5 flex items-baseline justify-between gap-3">
         <h2 id="brief-heading" className="font-serif text-[24px] font-bold leading-7 md:text-[28px] md:leading-8">Today&apos;s brief</h2>
@@ -36,22 +36,25 @@ export default function MorningBrief({
         {articles.map((a, i) => (
           <li
             key={a.id}
-            className={`flex break-inside-avoid gap-3 border-b border-[rgb(26_28_24/0.10)] py-3 last:border-b-0 md:gap-4 md:py-3.5 dark:border-[rgb(254_252_240/0.12)] ${
-              readIds.has(a.id) ? 'opacity-60' : ''
-            }`}
+            className="flex break-inside-avoid gap-3 border-b border-[rgb(26_28_24/0.10)] py-3 last:border-b-0 md:gap-4 md:py-3.5 dark:border-[rgb(254_252_240/0.12)]"
           >
             <span
               aria-hidden="true"
-              className="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full bg-[var(--highlight)] font-serif text-[15px] font-bold leading-none text-[var(--ink)] md:h-7 md:w-7 md:text-[16px]"
+              className={`flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full font-serif text-[15px] font-bold leading-none text-[var(--ink)] md:h-7 md:w-7 md:text-[16px] ${
+                readIds.has(a.id) ? 'bg-[var(--border-strong)]' : 'bg-[var(--highlight)]'
+              }`}
             >
               {i + 1}
             </span>
             <div className="flex min-w-0 flex-col gap-1.5">
               <Link
                 href={`/article/${a.id}`}
-                className="font-serif text-[17px] font-semibold leading-[22px] text-[var(--text)] hover:underline md:text-[18px] md:leading-[23px]"
+                className={`font-serif text-[17px] font-semibold leading-[22px] hover:underline md:text-[18px] md:leading-[23px] ${
+                  readIds.has(a.id) ? 'text-[var(--text-body)]' : 'text-[var(--text)]'
+                }`}
               >
                 {decodeEntities(a.title)}
+                {readIds.has(a.id) && <span className="sr-only"> (read)</span>}
               </Link>
               <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-body-sm text-[var(--text-muted)]">
                 <span>{a.source.name}</span>

@@ -25,7 +25,7 @@ const SECTION_HEADING = 'pt-2 text-body-sm font-semibold uppercase tracking-wide
 /** Bulleted key points in a beige panel, with an optional small uppercase heading ("Key points" by default). */
 function KeyPoints({ heading, items }: { heading?: string; items: string[] }) {
   return (
-    <section className="rounded-[14px] bg-[var(--panel)] px-[18px] pb-2 pt-[18px]">
+    <section className="rounded-[14px] border border-[var(--border-strong)] bg-[var(--panel)] px-[18px] pb-2 pt-[18px]">
       <h3 className="mb-1.5 text-[12px] font-semibold uppercase tracking-[0.8px] text-[var(--text-body)]">{heading ?? 'Key points'}</h3>
       <ul>
         {items.map((item, j) => (

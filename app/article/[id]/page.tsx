@@ -151,7 +151,7 @@ export default async function ArticlePage({
             {firstTopic && <span className="min-w-0 truncate">· {firstTopic}</span>}
           </Link>
           {article.lowConfidenceTag && (
-            <span className="ml-2 inline-block px-2 py-0.5 rounded-full text-body-sm bg-[var(--warning)]/20 text-[var(--warning)]">
+            <span className="ml-2 inline-block px-2 py-0.5 rounded-full text-body-sm bg-[var(--warning)]/20 text-[var(--text)]">
               auto-tagged
             </span>
           )}

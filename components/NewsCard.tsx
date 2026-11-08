@@ -32,7 +32,8 @@ export default function NewsCard({ article, cluster, isRead, dataKbId }: NewsCar
   const mutedText = 'text-[var(--text-muted)]';
 
   const eyebrow = (
-    <span className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-[var(--bg)] px-2.5 py-1 text-[12px] leading-4 text-[var(--text)]">
+    // On an image the pill is page-coloured; on a pale text-only card it takes the category colour so it stays visible.
+    <span className={`inline-flex max-w-full items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] leading-4 ${hasImage ? 'bg-[var(--bg)] text-[var(--text)]' : 'cat-fill'}`}>
       <strong className="shrink-0 font-semibold uppercase tracking-[0.3px]">{categoryShortLabel(article.primaryArea)}</strong>
       {firstTopic && <span className="min-w-0 truncate">· {firstTopic}</span>}
     </span>
@@ -53,7 +54,8 @@ export default function NewsCard({ article, cluster, isRead, dataKbId }: NewsCar
   );
 
   const title = (
-    <h3 className="line-clamp-4 font-serif text-[19px] font-semibold leading-6 text-[var(--text)] md:text-[20px] md:leading-[25px]">
+    // Read stories keep full-contrast text (dimming it with opacity fails AAA); a softer headline, the "Read" badge and a faded image mark them.
+    <h3 className={`line-clamp-4 font-serif text-[19px] font-semibold leading-6 md:text-[20px] md:leading-[25px] ${isRead ? 'text-[var(--text-body)]' : 'text-[var(--text)]'}`}>
       <Link
         href={href}
         className="hover:underline max-md:after:absolute max-md:after:inset-0 max-md:after:content-[''] max-md:focus-visible:outline-none"
@@ -93,7 +95,7 @@ export default function NewsCard({ article, cluster, isRead, dataKbId }: NewsCar
         hasImage
           ? 'border border-[var(--border)] bg-[var(--surface-elevated)] transition-shadow md:hover:shadow-md'
           : 'cat-card'
-      } ${isRead ? 'opacity-60' : ''}`}
+      }`}
     >
       {isRead && (
         <span className="absolute right-3.5 top-3.5 z-10 rounded-full bg-[var(--bg)] px-2 py-0.5 text-[11px] font-medium text-[var(--text-muted)]">
@@ -105,7 +107,7 @@ export default function NewsCard({ article, cluster, isRead, dataKbId }: NewsCar
         <>
           <div className="relative">
             {/* Mouse/touch convenience only: the headline link is the accessible one. */}
-            <Link href={href} tabIndex={-1} aria-hidden="true" className="block">
+            <Link href={href} tabIndex={-1} aria-hidden="true" className={`block ${isRead ? 'opacity-50' : ''}`}>
               <ArticleImage
                 src={`/api/img?url=${encodeURIComponent(article.imageUrl!)}&v=2`}
                 alt={article.imageAlt || article.title}
