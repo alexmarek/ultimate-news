@@ -14,6 +14,8 @@
 
 ## Safety: data and commands
 
+- **The local `.env` and `.env.local` point at the PRODUCTION database** (confirmed by Alex, 2026-11-08). Until a separate dev database exists: do not start the dev server or the app, and do not run any script or command that imports Prisma or connects to a database. Run checks only with the database variables overridden to dummy values:
+  `DATABASE_URL="postgresql://none:none@127.0.0.1:1/none" DATABASE_URL_UNPOOLED="postgresql://none:none@127.0.0.1:1/none" bash scripts/check.sh`
 - **Never run any of these without Alex's explicit approval AND a confirmed non-production `DATABASE_URL`:**
   `prisma db push`, `prisma migrate dev|deploy|reset`, `prisma db execute`, seed scripts, any script that calls `deleteMany`, `TRUNCATE` or `DROP`, and the wipe/reset scripts listed under "Project facts".
 - Ask which database a command would touch before running it. Do not guess from the variable name.
@@ -48,7 +50,7 @@
   - `scripts/wipe-articles.ts` deletes reads, saves, clusters and articles.
   - `scripts/reclassify-articles.ts`, `reembed-articles.ts`, `embed-missing-articles.ts`, `sync-sources.ts`, `manual-ingest.ts`, `cluster-articles.ts`: effects NOT reviewed. TO CONFIRM before running.
   - `npm run ingest:local` calls the ingest API with `INGEST_CRON_SECRET`.
-- **Which database do `.env` and `.env.local` point at (dev or production)?** TO CONFIRM with Alex.
+- **Database:** `.env` and `.env.local` point at the **production** database (Neon, per the README; confirmed by Alex 2026-11-08). The README describes a local Docker Postgres for development; use that or another dev database once set up, then update this line. Prisma also reads `DATABASE_URL_UNPOOLED` (`directUrl`), so override both variables.
 - **Local database file:** `prisma/dev.db` exists locally and is gitignored (`*.db`).
 - **Env:** `.env`, `.env.local` are gitignored; only `.env.example` is tracked. Do not read the others.
 - **Tests / CI:** 13 tracked test files; no CI workflows yet.

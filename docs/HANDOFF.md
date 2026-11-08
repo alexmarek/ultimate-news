@@ -9,7 +9,7 @@ Next.js and Prisma news aggregator, deployed on Vercel. 13 tracked tests (`npm t
 - Added `AGENTS.md`, `CLAUDE.md`, `scripts/check.sh`, `docs/HANDOFF.md` from the dev-kit templates. Nothing in app code was changed.
 
 ## Next steps (in order)
-1. Alex confirms whether `.env` and `.env.local` point at a dev or a production database, then the TO CONFIRM markers in `AGENTS.md` are updated.
+1. Alex creates a separate dev database (the README documents a local Docker Postgres) and points the local `.env` and `.env.local` at it. Then update the Safety section of `AGENTS.md`.
 2. Change the `build` script so a build no longer runs `prisma db push` (needs Alex's approval).
 3. Add a CI workflow that runs `scripts/check.sh`.
 4. Review the untracked `2026-11-08-ultimate-news-redesign-handover.md` before it is committed; this repo is public.
@@ -18,7 +18,7 @@ Next.js and Prisma news aggregator, deployed on Vercel. 13 tracked tests (`npm t
 - 2026-11-08: agent files are committed in this repo. `.claude/` stays gitignored, so `.claude/settings.json` is local-only.
 
 ## Open questions for Alex
-- Which database do `.env` and `.env.local` point at?
+- When will the dev database exist? Until then agents do not run the app or any database-touching script (local `.env` points at production, confirmed 2026-11-08).
 - What do `reclassify-articles.ts`, `reembed-articles.ts`, `embed-missing-articles.ts`, `sync-sources.ts`, `manual-ingest.ts` and `cluster-articles.ts` do to the data? They have not been reviewed.
 
 ## Commands that matter
