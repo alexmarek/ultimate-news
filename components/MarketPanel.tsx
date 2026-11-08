@@ -4,7 +4,7 @@ import type { PetrolSnapshot } from '@/lib/markets/petrol';
 
 /** `lowerIsBetter`: prices you pay (petrol) are green when they fall and red when they rise. */
 function Change({ value, suffix = '%', lowerIsBetter = false }: { value: number | null; suffix?: string; lowerIsBetter?: boolean }) {
-  if (value === null) return <span className="text-[var(--text-faint)]">–</span>;
+  if (value === null) return <span className="text-[var(--text-muted)]">–</span>;
   const up = value > 0;
   const down = value < 0;
   const good = lowerIsBetter ? down : up;
@@ -37,7 +37,7 @@ export default function MarketPanel({ etfs, petrol }: { etfs: EtfSnapshot | null
           </h2>
           <table className="w-full text-body-sm">
             <thead>
-              <tr className="text-[var(--text-faint)] text-left">
+              <tr className="text-[var(--text-muted)] text-left">
                 <th className="font-normal pb-1">Fund</th>
                 <th className="font-normal pb-1 text-right">Day</th>
                 <th className="font-normal pb-1 text-right">1M</th>
@@ -55,7 +55,7 @@ export default function MarketPanel({ etfs, petrol }: { etfs: EtfSnapshot | null
               ))}
             </tbody>
           </table>
-          <p className="mt-2 text-body-sm text-[var(--text-faint)]">
+          <p className="mt-2 text-body-sm text-[var(--text-muted)]">
             Xetra prices in EUR, last close {dateLabel(quotes[0].lastDate)}. Market performance, not your returns.
           </p>
         </div>
@@ -79,7 +79,7 @@ export default function MarketPanel({ etfs, petrol }: { etfs: EtfSnapshot | null
               ) : null,
             )}
           </dl>
-          <p className="mt-2 text-body-sm text-[var(--text-faint)]">
+          <p className="mt-2 text-body-sm text-[var(--text-muted)]">
             National average incl. taxes{latest.date ? `, week of ${dateLabel(latest.date)}` : ''}; change vs previous week. Source: EU Weekly Oil Bulletin.
           </p>
         </div>

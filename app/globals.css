@@ -1,5 +1,8 @@
 @import 'tailwindcss';
 
+/* Dark mode is the `.dark` class on <html>, not the OS media query. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --font-sans: var(--font-ibm-plex-sans), system-ui, -apple-system, sans-serif;
   --font-serif: var(--font-source-serif-4), Georgia, serif;
@@ -24,52 +27,79 @@
   --text-body-sm--line-height: 18px;
 }
 
+/*
+ * "Golden Summer Fields": five colours plus neutrals.
+ * Rule: text on any of the five is always dark ink (--ink). Never white text on them,
+ * never bronze as text on a light background.
+ */
 :root {
-  --accent: #1F4E3D;
-  --accent-2: #A8501C;
-  --accent-3: #C4923A;
-  --accent-4: #3A6B8C;
-  --accent-warm: #E8DCC4;
+  /* palette */
+  --sage: #ccd5ae; /* Dry Sage */
+  --beige: #e9edc9; /* Beige */
+  --cornsilk: #fefae0;
+  --papaya: #faedcd; /* Papaya Whip */
+  --bronze: #d4a373; /* Light Bronze: fill only, never text on light backgrounds */
 
-  --bg: #FAFAF7;
-  --surface: #F2F1EC;
-  --surface-elevated: #FFFFFF;
-  --border: #E5E3DB;
-  --border-strong: #C9C6BA;
+  /* dark ink: the only text colour allowed on a palette fill, in light AND dark mode */
+  --ink: #1a1c18;
 
-  --text: #1A1C18;
-  --text-body: #3A3E33;
-  --text-muted: #6B6E60;
-  --text-faint: #9A9D8E;
+  /* surfaces */
+  --bg: #fefcf0; /* cornsilk mixed 50% with white: page + header */
+  --surface: var(--papaya); /* chips, tags */
+  --surface-elevated: #ffffff; /* image cards */
+  --border: var(--papaya);
+  --border-strong: var(--sage);
 
-  --success: #3D7A4A;
-  --warning: #B8772E;
-  --error: #B43A2E;
-  --info: var(--accent-4);
+  /* text */
+  --text: #1a1c18;
+  --text-body: #3a3e33;
+  --text-muted: #5c5f4e;
+  --text-faint: #7d806f; /* icons and decoration only, not body text */
+
+  /* roles */
+  --accent: var(--text); /* links, focus ring, primary buttons */
+  --highlight: var(--bronze); /* the ONE highlight: brief numbers, date badge, active filter, search ring */
+  --panel: var(--beige); /* brief panel, key points, selected row */
+
+  /* categories (keyed on Article.primaryArea, see lib/categoryColor.ts) */
+  --cat-world: var(--sage);
+  --cat-environment: var(--sage);
+  --cat-business: var(--papaya);
+  --cat-tech: var(--beige);
+  --cat-science: var(--beige);
+  --cat-travel: var(--bronze);
+  --cat-sport: var(--bronze);
+  --cat-fallback: var(--beige);
+
+  /* status colours: rare UI only (auto-tagged badge, market up/down, errors) */
+  --success: #3d7a4a;
+  --warning: #b8772e;
+  --error: #b43a2e;
 }
 
 .dark {
-  --accent: #3D8268;
-  --accent-2: #D17A3F;
-  --accent-3: #E0B05A;
-  --accent-4: #6B9BBE;
-  --accent-warm: #3A352B;
+  color-scheme: dark;
 
-  --bg: #1A1C18;
-  --surface: #23261F;
-  --surface-elevated: #2D3128;
-  --border: #3A3E33;
-  --border-strong: #5A5E50;
+  --bg: #1c1d17;
+  --surface: #26281f;
+  --surface-elevated: #2d3027;
+  --border: #3a3d30;
+  --border-strong: #4a4e3e;
 
-  --text: #F2F1EC;
-  --text-body: #D6D4CB;
-  --text-muted: #9A9D8E;
-  --text-faint: #6B6E60;
+  --text: #fefcf0;
+  --text-body: #e9edc9;
+  --text-muted: #b5b8a3;
+  --text-faint: #8c8f7c;
 
-  --success: #5FA371;
-  --warning: #D4934A;
-  --error: #D45A4D;
-  --info: var(--accent-4);
+  --accent: var(--text);
+  --panel: color-mix(in oklab, var(--beige) 12%, var(--surface));
+
+  /* in dark mode the five colours are used as TEXT, dots and 1px pill outlines;
+     tinted backgrounds = color-mix(in oklab, <colour> 12%, var(--surface)) */
+
+  --success: #5fa371;
+  --warning: #d4934a;
+  --error: #d45a4d;
 }
 
 body {
@@ -77,10 +107,55 @@ body {
   color: var(--text-body);
 }
 
+/* Keyboard focus: one consistent ring everywhere. */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 .kb-focused {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
   border-radius: 0.75rem;
+}
+
+/* Search match highlight: bronze fill, ink text. */
+mark {
+  background-color: var(--highlight);
+  color: var(--ink);
+  border-radius: 2px;
+  padding: 0 2px;
+}
+
+/*
+ * Category-coloured surfaces. Set `--cat` on the element (or an ancestor) with
+ * categoryStyle() from lib/categoryColor.ts.
+ *   .cat-fill  pill / chip: palette fill + ink text (dark mode: tint + coloured text + 1px outline)
+ *   .cat-tint  large surface (text-only card, image placeholder): palette fill (dark mode: tint)
+ *   .cat-dot   small round swatch with a hairline so pale colours stay visible
+ */
+.cat-fill {
+  --_c: var(--cat, var(--cat-fallback));
+  background-color: var(--_c);
+  color: var(--ink);
+}
+.dark .cat-fill {
+  background-color: color-mix(in oklab, var(--_c) 12%, var(--surface));
+  color: var(--_c);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--_c) 45%, transparent);
+}
+.cat-tint {
+  background-color: var(--cat, var(--cat-fallback));
+}
+.dark .cat-tint {
+  background-color: color-mix(in oklab, var(--cat, var(--cat-fallback)) 12%, var(--surface));
+}
+.cat-dot {
+  background-color: var(--cat, var(--cat-fallback));
+  box-shadow: inset 0 0 0 1px rgb(26 28 24 / 0.25);
+}
+.dark .cat-dot {
+  box-shadow: inset 0 0 0 1px rgb(254 252 240 / 0.25);
 }
 
 @keyframes fade-in {
@@ -94,12 +169,40 @@ body {
   }
 }
 
+@keyframes sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes scrim-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 .animate-fade-in {
   animation: fade-in 0.5s ease-out both;
 }
 
+.animate-sheet-up {
+  animation: sheet-up 0.25s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.animate-scrim-in {
+  animation: scrim-in 0.2s ease-out both;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .animate-fade-in {
+  .animate-fade-in,
+  .animate-sheet-up,
+  .animate-scrim-in {
     animation: none;
   }
 }
