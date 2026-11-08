@@ -131,7 +131,8 @@ mark {
  * Category-coloured surfaces. Set `--cat` on the element (or an ancestor) with
  * categoryStyle() from lib/categoryColor.ts.
  *   .cat-fill  pill / chip: palette fill + ink text (dark mode: tint + coloured text + 1px outline)
- *   .cat-tint  large surface (text-only card, image placeholder): palette fill (dark mode: tint)
+ *   .cat-tint  large surface (image placeholder): palette fill (dark mode: tint)
+ *   .cat-card  text-only news card: the palette colour at 30% over the page (dark mode: tint)
  *   .cat-dot   small round swatch with a hairline so pale colours stay visible
  */
 .cat-fill {
@@ -148,6 +149,13 @@ mark {
   background-color: var(--cat, var(--cat-fallback));
 }
 .dark .cat-tint {
+  background-color: color-mix(in oklab, var(--cat, var(--cat-fallback)) 12%, var(--surface));
+}
+/* Text-only news cards: the category colour at 30% over the page background, so text stays easy to read. */
+.cat-card {
+  background-color: color-mix(in srgb, var(--cat, var(--cat-fallback)) 30%, var(--bg));
+}
+.dark .cat-card {
   background-color: color-mix(in oklab, var(--cat, var(--cat-fallback)) 12%, var(--surface));
 }
 .cat-dot {

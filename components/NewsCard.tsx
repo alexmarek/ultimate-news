@@ -29,8 +29,7 @@ export default function NewsCard({ article, cluster, isRead, dataKbId }: NewsCar
   const firstTopic = article.topics ? article.topics.split(',')[0].trim() : '';
   const multiSource = Boolean(cluster && cluster.totalSourceCount > 1);
 
-  // Ink-on-palette needs a darker "muted" in light mode; dark mode tints are fine with the normal one.
-  const mutedText = hasImage ? 'text-[var(--text-muted)]' : 'text-[var(--text-body)] dark:text-[var(--text-muted)]';
+  const mutedText = 'text-[var(--text-muted)]';
 
   const eyebrow = (
     <span className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-[var(--bg)] px-2.5 py-1 text-[12px] leading-4 text-[var(--text)]">
@@ -93,7 +92,7 @@ export default function NewsCard({ article, cluster, isRead, dataKbId }: NewsCar
       className={`relative flex flex-col overflow-hidden rounded-[14px] max-md:transition-[transform,filter] max-md:active:scale-[0.99] max-md:active:brightness-[0.96] max-md:has-[:focus-visible]:outline-2 max-md:has-[:focus-visible]:outline-offset-2 max-md:has-[:focus-visible]:outline-[var(--accent)] ${
         hasImage
           ? 'border border-[var(--border)] bg-[var(--surface-elevated)] transition-shadow md:hover:shadow-md'
-          : 'cat-tint'
+          : 'cat-card'
       } ${isRead ? 'opacity-60' : ''}`}
     >
       {isRead && (
