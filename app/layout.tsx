@@ -1,19 +1,19 @@
 import type { Metadata } from 'next';
-import { Newsreader, Libre_Franklin } from 'next/font/google';
+import localFont from 'next/font/local';
 import './globals.css';
 
-const newsreader = Newsreader({
-  subsets: ['latin', 'latin-ext'],
-  weight: 'variable',
-  style: ['normal', 'italic'],
-  axes: ['opsz'],
+const newsreader = localFont({
+  src: [
+    { path: './2026-11-13-fonts/2026-11-13-newsreader-variable.ttf', weight: '200 800', style: 'normal' },
+    { path: './2026-11-13-fonts/2026-11-13-newsreader-italic-variable.ttf', weight: '200 800', style: 'italic' },
+  ],
   variable: '--font-newsreader',
   display: 'swap',
 });
 
-const libreFranklin = Libre_Franklin({
-  subsets: ['latin', 'latin-ext'],
-  weight: ['400', '500', '600', '700'],
+const libreFranklin = localFont({
+  src: './2026-11-13-fonts/2026-11-13-libre-franklin-variable.ttf',
+  weight: '100 900',
   variable: '--font-libre-franklin',
   display: 'swap',
 });
