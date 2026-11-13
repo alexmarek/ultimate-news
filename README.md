@@ -106,6 +106,28 @@ Add `&source=id1,id2` to check only some sources, and `&enrich` to also summaris
 
 ## Environment Variables
 
+### Fact checking (in development)
+
+The fact checker is in development. The nine fact-check tables have been verified on the Neon `development` branch. The normal build generates the Prisma client and leaves database schema changes to a separate migration.
+
+Administrator sign-in uses Google. Configure a Google OAuth client with an authorized callback ending in `/api/auth/callback/google`, an Auth.js secret, and the owner's immutable Google account subject. The owner can add or remove editors by their verified Google account email. Editors can submit articles and review and publish reports. See `.env.example` for the server settings.
+
+For a local smoke test, enable `FACT_CHECK_ENABLED` in `.env.development.local`, use the Neon `development` connection, and visit `/admin/fact-check`. Use `http://localhost:3000/api/auth/callback/google` as the callback if the local server runs on port 3000.
+
+The default OpenRouter configuration uses the dated GLM 5.3 release and limits routing to endpoints that fit the reserved price. It defaults to two claims and a $1 job budget. Each source search reserves $0.228716 to cover both model turns and the Exa Fast fee. A custom model requires verified whole-request bounds in `FACT_CHECK_SEARCH_LIMITS_JSON`. The default uses the [provider catalog](https://openrouter.ai/api/v1/models/z-ai/glm-5.3-20260816/endpoints), [routing limits](https://openrouter.ai/docs/guides/routing/provider-selection#max-price), [server tool limits](https://openrouter.ai/docs/guides/features/server-tools#tool-call-limits), and [search pricing](https://openrouter.ai/docs/guides/features/server-tools/web-search#pricing).
+
+Google sign-in and paid research have run locally. Publication, unpublishing, and revocation were checked against disposable PostgreSQL using synthetic sessions.
+
+#### Vercel preview
+
+1. In the Vercel project, confirm **Settings → Build and Deployment → Node.js Version** is **24.x** and the build command uses `npm run build`. Verify the branch selected for the preview is separate from the Production branch.
+2. Under **Settings → Environment Variables**, choose **Preview** and scope the settings to the fact-check branch. Set `DATABASE_URL` and `DATABASE_URL_UNPOOLED` to the Neon `development` branch or another confirmed non-production branch with the nine fact-check tables. Use the pooled URL for `DATABASE_URL` and the direct URL for `DATABASE_URL_UNPOOLED`.
+3. For the same Preview scope, set `FACT_CHECK_ENABLED=true`, `AUTH_SECRET` to a new random secret, `AUTH_GOOGLE_ID` and `AUTH_GOOGLE_SECRET` to the Google web client's credentials, `FACT_CHECK_OWNER_GOOGLE_SUBJECT` to the configured owner's Google subject, and `OPENROUTER_API_KEY` to the OpenRouter key. Generate a session secret locally with `openssl rand -base64 32`. Use the built-in model and limits for the first check.
+4. After the preview builds, copy its stable Git branch URL from the Vercel deployment details. In **Google Cloud Console → Google Auth Platform → Clients**, open the web client and add `https://<preview-branch-host>/api/auth/callback/google` under **Authorized redirect URIs**. Open that same preview hostname for the test so the request and callback hosts match.
+5. Open `/admin/fact-check`, sign in with the owner account, and submit one readable article. Confirm the Workflow run completes in Vercel, the report reaches **Ready for review**, and the review shows a verdict, score, and evidence. If approved for publication, publish it on the preview and verify it appears in `/fact-check`, then unpublish it and verify that the archive and direct URL hide it.
+
+See [Vercel Preview environments](https://vercel.com/docs/deployments/environments), [branch-specific environment variables](https://vercel.com/docs/environment-variables#preview-environment-variables), and the [Auth.js Google callback](https://authjs.dev/getting-started/providers/google#callback-url).
+
 | Variable | Description |
 |---|---|
 | `DATABASE_URL` | Database connection string |
