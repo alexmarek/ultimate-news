@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { isHelpShortcut } from '@/lib/2026-11-13-keyboard-shortcuts';
 
 export function useKeyboardNav(articleIds: string[]) {
   const router = useRouter();
@@ -78,7 +79,7 @@ export function useKeyboardNav(articleIds: string[]) {
           reset();
           break;
         case '?':
-          if (!e.shiftKey) {
+          if (isHelpShortcut(e)) {
             e.preventDefault();
             setShowHelp((prev) => !prev);
           }

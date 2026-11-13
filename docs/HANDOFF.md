@@ -1,5 +1,7 @@
 # Handoff — ultimate-news
 
+> The 2026-11-08 status below is historical. The 2026-11-13 section at the end is current.
+
 **Updated:** 2026-11-08 by Claude (agent rules rollout)
 
 ## Current state
@@ -24,3 +26,33 @@ Next.js and Prisma news aggregator, deployed on Vercel. 13 tracked tests (`npm t
 ## Commands that matter
 - Check: `scripts/check.sh` (add `--build` only once `build` no longer touches the database)
 - Dev: `npm run dev`; tests: `npm test`
+
+## Newsroom redesign — 2026-11-13 (current)
+
+A separate development database is available. Follow `AGENTS.md` and confirm the target before any database operation.
+
+### Current state
+
+The newsroom redesign updates the front page and story page with responsive layouts, shared navigation, day-based editions, a brief, article deduplication and an accessibility-focused type and colour system.
+
+Fact-check styling and published-report integration are deferred. The summary component is not wired to report data, and no fact-check verdicts or report links are shown in the redesign.
+
+### Next steps
+
+1. Integrate the fact-check feature when its changes are available. Gate every verdict and report module behind `FACT_CHECK_ENABLED`, and display only published reports. The existing report route uses the fact-check article ID.
+2. Re-run Lighthouse accessibility on the final integrated front page and story page. The earlier mobile audits scored 100/100 before the final control and footer changes.
+3. Verify the approximate 2,000px mobile-page target using a 12-story fixture. Review screenshot image-use rights before publishing captures containing source images.
+4. Add the paid-promotion hidden count only when a reliable promotion classification is available. Ingest filtering is a separate task.
+5. Review legacy category-colour code and any unused local components only after confirming references and receiving approval to delete.
+
+### Verification
+
+- `scripts/check.sh` passed with dummy database variables: 124 tests and typecheck passed. Lint was skipped because no ESLint configuration is present.
+- A direct Next.js production build passed with dummy database variables. Token colours met 4.5:1 contrast against the specified light and dark paper and wash backgrounds.
+- The visible front-page controls were checked at 1440, 1024, 390 and 320 CSS pixels, with no page-level horizontal overflow. The keyboard-help shortcut and its dismissal were checked manually.
+
+### Safety
+
+Follow `AGENTS.md` for database and Git safeguards. The `npm run build` script in this revision invokes `prisma db push`; use a direct Next.js build with dummy database variables unless a database operation has been explicitly approved for a confirmed non-production database.
+
+The effects of the reclassification, re-embedding, source-sync, manual-ingest and clustering scripts have not been reviewed. Inspect and obtain the required approval before running them.

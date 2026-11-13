@@ -1,71 +1,26 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import type { Article, Source } from '@prisma/client';
 import { decodeEntities } from '@/lib/text';
-import { categoryShortLabel, categoryStyle } from '@/lib/categoryColor';
-import { FEED_TIME_ZONE, dayLabelParts } from '@/lib/groupByDay';
+import { firstSentence } from '@/lib/summary';
 
 type BriefArticle = Article & { source: Source };
 
-/**
- * Today's essentials: a short numbered list of headlines (no summaries) with a clear end,
- * so the day's reading can be finished. One column on mobile, two inside the panel from `md`.
- */
-export default function MorningBrief({
-  articles,
-  readIds,
-}: {
-  articles: BriefArticle[];
-  readIds: Set<string>;
-}) {
-  const { weekday, day, month } = dayLabelParts(new Date(), FEED_TIME_ZONE);
-
-  return (
-    <section
-      aria-labelledby="brief-heading"
-      className="rounded-2xl border border-[var(--border-strong)] bg-[var(--panel)] px-[18px] pb-2 pt-5 text-[var(--text)] md:rounded-[18px] md:px-7 md:pb-3 md:pt-6"
-    >
-      <div className="mb-1.5 flex items-baseline justify-between gap-3">
-        <h2 id="brief-heading" className="font-serif text-[24px] font-bold leading-7 md:text-[28px] md:leading-8">Today&apos;s brief</h2>
-        <span className="text-body-sm text-[var(--text-muted)] md:text-[14px]">
-          <span className="md:hidden">{weekday.slice(0, 3)} {day} {month.slice(0, 3)}</span>
-          <span className="hidden md:inline">{weekday} {day} {month}</span>
-        </span>
+export default function MorningBrief({ articles, readIds }: { articles: BriefArticle[]; readIds: Set<string> }) {
+  const [lead, ...rest] = articles;
+  if (!lead) return null;
+  return <section aria-labelledby="brief-heading" className="text-[var(--ink)]">
+    <h2 id="brief-heading" className="mb-3 text-label font-bold uppercase tracking-[1.2px] text-[var(--accent)]">Today&apos;s brief</h2>
+    <article className="border-b border-[var(--ink)] pb-6">
+      {lead.imageUrl && <Link href={`/article/${lead.id}`} tabIndex={-1} aria-hidden="true" className="relative -mx-4 mb-4 block aspect-[3/2] w-[calc(100%+2rem)] overflow-hidden md:mx-0 md:w-full"><Image src={`/api/img?url=${encodeURIComponent(lead.imageUrl)}&v=2`} alt="" fill sizes="(max-width: 767px) 100vw, (max-width: 1200px) 65vw, 800px" className="object-cover" /></Link>}
+      <h3 className={`font-serif text-[36px] leading-[37px] font-semibold tracking-[-1px] [text-wrap:balance] md:text-lead md:leading-[59px] ${readIds.has(lead.id) ? 'text-[var(--meta)]' : ''}`}><Link href={`/article/${lead.id}`} className="hover:text-[var(--accent)]">{decodeEntities(lead.title)}{readIds.has(lead.id) && <span className="sr-only"> (read)</span>}</Link></h3>
+      <div className="mt-4 grid gap-4 md:grid-cols-[1fr_240px]">
+        <p className="font-serif text-[20px] leading-[27px] md:text-deck-front">{firstSentence(lead.summary) || lead.excerpt}</p>
+        <div className="text-meta text-[var(--meta)]">{lead.forYou && <p className="mb-3 text-ui text-[var(--body)]"><span className="mr-1 border border-[var(--ink)] px-1 text-[10px] font-bold">AI</span><strong>Why it matters to you.</strong> {lead.forYou}</p>}<strong className="text-[var(--ink)]">{lead.source.name}</strong> · {lead.primaryArea}</div>
       </div>
-
-      <ol className="md:columns-2 md:gap-x-10">
-        {articles.map((a, i) => (
-          <li
-            key={a.id}
-            className="flex break-inside-avoid gap-3 border-b border-[rgb(26_28_24/0.10)] py-3 last:border-b-0 md:gap-4 md:py-3.5 dark:border-[rgb(254_252_240/0.12)]"
-          >
-            <span
-              aria-hidden="true"
-              className={`flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full font-serif text-[15px] font-bold leading-none text-[var(--ink)] md:h-7 md:w-7 md:text-[16px] ${
-                readIds.has(a.id) ? 'bg-[var(--border-strong)]' : 'bg-[var(--highlight)]'
-              }`}
-            >
-              {i + 1}
-            </span>
-            <div className="flex min-w-0 flex-col gap-1.5">
-              <Link
-                href={`/article/${a.id}`}
-                className={`font-serif text-[17px] font-semibold leading-[22px] hover:underline md:text-[18px] md:leading-[23px] ${
-                  readIds.has(a.id) ? 'text-[var(--text-body)]' : 'text-[var(--text)]'
-                }`}
-              >
-                {decodeEntities(a.title)}
-                {readIds.has(a.id) && <span className="sr-only"> (read)</span>}
-              </Link>
-              <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-body-sm text-[var(--text-muted)]">
-                <span>{a.source.name}</span>
-                <span className="cat-fill rounded-full px-2 py-0.5 text-[12px] font-medium leading-4" style={categoryStyle(a.primaryArea)}>
-                  {categoryShortLabel(a.primaryArea)}
-                </span>
-              </p>
-            </div>
-          </li>
-        ))}
-      </ol>
-    </section>
-  );
+    </article>
+    <ol start={2} className="grid md:grid-cols-2 md:gap-x-10">{rest.map((article, i) => <li key={article.id} className="relative flex gap-4 border-b border-[var(--rule)] py-4">
+      <span aria-hidden="true" className="font-serif text-brief">{i + 2}</span><div className="min-w-0 flex-1"><h3 className={`font-serif text-[22px] leading-[26px] font-semibold md:text-[26px] md:leading-[30px] ${readIds.has(article.id) ? 'text-[var(--meta)]' : ''}`}><Link href={`/article/${article.id}`} className="hover:text-[var(--accent)] after:absolute after:inset-0">{decodeEntities(article.title)}{readIds.has(article.id) && <span className="sr-only"> (read)</span>}</Link></h3><p className="mt-2 text-meta text-[var(--meta)]"><strong className="text-[var(--ink)]">{article.source.name}</strong> · {article.primaryArea}</p></div>
+    </li>)}</ol>
+  </section>;
 }

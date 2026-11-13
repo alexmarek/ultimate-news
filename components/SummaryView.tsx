@@ -1,94 +1,22 @@
-import { Fragment } from 'react';
-import { parseInline, parseSummary, type SummaryBlock } from '@/lib/summary';
+import React, { Fragment } from 'react';
+import { parseInline, parseSummary } from '@/lib/summary';
 
-/** Inline **bold** / *italic* as React elements (never raw HTML). */
 function Inline({ text }: { text: string }) {
-  return (
-    <>
-      {parseInline(text).map((t, i) => (
-        <Fragment key={i}>
-          {t.bold ? (
-            <strong className="font-semibold text-[var(--text)]">{t.text}</strong>
-          ) : t.italic ? (
-            <em>{t.text}</em>
-          ) : (
-            t.text
-          )}
-        </Fragment>
-      ))}
-    </>
-  );
+  return <>{parseInline(text).map((token, index) => <Fragment key={index}>{token.bold ? <strong>{token.text}</strong> : token.italic ? <em>{token.text}</em> : token.text}</Fragment>)}</>;
 }
 
-const SECTION_HEADING = 'pt-2 text-body-sm font-semibold uppercase tracking-wide text-[var(--text-body)]';
-
-/** Bulleted key points in a beige panel, with an optional small uppercase heading ("Key points" by default). */
-function KeyPoints({ heading, items }: { heading?: string; items: string[] }) {
-  return (
-    <section className="rounded-[14px] border border-[var(--border-strong)] bg-[var(--panel)] px-[18px] pb-2 pt-[18px]">
-      <h3 className="mb-1.5 text-[12px] font-semibold uppercase tracking-[0.8px] text-[var(--text-body)]">{heading ?? 'Key points'}</h3>
-      <ul>
-        {items.map((item, j) => (
-          <li key={j} className="flex gap-3 py-2 text-[16px] leading-6 text-[var(--text)]">
-            <span aria-hidden="true" className="mt-[9px] h-[7px] w-[7px] flex-shrink-0 rounded-full bg-[var(--highlight)]" />
-            <span>
-              <Inline text={item} />
-            </span>
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
-}
-
-/**
- * Renders a stored summary (see lib/summary.ts for the format): a serif lead, short paragraphs,
- * small uppercase sub-headings, and bulleted key points in a beige panel.
- */
-export default function SummaryView({ summary }: { summary: string | null | undefined }) {
+/** Render the article summary as prose; the opening paragraph may already be used as the deck. */
+export default function SummaryView({ summary, omitOpening = false }: { summary: string | null | undefined; omitOpening?: boolean }) {
   const blocks = parseSummary(summary);
-  if (blocks.length === 0) return null;
-
-  const out: React.ReactNode[] = [];
-  for (let i = 0; i < blocks.length; i++) {
-    const block: SummaryBlock = blocks[i];
-    switch (block.type) {
-      case 'lead':
-        out.push(
-          <p
-            key={i}
-            className="font-serif text-headline-lg font-semibold text-[var(--text)] border-l-4 border-[var(--highlight)] pl-4"
-          >
-            <Inline text={block.text} />
-          </p>,
-        );
-        break;
-      case 'heading': {
-        const next = blocks[i + 1];
-        if (next?.type === 'list') {
-          // A heading directly above a list becomes that list's panel title.
-          out.push(<KeyPoints key={i} heading={block.text} items={next.items} />);
-          i++;
-        } else {
-          out.push(
-            <h3 key={i} className={SECTION_HEADING}>
-              {block.text}
-            </h3>,
-          );
-        }
-        break;
-      }
-      case 'list':
-        out.push(<KeyPoints key={i} items={block.items} />);
-        break;
-      default:
-        out.push(
-          <p key={i} className="text-body-lg text-[var(--text-body)]">
-            <Inline text={block.text} />
-          </p>,
-        );
-    }
-  }
-
-  return <div className="space-y-4">{out}</div>;
+  let openingOmitted = false;
+  let skipKeyPointsList = false;
+  const content = blocks.map((block, index) => {
+    if (block.type === 'heading' && /^key points?\s*:?$/i.test(block.text.trim())) { skipKeyPointsList = true; return null; }
+    if (skipKeyPointsList) { skipKeyPointsList = false; if (block.type === 'list') return null; }
+    if (block.type === 'heading') return <h2 key={index} className="pt-2 font-serif text-headline font-semibold text-[var(--ink)]">{block.text}</h2>;
+    if (block.type === 'list') return <ul key={index} className="list-disc space-y-2 pl-6">{block.items.map((item, i) => <li key={i}><Inline text={item} /></li>)}</ul>;
+    if (omitOpening && !openingOmitted) { openingOmitted = true; return null; }
+    return <p key={index}><Inline text={block.text} /></p>;
+  });
+  return <div className="space-y-5 font-serif text-[19px] leading-[28px] text-[var(--article)] md:text-article md:leading-[31px]">{content}</div>;
 }

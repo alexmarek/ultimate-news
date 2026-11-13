@@ -77,7 +77,7 @@ export default function SearchPage() {
           <Link
             href="/"
             aria-label="Back to news"
-            className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-[var(--text)] hover:bg-[var(--surface)] md:ml-0 md:h-auto md:w-auto md:text-[var(--text-muted)] md:hover:bg-transparent md:hover:text-[var(--text)]"
+            className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center  text-[var(--text)] hover:bg-[var(--surface)] md:ml-0 md:text-[var(--text-muted)] md:hover:bg-transparent md:hover:text-[var(--text)]"
           >
             <ArrowLeft aria-hidden="true" className="w-5 h-5" />
           </Link>
@@ -106,7 +106,7 @@ export default function SearchPage() {
                 defaultValue={query}
                 aria-label="Search news"
                 /* 16px so iOS Safari does not zoom the page on focus */
-                className="block h-11 w-full rounded-xl border-2 border-[var(--highlight)] bg-[var(--surface-elevated)] pl-10 pr-3 text-[16px] text-[var(--text)] placeholder:text-[var(--text-muted)] focus:outline-none"
+                className="block h-11 w-full  border-2 border-[var(--highlight)] bg-[var(--surface-elevated)] pl-10 pr-3 text-[16px] text-[var(--text)] placeholder:text-[var(--text-muted)]"
                 placeholder="Search across all sources..."
               />
             </div>
@@ -163,14 +163,14 @@ export default function SearchPage() {
                 <li
                   key={r.id}
                   data-kb-id={r.id}
-                  className="border-b border-[var(--border)] last:border-b-0 md:rounded-xl md:border md:bg-[var(--surface-elevated)] md:p-4 md:last:border-b md:hover:shadow-sm md:transition-shadow"
+                  className="border-b border-[var(--border)] last:border-b-0  md:border md:bg-[var(--surface-elevated)] md:p-4 md:last:border-b md:transition-shadow"
                 >
                   <div className="flex flex-col items-start gap-1.5 py-3.5 md:py-0">
                     <div className="flex items-center gap-2">
                       <Link
                         href={`/?category=${encodeURIComponent(r.primaryArea)}`}
                         style={categoryStyle(r.primaryArea)}
-                        className="cat-fill inline-block rounded-full px-[9px] py-0.5 text-[12px] font-semibold leading-4"
+                        className="cat-fill inline-block  px-[9px] py-0.5 text-[12px] font-semibold leading-4"
                       >
                         {categoryShortLabel(r.primaryArea)}
                       </Link>
