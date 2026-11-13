@@ -1,18 +1,20 @@
 import type { Metadata } from 'next';
-import { IBM_Plex_Sans, Source_Serif_4 } from 'next/font/google';
+import { Newsreader, Libre_Franklin } from 'next/font/google';
 import './globals.css';
 
-const ibmPlexSans = IBM_Plex_Sans({
-  weight: ['400', '500', '600'],
-  subsets: ['latin'],
-  variable: '--font-ibm-plex-sans',
+const newsreader = Newsreader({
+  subsets: ['latin', 'latin-ext'],
+  weight: 'variable',
+  style: ['normal', 'italic'],
+  axes: ['opsz'],
+  variable: '--font-newsreader',
   display: 'swap',
 });
 
-const sourceSerif4 = Source_Serif_4({
+const libreFranklin = Libre_Franklin({
+  subsets: ['latin', 'latin-ext'],
   weight: ['400', '500', '600', '700'],
-  subsets: ['latin'],
-  variable: '--font-source-serif-4',
+  variable: '--font-libre-franklin',
   display: 'swap',
 });
 
@@ -30,7 +32,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${ibmPlexSans.variable} ${sourceSerif4.variable}`} suppressHydrationWarning>
+    <html lang="en" className={`${libreFranklin.variable} ${newsreader.variable}`} suppressHydrationWarning>
       <head>
         <script
           dangerouslySetInnerHTML={{
@@ -38,7 +40,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="font-sans text-body-md">{children}</body>
+      <body className="font-sans text-ui">{children}</body>
     </html>
   );
 }

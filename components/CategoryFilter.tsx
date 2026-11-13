@@ -37,14 +37,14 @@ export default function CategoryFilter({ categories }: CategoryFilterProps) {
             key={category}
             onClick={() => handleCategoryChange(category)}
             aria-pressed={selectedCategory === category}
-            className={`inline-flex h-9 items-center gap-2 px-3.5 rounded-full border text-[14px] whitespace-nowrap transition-all duration-200 cursor-pointer ${
+            className={`inline-flex min-h-11 items-center gap-2 px-3.5  border text-[14px] whitespace-nowrap transition-all duration-200 cursor-pointer ${
               selectedCategory === category
-                ? 'bg-[var(--highlight)] text-[var(--ink)] border-transparent font-semibold'
+                ? 'bg-[var(--ink)] text-[var(--paper)] border-[var(--ink)] font-semibold'
                 : 'bg-[var(--surface-elevated)] text-[var(--text)] hover:bg-[var(--surface)] border-[var(--border)]'
             }`}
           >
             {category !== 'all' && (
-              <span aria-hidden="true" className="cat-dot h-2.5 w-2.5 shrink-0 rounded-full" style={categoryStyle(category)} />
+              <span aria-hidden="true" className="cat-dot h-2.5 w-2.5 shrink-0 " style={categoryStyle(category)} />
             )}
             {category === 'all' ? 'All Categories' : category}
           </button>

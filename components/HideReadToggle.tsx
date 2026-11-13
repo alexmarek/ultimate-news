@@ -28,11 +28,11 @@ export default function HideReadToggle() {
     <button
       onClick={toggle}
       disabled={isPending}
-      className={`flex items-center justify-center w-11 h-11 md:w-8 md:h-8 rounded-xl md:rounded-lg transition-all duration-150 cursor-pointer ${
+      className={`flex items-center justify-center w-11 h-11 shrink-0   transition-all duration-150 cursor-pointer ${
         isPending ? 'opacity-50' : ''
       } ${
         hideRead
-          ? 'text-[var(--accent)] bg-[var(--surface)]'
+          ? 'text-[var(--ink)] bg-[var(--surface)]'
           : 'text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface)]'
       }`}
       aria-label={hideRead ? 'Show read articles' : 'Hide read articles'}
