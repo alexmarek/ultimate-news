@@ -44,23 +44,10 @@ export async function researchClaim({ jobId, claimId, store, searchLimits, model
     await store.reserve(jobId, lease.token, reservation, searchLimits.maxSearchCalls);
     const candidates = await discoverSources({ claim: lease.claim.statement, model, apiKey, budget: new ResearchBudget(reservation, 1), upperBoundUsd: reservation, request });
     const evidence = await retrieveEvidence({ claimId, candidates, articleUrl: lease.articleUrl, fetcher });
-    const assess = () => assessSingleClaim({
+    const result = await assessSingleClaim({
       articleUrl: lease.articleUrl, articleTitle: lease.articleTitle, claim: lease.claim, evidence, model, apiKey,
       reserve: (cost) => store.reserve(jobId, lease.token, cost, 0), request,
     });
-    let result: CompactAssessment;
-    try {
-      result = await assess();
-    } catch (error) {
-      if (!(error instanceof FactCheckFailure) || error.code !== 'evidence_duplicate_source') throw error;
-      try {
-        result = await assess();
-      } catch (retryError) {
-        // Keep the original diagnosis if the extra assessment cannot be reserved.
-        if (retryError instanceof FactCheckFailure && retryError.code === 'budget') throw error;
-        throw retryError;
-      }
-    }
     await store.complete(jobId, claimId, lease.token, result);
   } catch (error) {
     // Reservations are deliberately not refunded: the provider may have billed

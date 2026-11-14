@@ -8,7 +8,7 @@ import { SCORING_INSTRUCTIONS, verdictForScore, type ClaimVerdict } from './2026
 const text = z.string().trim().min(1).max(4000);
 const verdict = z.enum(['supported', 'mostly-supported', 'mixed', 'mostly-false', 'false', 'unverified']);
 const confidence = z.enum(['high', 'medium', 'low']);
-const sourceSchema = z.object({ id: text, claimId: text, url: z.string().url(), excerpt: z.string().trim().min(20).max(500), relationship: z.enum(['supports', 'contradicts', 'supports-and-contradicts']) }).strict();
+const sourceSchema = z.object({ id: text, claimId: text, url: z.string().url(), excerpt: z.string().trim().min(20).max(15090), relationship: z.enum(['supports', 'contradicts', 'supports-and-contradicts']) }).strict();
 const claimSchema = z.object({ id: text, statement: text, importance: text, central: z.boolean(), verdict, score: scoreSchema, confidence, explanation: text }).strict();
 const inputSchema = z.object({ articleUrl: z.string().url(), articleTitle: text, claims: z.array(claimSchema).min(1).max(8), evidence: z.array(sourceSchema).max(40) }).strict();
 const outputSchema = z.object({

@@ -67,7 +67,7 @@ export async function evaluateClaims({ articleUrl, articleTitle, claims, evidenc
       if (!claim) throw new FactCheckFailure('evidence_claims');
       const supportingEvidenceIds: string[] = [];
       const contradictingEvidenceIds: string[] = [];
-      const citedSources = new Map<string, { passageNumber: number; relationship: string }>();
+      const citedSources = new Map<string, Set<number>>();
       const evidenceQuotes: Array<{ evidenceId: string; excerpt: string }> = [];
       for (const { passageNumber, relationship } of citations) {
         const passage = passages.get(passageNumber);
@@ -75,12 +75,16 @@ export async function evaluateClaims({ articleUrl, articleTitle, claims, evidenc
         if (passage.claimNumber !== claimNumber) throw new FactCheckFailure('evidence_wrong_claim');
         const { evidenceId, text } = passage;
         const prior = citedSources.get(evidenceId);
-        if (prior?.passageNumber === passageNumber && prior.relationship === relationship) continue;
-        if (prior) throw new FactCheckFailure('evidence_duplicate_source');
-        citedSources.set(evidenceId, { passageNumber, relationship });
-        if (relationship !== 'contradicts') supportingEvidenceIds.push(evidenceId);
-        if (relationship !== 'supports') contradictingEvidenceIds.push(evidenceId);
-        evidenceQuotes.push({ evidenceId, excerpt: text });
+        if (relationship !== 'contradicts' && !supportingEvidenceIds.includes(evidenceId)) supportingEvidenceIds.push(evidenceId);
+        if (relationship !== 'supports' && !contradictingEvidenceIds.includes(evidenceId)) contradictingEvidenceIds.push(evidenceId);
+        if (prior?.has(passageNumber)) continue;
+        if (prior) {
+          prior.add(passageNumber);
+          evidenceQuotes.find(quote => quote.evidenceId === evidenceId)!.excerpt += `\n…\n${text}`;
+        } else {
+          citedSources.set(evidenceId, new Set([passageNumber]));
+          evidenceQuotes.push({ evidenceId, excerpt: text });
+        }
       }
       return { ...assessment, verdict: verdictForScore(assessment.score), claimId: claim.id, supportingEvidenceIds, contradictingEvidenceIds, evidenceQuotes };
     });

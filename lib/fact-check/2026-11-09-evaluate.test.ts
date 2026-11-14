@@ -12,12 +12,14 @@ test('returns an unverified result when no evidence was retrieved', async () => 
   assert.equal(result.claims[0].verdict, 'unverified');
 });
 
-test('deduplicates identical citations but rejects different passages from one source', async () => {
+test('keeps multiple verified passages from one source and rejects unknown passages', async () => {
   const source = 'The library opens on Saturdays and closes on Sundays. '.repeat(20);
   const options = { articleUrl: 'https://article.example/a', articleTitle: 'Synthetic', claims: [{ id: 'claim', statement: 'A claim', central: true }], evidence: [{ id: 'source', claimId: 'claim', url: 'https://source.example/a', title: 'Source', publisher: null, publishedAt: null, retrievedAt: new Date(), content: source }], model: 'test', apiKey: 'synthetic', reserve: async () => {} };
   const request = (secondPassage: number): typeof fetch => async () => Response.json({ choices: [{ message: { content: JSON.stringify({ score: 9, confidence: 'medium', executiveSummary: 'Supported.', supportedFindings: [], unsupportedFindings: [], missingContext: [], accurateFormulation: 'A claim.', claims: [{ claimNumber: 1, score: 9, confidence: 'medium', explanation: 'Supported.', citations: [{ passageNumber: 1, relationship: 'supports' }, { passageNumber: secondPassage, relationship: 'supports' }] }] }) } }] });
   const result = await evaluateClaims({ ...options, request: request(1) });
   assert.equal(result.claims[0].evidenceQuotes.length, 1);
-  await assert.rejects(evaluateClaims({ ...options, request: request(2) }), { code: 'evidence_duplicate_source' });
+  const multiple = await evaluateClaims({ ...options, request: request(2) });
+  assert.equal(multiple.claims[0].evidenceQuotes.length, 1);
+  assert.equal(multiple.claims[0].evidenceQuotes[0].excerpt.split('\n…\n').length, 2);
   await assert.rejects(evaluateClaims({ ...options, request: request(999) }), { code: 'evidence_passage' });
 });

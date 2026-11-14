@@ -85,7 +85,7 @@ test('reserves before both model requests and checkpoints only cited excerpts', 
   assert.deepEqual(calls, ['reserve:1', 'search', 'reserve:0', 'evaluate', 'complete:1']);
 });
 
-test('retries an invalid duplicate-source assessment without searching again', async () => {
+test('accepts multiple passages from one source without repeating the search or assessment', async () => {
   const { calls, store } = fixture();
   let assessments = 0;
   const request: typeof fetch = async (_url, init) => {
@@ -105,5 +105,5 @@ test('retries an invalid duplicate-source assessment without searching again', a
   };
   const fetcher = async (url: string) => ({ url, html: `<title>Synthetic source</title><article><p>${'The synthetic source contains a factual statement supporting the claim. '.repeat(20)}</p></article>` });
   await researchClaim({ jobId: 'job-1', claimId: claim.id, store, searchLimits: limits, model: 'test', apiKey: 'synthetic', request, fetcher });
-  assert.deepEqual(calls, ['reserve:1', 'search', 'reserve:0', 'evaluate', 'reserve:0', 'evaluate', 'complete:1']);
+  assert.deepEqual(calls, ['reserve:1', 'search', 'reserve:0', 'evaluate', 'complete:1']);
 });

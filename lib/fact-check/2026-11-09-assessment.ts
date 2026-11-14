@@ -61,7 +61,7 @@ export function parseAssessment(output: unknown, articleUrl: string, claims: Res
       if (!record || record.claimId !== claim.claimId || !cited.has(quote.evidenceId)) {
         throw new FactCheckFailure('evidence_reference', 'Invalid evidence quotation reference');
       }
-      if (quotes.has(quote.evidenceId) || !isRetrievedExcerpt(record, quote.excerpt)) {
+      if (quotes.has(quote.evidenceId) || !quote.excerpt.split('\n…\n').every(excerpt => isRetrievedExcerpt(record, excerpt))) {
         throw new FactCheckFailure('evidence_quote', 'Invalid evidence quotation');
       }
       quotes.add(quote.evidenceId);

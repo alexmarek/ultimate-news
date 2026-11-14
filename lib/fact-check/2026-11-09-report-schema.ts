@@ -14,7 +14,7 @@ const claimAssessment = z.object({ verdict, score: scoreSchema, confidence, expl
 const evaluatedClaim = claimAssessment.extend({
   claimId: text,
   supportingEvidenceIds: z.array(text).max(30), contradictingEvidenceIds: z.array(text).max(30),
-  evidenceQuotes: z.array(z.object({ evidenceId: text, excerpt: z.string().min(20).max(500) }).strict()).max(30),
+  evidenceQuotes: z.array(z.object({ evidenceId: text, excerpt: z.string().min(20).max(15090) }).strict()).max(30),
 }).strict();
 
 const reportAssessment = z.object({

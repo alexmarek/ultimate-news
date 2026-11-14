@@ -22,6 +22,12 @@ test('rejects invented quotations even when the evidence ID exists', () => {
   assert.throws(() => parseAssessment(invalid, 'https://example.org/article', claims, evidence), /Invalid evidence quotation/);
 });
 
+test('rejects an invented passage appended to a real quotation', () => {
+  const invalid = report();
+  invalid.claims[0].evidenceQuotes[0].excerpt += '\n…\nThis invented passage was never in the source.';
+  assert.throws(() => parseAssessment(invalid, 'https://example.org/article', claims, evidence), { code: 'evidence_quote' });
+});
+
 test('rejects an invented evidence ID and a missing claim', () => {
   const invented = report();
   invented.claims[0].supportingEvidenceIds = ['invented'];
