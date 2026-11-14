@@ -33,7 +33,7 @@ export default function Pagination({ currentPage, totalPages, query, category }:
       {currentPage > 1 && (
         <Link
           href={createUrl(currentPage - 1)}
-          className="px-3 py-2 rounded-lg text-body-md font-medium bg-[var(--surface-elevated)] text-[var(--text-body)] hover:bg-[var(--surface)] border border-[var(--border)] transition-colors duration-200"
+          className="inline-flex min-h-11 min-w-11 items-center justify-center px-3 py-2 text-body-md font-medium bg-[var(--surface-elevated)] text-[var(--text-body)] hover:bg-[var(--surface)] border border-[var(--border)] transition-colors duration-200"
         >
           Previous
         </Link>
@@ -47,9 +47,9 @@ export default function Pagination({ currentPage, totalPages, query, category }:
         <Link
           key={page}
           href={createUrl(page)}
-          className={`px-3 py-2 rounded-lg text-body-md font-medium transition-colors duration-200 ${
+          className={`inline-flex min-h-11 min-w-11 items-center justify-center px-3 py-2 text-body-md font-medium transition-colors duration-200 ${
             page === currentPage
-              ? 'bg-[var(--accent)] text-[var(--surface-elevated)] shadow-sm cursor-default pointer-events-none'
+              ? 'bg-[var(--ink)] text-[var(--surface-elevated)] cursor-default pointer-events-none'
               : 'bg-[var(--surface-elevated)] text-[var(--text-body)] hover:bg-[var(--surface)] border border-[var(--border)] cursor-pointer'
           }`}
         >
@@ -59,7 +59,7 @@ export default function Pagination({ currentPage, totalPages, query, category }:
       {currentPage < totalPages && (
         <Link
           href={createUrl(currentPage + 1)}
-          className="px-3 py-2 rounded-lg text-body-md font-medium bg-[var(--surface-elevated)] text-[var(--text-body)] hover:bg-[var(--surface)] border border-[var(--border)] transition-colors duration-200"
+          className="inline-flex min-h-11 min-w-11 items-center justify-center px-3 py-2 text-body-md font-medium bg-[var(--surface-elevated)] text-[var(--text-body)] hover:bg-[var(--surface)] border border-[var(--border)] transition-colors duration-200"
         >
           Next
         </Link>

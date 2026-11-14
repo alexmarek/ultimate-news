@@ -1,6 +1,6 @@
 # Handoff — ultimate-news
 
-**Updated:** 2026-11-13 (fact-check implementation in progress)
+**Updated:** 2026-11-14 (release integration in progress)
 
 ## Current state
 Next.js and Prisma news aggregator, deployed on Vercel. The evidence-based fact checker is in progress. Alex created a Neon `development` child branch and reported that the local site runs against it. `.env` and `.env.local` contain production configuration. Alex configured `.env.development.local` for local Next.js development. The approved fact-check schema transaction ran on the development branch and a separate read-only inventory confirmed all nine tables.
@@ -34,6 +34,7 @@ Next.js and Prisma news aggregator, deployed on Vercel. The evidence-based fact 
 1. Keep GLM 5.3 as the baseline. Follow the Vercel preview checklist in `README.md`. After preview deployment is approved, verify one fact check from submission through publication on the preview.
 
 ## Decisions and constraints
+- 2026-11-14: Alex verified both pasted-text and original-image checks on the preview. The Neon development branch has the input-type columns, applied manually without Prisma migration history. Production still needs a reviewed schema rollout before enabling the feature. The newsroom redesign and fact-check branches have been combined in an isolated release worktree for verification.
 - 2026-11-14: Alex confirmed pasted-text checking and automatic publishing work on preview, but an image submission returned the generic `submission=failed` error before creating a report. The OCR model supports image input per OpenRouter; the precise failure remains unverified. Image-submission errors now distinguish provider access, credits, rejected requests, rate limits, timeouts, truncated results, unreadable output and invalid files, while avoiding a potentially brittle cross-realm `instanceof File` check. Verify with a synthetic image on preview.
 - 2026-11-14: Alex requested pasted text and image text extraction with automatic publication of completed fact checks. Changes add text/image input types, automatic OCR via OpenRouter vision, and atomic automatic publication. The two additive columns in `20261114_add_fact_check_text_input` were applied via Neon SQL Editor and verified on the `development` branch (`neondb`); this manual application did not record Prisma migration history. Production has not been migrated. End-to-end OCR, text submission and automatic publication remain unverified.
 - 2026-11-14: A further preview run again reported duplicate-source evidence. The real restriction was one passage per source, even when the model selected several valid passages. The evaluator now groups distinct passages from a source into one excerpt separated by an ellipsis, combines their support/contradiction relationships, and validates each passage against fetched source text. The summarizer accepts the grouped excerpts. The fix needs a live preview check.
@@ -65,3 +66,33 @@ Next.js and Prisma news aggregator, deployed on Vercel. The evidence-based fact 
 - Model comparison on Node 24: `node --env-file=.env.development.local --import tsx scripts/2026-11-13-compare-fact-check-models.ts --run`. Use `--plan` to list the cases without sending requests. The run uses 33 requests with a $2 total reservation ceiling. It compares the current GLM route, Nex and Inkling on common cases, and Hydrogen on three harder scoring cases. The fixed scoring evidence is paraphrased reference material. Search probes report discovery of the reference URL and leave relevance review to the reviewer.
 - Check with dummy database URLs: `DATABASE_URL="postgresql://none:none@127.0.0.1:1/none" DATABASE_URL_UNPOOLED="postgresql://none:none@127.0.0.1:1/none" bash scripts/check.sh`. Do not add `--build` while the rule forbids commands that import Prisma without a separate dev database.
 - Dev: `npm run dev`; tests: `npm test`
+
+## Newsroom redesign — 2026-11-13 (current)
+
+A separate development database is available. Follow `AGENTS.md` and confirm the target before any database operation.
+
+### Current state
+
+The newsroom redesign updates the front page and story page with responsive layouts, shared navigation, day-based editions, a brief, article deduplication and an accessibility-focused type and colour system.
+
+Fact-check styling and published-report integration are deferred. The summary component is not wired to report data, and no fact-check verdicts or report links are shown in the redesign.
+
+### Next steps
+
+1. Integrate the fact-check feature when its changes are available. Gate every verdict and report module behind `FACT_CHECK_ENABLED`, and display only published reports. The existing report route uses the fact-check article ID.
+2. Re-run Lighthouse accessibility on the final integrated front page and story page. The earlier mobile audits scored 100/100 before the final control and footer changes.
+3. Verify the approximate 2,000px mobile-page target using a 12-story fixture. Review screenshot image-use rights before publishing captures containing source images.
+4. Add the paid-promotion hidden count only when a reliable promotion classification is available. Ingest filtering is a separate task.
+5. Review legacy category-colour code and any unused local components only after confirming references and receiving approval to delete.
+
+### Verification
+
+- `scripts/check.sh` passed with dummy database variables: 124 tests and typecheck passed. Lint was skipped because no ESLint configuration is present.
+- A direct Next.js production build passed with dummy database variables. Token colours met 4.5:1 contrast against the specified light and dark paper and wash backgrounds.
+- The visible front-page controls were checked at 1440, 1024, 390 and 320 CSS pixels, with no page-level horizontal overflow. The keyboard-help shortcut and its dismissal were checked manually.
+
+### Safety
+
+Follow `AGENTS.md` for database and Git safeguards. The `npm run build` script in this revision invokes `prisma db push`; use a direct Next.js build with dummy database variables unless a database operation has been explicitly approved for a confirmed non-production database.
+
+The effects of the reclassification, re-embedding, source-sync, manual-ingest and clustering scripts have not been reviewed. Inspect and obtain the required approval before running them.

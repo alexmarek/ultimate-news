@@ -1,18 +1,20 @@
 import type { Metadata } from 'next';
-import { IBM_Plex_Sans, Source_Serif_4 } from 'next/font/google';
+import localFont from 'next/font/local';
 import './globals.css';
 
-const ibmPlexSans = IBM_Plex_Sans({
-  weight: ['400', '500', '600'],
-  subsets: ['latin'],
-  variable: '--font-ibm-plex-sans',
+const newsreader = localFont({
+  src: [
+    { path: './2026-11-13-fonts/2026-11-13-newsreader-variable.ttf', weight: '200 800', style: 'normal' },
+    { path: './2026-11-13-fonts/2026-11-13-newsreader-italic-variable.ttf', weight: '200 800', style: 'italic' },
+  ],
+  variable: '--font-newsreader',
   display: 'swap',
 });
 
-const sourceSerif4 = Source_Serif_4({
-  weight: ['400', '500', '600', '700'],
-  subsets: ['latin'],
-  variable: '--font-source-serif-4',
+const libreFranklin = localFont({
+  src: './2026-11-13-fonts/2026-11-13-libre-franklin-variable.ttf',
+  weight: '100 900',
+  variable: '--font-libre-franklin',
   display: 'swap',
 });
 
@@ -30,7 +32,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${ibmPlexSans.variable} ${sourceSerif4.variable}`} suppressHydrationWarning>
+    <html lang="en" className={`${libreFranklin.variable} ${newsreader.variable}`} suppressHydrationWarning>
       <head>
         <script
           dangerouslySetInnerHTML={{
@@ -38,7 +40,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="font-sans text-body-md">{children}</body>
+      <body className="font-sans text-ui">{children}</body>
     </html>
   );
 }

@@ -4,8 +4,21 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-  --font-sans: var(--font-ibm-plex-sans), system-ui, -apple-system, sans-serif;
-  --font-serif: var(--font-source-serif-4), Georgia, serif;
+  --font-sans: var(--font-libre-franklin), system-ui, -apple-system, sans-serif;
+  --font-serif: var(--font-newsreader), Georgia, serif;
+
+  --text-wordmark: 50px; --text-wordmark--line-height: 52px;
+  --text-lead: 58px; --text-lead--line-height: 59px;
+  --text-h1: 50px; --text-h1--line-height: 52px;
+  --text-brief: 26px; --text-brief--line-height: 26px;
+  --text-headline: 21px; --text-headline--line-height: 25px;
+  --text-row: 18px; --text-row--line-height: 22px;
+  --text-deck: 23px; --text-deck--line-height: 32px;
+  --text-deck-front: 21px; --text-deck-front--line-height: 30px;
+  --text-article: 20px; --text-article--line-height: 31px;
+  --text-ui: 14px; --text-ui--line-height: 20px;
+  --text-meta: 12.5px; --text-meta--line-height: 18px;
+  --text-label: 12px; --text-label--line-height: 16px;
 
   --text-display-1: 48px;
   --text-display-1--line-height: 52px;
@@ -27,105 +40,32 @@
   --text-body-sm--line-height: 18px;
 }
 
-/*
- * "Golden Summer Fields": five colours plus neutrals.
- * Rule: text on any of the five is always dark ink (--ink). Never white text on them,
- * never bronze as text on a light background.
- */
 :root {
-  /* palette */
-  --sage: #ccd5ae; /* Dry Sage */
-  --beige: #e9edc9; /* Beige */
-  --cornsilk: #fefae0;
-  --papaya: #faedcd; /* Papaya Whip */
-  --bronze: #d4a373; /* Light Bronze: fill only, never text on light backgrounds */
-
-  /* dark ink: the only text colour allowed on a palette fill, in light AND dark mode */
-  --ink: #1a1c18;
-
-  /* surfaces */
-  --bg: color-mix(in srgb, var(--cornsilk) 20%, white); /* white with a slight cornsilk tone (#fffef9): page + header */
-  --surface: var(--papaya); /* chips, tags */
-  --surface-elevated: #ffffff; /* image cards */
-  --border: var(--papaya);
-  --border-strong: var(--sage);
-
-  /* text */
-  --text: #1a1c18;
-  --text-body: #3a3e33;
-  --text-muted: #4d5042; /* 7:1 or better on every surface that carries it (AAA) */
-  --text-faint: #7d806f; /* icons and decoration only, not body text */
-
-  /* roles */
-  --accent: var(--text); /* links, focus ring, primary buttons */
-  --highlight: var(--bronze); /* the ONE highlight: brief numbers, date badge, active filter, search ring */
-  --panel: color-mix(in srgb, var(--beige) 15%, var(--bg)); /* brief panel, key points, selected row: a pale beige wash */
-
-  /* categories (keyed on Article.primaryArea, see lib/categoryColor.ts) */
-  --cat-world: var(--sage);
-  --cat-environment: var(--sage);
-  --cat-business: var(--papaya);
-  --cat-tech: var(--beige);
-  --cat-science: var(--beige);
-  --cat-travel: var(--bronze);
-  --cat-sport: var(--bronze);
-  --cat-fallback: var(--beige);
-
-  /* status colours: rare UI only (auto-tagged badge, market up/down, errors) */
-  --success: #325e3b;
-  --warning: #b8772e; /* tint only (auto-tagged badge); never used as text */
-  --error: #95342a;
+  --paper: #ffffff; --wash: #f5f3ee; --rule: #d8d5cc; --image-hold: #e6e3db;
+  --ink: #111111; --body: #2e2e2b; --article: #1f1f1d; --meta: #62625c; --accent: #8e1b16;
+  --verdict-supported: #1b6b3a; --verdict-mixed: #7a5200; --verdict-false: #a3271e;
+  --bg: var(--paper); --surface: var(--wash); --surface-elevated: var(--paper);
+  --border: var(--rule); --border-strong: var(--ink); --text: var(--ink);
+  --text-body: var(--body); --text-muted: var(--meta); --text-faint: var(--meta);
+  --highlight: var(--accent); --success: var(--verdict-supported);
+  --warning: var(--verdict-mixed); --error: var(--verdict-false);
+  /* Retained for components that have not yet migrated. */
+  --sage: #ccd5ae; --beige: #e9edc9; --cornsilk: #fefae0; --papaya: #faedcd; --bronze: #d4a373;
+  --panel: var(--wash);
+  --cat-world: var(--sage); --cat-environment: var(--sage); --cat-business: var(--papaya);
+  --cat-tech: var(--beige); --cat-science: var(--beige); --cat-travel: var(--bronze);
+  --cat-sport: var(--bronze); --cat-fallback: var(--beige);
 }
-
 .dark {
   color-scheme: dark;
-
-  --bg: #1c1d17;
-  --surface: #26281f;
-  --surface-elevated: #2d3027;
-  --border: #3a3d30;
-  --border-strong: #4a4e3e;
-
-  --text: #fefcf0;
-  --text-body: #e9edc9;
-  --text-muted: #cdd0b4;
-  --text-faint: #8c8f7c;
-
-  --accent: var(--text);
-  --panel: color-mix(in oklab, var(--beige) 12%, var(--surface));
-
-  /* in dark mode the five colours are used as TEXT, dots and 1px pill outlines;
-     tinted backgrounds = color-mix(in oklab, <colour> 12%, var(--surface)) */
-
-  --success: #9fc7a4;
-  --warning: #d4934a;
-  --error: #eaaea2;
+  --paper: #141413; --wash: #1d1d1b; --rule: #3a3936; --image-hold: #262624;
+  --ink: #edebe6; --body: #d2cfc8; --article: #d2cfc8; --meta: #a3a098; --accent: #f0857a;
+  --verdict-supported: #7cc79a; --verdict-mixed: #e0b15a; --verdict-false: #f0857a;
 }
-
-body {
-  background-color: var(--bg);
-  color: var(--text-body);
-}
-
-/* Keyboard focus: one consistent ring everywhere. */
-:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-
-.kb-focused {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-  border-radius: 0.75rem;
-}
-
-/* Search match highlight: bronze fill, ink text. */
-mark {
-  background-color: var(--highlight);
-  color: var(--ink);
-  border-radius: 2px;
-  padding: 0 2px;
-}
+body { background: var(--bg); color: var(--body); }
+:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.kb-focused { outline: 2px solid var(--ink); outline-offset: 2px; border-radius: 0; }
+mark { background: transparent; color: inherit; box-shadow: inset 0 -0.4em 0 color-mix(in srgb, var(--accent) 22%, transparent); }
 
 /*
  * Category-coloured surfaces. Set `--cat` on the element (or an ancestor) with
