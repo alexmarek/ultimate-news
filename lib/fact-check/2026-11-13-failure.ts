@@ -37,6 +37,12 @@ const submissionMessages = {
   invalid_text: 'Enter text to check, up to 19,000 characters.',
   invalid_image: 'Choose a PNG, JPEG or WebP image up to 3 MB.',
   image_text: 'Could not read text from the image. Try a clearer image with visible text.',
+  image_access: 'OpenRouter refused access to the image-reading model. Check that your API key can use the model and that your privacy settings allow its provider.',
+  image_credits: 'OpenRouter reported a credit or payment issue while reading the image. Check your balance and API key limit.',
+  image_request: 'OpenRouter rejected the image-reading request. The selected model or provider may not support this image.',
+  image_busy: 'The image-reading service is temporarily unavailable or rate limited. Try again shortly.',
+  image_timeout: 'The image-reading service took too long to respond. Try again shortly.',
+  image_truncated: 'The image contains more text than the reader could return. Try a smaller section.',
   unreachable: 'Could not reach the article’s website. Check that the link opens in your browser, then try again.',
   busy: 'Another fact check is running. Open its report below to see its status, then try this link again when it finishes.',
   stalled: 'An earlier attempt to start this check needs manual recovery. Keep the queued report for troubleshooting.',
@@ -57,6 +63,16 @@ export class FactCheckFailure extends Error {
 export function submissionFailureCode(error: unknown): SubmissionFailure {
   return error instanceof FactCheckFailure && Object.prototype.hasOwnProperty.call(submissionMessages, error.code)
     ? error.code as SubmissionFailure : 'failed';
+}
+
+export function imageSubmissionFailureCode(error: unknown): SubmissionFailure {
+  if (!(error instanceof FactCheckFailure)) return 'failed';
+  const imageFailures: Partial<Record<FailureCode, SubmissionFailure>> = {
+    invalid: 'invalid_image', provider_output: 'image_text', provider_access: 'image_access',
+    provider_credits: 'image_credits', provider_request: 'image_request', provider_busy: 'image_busy',
+    provider_timeout: 'image_timeout', provider_truncated: 'image_truncated',
+  };
+  return imageFailures[error.code] ?? submissionFailureCode(error);
 }
 
 export function jobFailureMessage(code: string | null | undefined): { title: string; next: string; retry?: boolean } {

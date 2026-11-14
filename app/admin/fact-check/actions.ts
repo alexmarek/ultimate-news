@@ -11,7 +11,7 @@ import { createSubmissionStore } from '@/lib/fact-check/2026-11-12-submission-st
 import { submitFactCheck, submitTextFactCheck } from '@/lib/fact-check/2026-11-12-submission';
 import { extractImageText } from '@/lib/fact-check/2026-11-14-image-text';
 import { loadWorkflowStartAdapter } from '@/lib/fact-check/2026-11-12-workflow-start-adapter';
-import { submissionFailureCode } from '@/lib/fact-check/2026-11-13-failure';
+import { imageSubmissionFailureCode, submissionFailureCode } from '@/lib/fact-check/2026-11-13-failure';
 import { FactCheckFailure } from '@/lib/fact-check/2026-11-13-failure';
 import { FACT_CHECK_METHODOLOGY_VERSION } from '@/lib/fact-check/2026-11-13-scoring-rubric';
 
@@ -55,7 +55,7 @@ export async function requestTextFactCheck(form: FormData): Promise<void> {
     let text: string;
     if (type === 'image') {
       const image = form.get('image');
-      if (!(image instanceof File)) throw new Error('Invalid image');
+      if (!image || typeof image === 'string' || typeof image.arrayBuffer !== 'function') throw new FactCheckFailure('invalid');
       text = await extractImageText(image, settings.apiKey);
     } else if (type === 'text' && typeof form.get('text') === 'string') {
       text = String(form.get('text'));
@@ -65,8 +65,7 @@ export async function requestTextFactCheck(form: FormData): Promise<void> {
       starter: await loadWorkflowStartAdapter(factCheckWorkflow) });
     destination = `/admin/fact-check/${encodeURIComponent(result.reportId)}${result.status === 'start_pending' ? '?submission=pending' : ''}`;
   } catch (error) {
-    const code = type === 'image' && error instanceof FactCheckFailure && error.code === 'invalid' ? 'invalid_image' :
-      type === 'image' && error instanceof FactCheckFailure && error.code === 'provider_output' ? 'image_text' :
+    const code = type === 'image' ? imageSubmissionFailureCode(error) :
       type === 'text' && error instanceof FactCheckFailure && error.code === 'invalid' ? 'invalid_text' : submissionFailureCode(error);
     destination = `/admin/fact-check?submission=${code}`;
   }
