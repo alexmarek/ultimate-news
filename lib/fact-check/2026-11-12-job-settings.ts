@@ -19,7 +19,7 @@ export function readFactCheckJobSettings(env: Readonly<Record<string, string | u
   const { model } = factCheckModelRoute(configuredModel);
   const maxClaims = Number(env.FACT_CHECK_MAX_CLAIMS ?? 2);
   const maxSearches = Number(env.FACT_CHECK_MAX_SEARCHES ?? 16);
-  const maxCostUsd = Number(env.FACT_CHECK_MAX_COST_USD ?? 1);
+  const maxCostUsd = Number(env.FACT_CHECK_MAX_COST_USD ?? 3);
   if (!apiKey ||
       !Number.isSafeInteger(maxClaims) || maxClaims < 1 || maxClaims > 8 ||
       !Number.isSafeInteger(maxSearches) || maxSearches < 1 ||

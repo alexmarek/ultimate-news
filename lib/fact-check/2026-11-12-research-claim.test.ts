@@ -84,3 +84,26 @@ test('reserves before both model requests and checkpoints only cited excerpts', 
   await researchClaim({ jobId: 'job-1', claimId: claim.id, store, searchLimits: limits, model: 'test', apiKey: 'synthetic', request, fetcher });
   assert.deepEqual(calls, ['reserve:1', 'search', 'reserve:0', 'evaluate', 'complete:1']);
 });
+
+test('retries an invalid duplicate-source assessment without searching again', async () => {
+  const { calls, store } = fixture();
+  let assessments = 0;
+  const request: typeof fetch = async (_url, init) => {
+    const body = JSON.parse(String(init?.body));
+    if (body.tools) {
+      calls.push('search');
+      return Response.json({ choices: [{ message: { content: JSON.stringify({ urls: ['https://source.example/a'] }) } }] });
+    }
+    calls.push('evaluate');
+    const input = JSON.parse(body.messages[1].content);
+    const passages = input.evidence[0].passages;
+    assert.ok(passages.length > 1);
+    const citations = [{ passageNumber: passages[0].passageNumber, relationship: 'supports' }];
+    if (assessments++ === 0) citations.push({ passageNumber: passages[1].passageNumber, relationship: 'supports' });
+    const report = { score: 9, confidence: 'medium', executiveSummary: 'The claim is supported.', supportedFindings: [], unsupportedFindings: [], missingContext: [], accurateFormulation: 'A synthetic claim.', claims: [{ claimNumber: 1, score: 9, confidence: 'medium', explanation: 'The source supports it.', citations }] };
+    return Response.json({ choices: [{ message: { content: JSON.stringify(report) } }] });
+  };
+  const fetcher = async (url: string) => ({ url, html: `<title>Synthetic source</title><article><p>${'The synthetic source contains a factual statement supporting the claim. '.repeat(20)}</p></article>` });
+  await researchClaim({ jobId: 'job-1', claimId: claim.id, store, searchLimits: limits, model: 'test', apiKey: 'synthetic', request, fetcher });
+  assert.deepEqual(calls, ['reserve:1', 'search', 'reserve:0', 'evaluate', 'reserve:0', 'evaluate', 'complete:1']);
+});

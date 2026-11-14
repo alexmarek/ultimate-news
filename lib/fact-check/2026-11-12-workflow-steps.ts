@@ -18,7 +18,7 @@ async function runActivity<T>(work: () => Promise<T>): Promise<T> {
     if (error instanceof FactCheckFailure) {
       // Retrying these conditions without changing the inputs will fail again.
       const code = error.code;
-      if (['article_blocked', 'article_paywall', 'article_text', 'no_claims', 'budget', 'provider_access', 'provider_credits', 'provider_request', 'provider_truncated', 'configuration'].includes(code)
+      if (['article_blocked', 'article_paywall', 'article_text', 'no_claims', 'budget', 'provider_access', 'provider_credits', 'provider_request', 'provider_truncated', 'configuration', 'evidence_duplicate_source'].includes(code)
           || getStepMetadata().attempt >= 3) {
         throw new FatalError(code);
       }
