@@ -67,18 +67,21 @@ export async function evaluateClaims({ articleUrl, articleTitle, claims, evidenc
       if (!claim) throw new FactCheckFailure('evidence_claims');
       const supportingEvidenceIds: string[] = [];
       const contradictingEvidenceIds: string[] = [];
-      const citedSources = new Set<string>();
-      const evidenceQuotes = citations.map(({ passageNumber, relationship }) => {
+      const citedSources = new Map<string, { passageNumber: number; relationship: string }>();
+      const evidenceQuotes: Array<{ evidenceId: string; excerpt: string }> = [];
+      for (const { passageNumber, relationship } of citations) {
         const passage = passages.get(passageNumber);
-        if (!passage || passage.claimNumber !== claimNumber || citedSources.has(passage.evidenceId)) {
-          throw new FactCheckFailure('evidence_reference');
-        }
+        if (!passage) throw new FactCheckFailure('evidence_passage');
+        if (passage.claimNumber !== claimNumber) throw new FactCheckFailure('evidence_wrong_claim');
         const { evidenceId, text } = passage;
-        citedSources.add(evidenceId);
+        const prior = citedSources.get(evidenceId);
+        if (prior?.passageNumber === passageNumber && prior.relationship === relationship) continue;
+        if (prior) throw new FactCheckFailure('evidence_duplicate_source');
+        citedSources.set(evidenceId, { passageNumber, relationship });
         if (relationship !== 'contradicts') supportingEvidenceIds.push(evidenceId);
         if (relationship !== 'supports') contradictingEvidenceIds.push(evidenceId);
-        return { evidenceId, excerpt: text };
-      });
+        evidenceQuotes.push({ evidenceId, excerpt: text });
+      }
       return { ...assessment, verdict: verdictForScore(assessment.score), claimId: claim.id, supportingEvidenceIds, contradictingEvidenceIds, evidenceQuotes };
     });
     return parseAssessment({ ...report, verdict: verdictForScore(report.score), claims: assessments }, articleUrl, claims, evidence);

@@ -51,7 +51,7 @@ test('keeps both sides of a passage when a claim has an accurate premise and a f
 test('rejects an unknown passage and a two-sided citation for a True or False verdict', async () => {
   await assert.rejects(assessSingleClaim({ ...options, request: mockResponse({
     score: 5, bothRelationships: true, passageNumber: 999,
-  }) }), { code: 'evidence_reference' });
+  }) }), { code: 'evidence_passage' });
   await assert.rejects(assessSingleClaim({ ...options, request: mockResponse({ bothRelationships: true }) }), { code: 'evidence_relationship' });
   await assert.rejects(assessSingleClaim({ ...options, request: mockResponse({ score: 1, bothRelationships: true }) }), { code: 'evidence_relationship' });
 });
