@@ -1,11 +1,22 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { submitFactCheck, type SubmissionStore } from './2026-11-12-submission';
+import { submitFactCheck, submitTextFactCheck, type SubmissionStore } from './2026-11-12-submission';
 import type { DurableStartAdapter } from './2026-11-12-start-job';
 import type { resolvePublicUrl } from './2026-11-09-safe-url';
 
 const resolve: typeof resolvePublicUrl = async (input) => ({ url: new URL(input), addresses: [{ address: '8.8.8.8', family: 4 }] });
 const ids = { articleId: 'article-1', reportId: 'report-1', jobId: 'job-1' };
+
+test('queues pasted text without treating it as an article URL', async () => {
+  const store: SubmissionStore = { reserve: async (identity, mode, input) => {
+    assert.match(identity, /^https:\/\/fact-check\.invalid\/submission\//);
+    assert.equal(mode, 'check');
+    assert.deepEqual(input, { type: 'text', text: 'A synthetic factual claim.' });
+    return { kind: 'created', ...ids };
+  }, recordRun: async () => {} };
+  const starter: DurableStartAdapter = { start: async () => ({ runId: 'run-1' }), classify: () => null };
+  assert.deepEqual(await submitTextFactCheck({ text: ' A synthetic factual claim. ', type: 'text', store, starter }), { status: 'started', ...ids });
+});
 
 test('reuses an existing report without starting paid research', async () => {
   let starts = 0;

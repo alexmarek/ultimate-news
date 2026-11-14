@@ -143,6 +143,8 @@ model FactCheckUser {
 model FactCheckArticle {
   id                String            @id @default(cuid())
   canonicalUrl      String            @unique
+  inputType         String            @default("url")
+  inputText         String?
   publishedReportId String?           @unique
   activeJobId       String?           @unique
   createdAt         DateTime          @default(now())

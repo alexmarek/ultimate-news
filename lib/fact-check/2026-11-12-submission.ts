@@ -2,6 +2,7 @@ import { canonicalizeUrl } from '@/lib/ingest/canonicalize';
 import { resolvePublicUrl } from './2026-11-09-safe-url';
 import { startFactCheckJob, type DurableStartAdapter } from './2026-11-12-start-job';
 import { FactCheckFailure } from './2026-11-13-failure';
+import { randomUUID } from 'node:crypto';
 
 export type SubmissionReservation =
   | { kind: 'existing'; articleId: string; reportId: string }
@@ -10,7 +11,7 @@ export type SubmissionReservation =
 
 /** Implement reserve atomically under the canonical article's database lock. */
 export interface SubmissionStore {
-  reserve(canonicalUrl: string, mode: 'check' | 'refresh'): Promise<SubmissionReservation>;
+  reserve(canonicalUrl: string, mode: 'check' | 'refresh', input?: { type: 'text' | 'image'; text: string }): Promise<SubmissionReservation>;
   recordRun(jobId: string, runId: string): Promise<void>;
 }
 
@@ -42,6 +43,25 @@ export async function submitFactCheck({ url, mode, store, starter, resolve = res
 
   // Never clear the job lock after an uncertain start: a run may already exist.
   // Reconciliation can retry with the same atomic workflow-admission token.
+  try {
+    const started = await startFactCheckJob(reservation.jobId, starter);
+    if (started.status === 'outcome_unknown') return { status: 'start_pending', articleId: reservation.articleId, reportId: reservation.reportId, jobId: reservation.jobId };
+    await store.recordRun(reservation.jobId, started.runId);
+    return { status: started.status === 'started' ? 'started' : 'active', articleId: reservation.articleId, reportId: reservation.reportId, jobId: reservation.jobId };
+  } catch {
+    return { status: 'start_pending', articleId: reservation.articleId, reportId: reservation.reportId, jobId: reservation.jobId };
+  }
+}
+
+export async function submitTextFactCheck({ text, type, store, starter }: {
+  text: string; type: 'text' | 'image'; store: SubmissionStore; starter: DurableStartAdapter;
+}): Promise<SubmissionResult> {
+  const content = text.trim();
+  if (!content || content.length > 19000) throw new FactCheckFailure('invalid');
+  const identity = `https://fact-check.invalid/submission/${randomUUID()}`;
+  const reservation = await store.reserve(identity, 'check', { type, text: content });
+  if (reservation.kind === 'existing') return { status: 'existing', articleId: reservation.articleId, reportId: reservation.reportId };
+  if (reservation.kind === 'active' && !reservation.needsDispatch) return { status: 'active', articleId: reservation.articleId, reportId: reservation.reportId, jobId: reservation.jobId };
   try {
     const started = await startFactCheckJob(reservation.jobId, starter);
     if (started.status === 'outcome_unknown') return { status: 'start_pending', articleId: reservation.articleId, reportId: reservation.reportId, jobId: reservation.jobId };

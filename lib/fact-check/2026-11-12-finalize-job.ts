@@ -37,7 +37,7 @@ export function createJobFinalizer(db: SqlDatabase) {
           SELECT "status", "reportId" FROM "FactCheckJob" WHERE "id" = ${jobId} FOR UPDATE`;
         const job = jobs[0];
         if (!job || jobs.length !== 1) throw new Error('Invalid job');
-        if (job.status === 'ready-for-review') return;
+        if (job.status === 'published' || job.status === 'ready-for-review') return;
         if (job.status !== 'evaluating' || articleRows[0].activeJobId !== jobId) throw new Error('Job is not ready');
         const reports = await tx.$queryRaw<Report[]>`SELECT r."id", r."status", a."canonicalUrl", r."title", r."verdict", r."score", r."confidence", r."executiveSummary", r."verifiedAt"
           FROM "FactCheckReport" r JOIN "FactCheckArticle" a ON a."id" = r."articleId" WHERE r."id" = ${job.reportId} FOR UPDATE OF r`;
@@ -48,9 +48,11 @@ export function createJobFinalizer(db: SqlDatabase) {
           WHERE c."reportId" = ${job.reportId}`;
         const evidence = await tx.$queryRaw<Evidence[]>`SELECT "id", "claimId", "url", "excerpt" FROM "FactCheckEvidence" WHERE "reportId" = ${job.reportId}`;
         assertReadyForReview(report, claims, evidence);
-        await tx.$executeRaw`UPDATE "FactCheckReport" SET "status" = 'ready-for-review', "updatedAt" = NOW() WHERE "id" = ${job.reportId}`;
-        await tx.$executeRaw`UPDATE "FactCheckJob" SET "status" = 'ready-for-review', "updatedAt" = NOW() WHERE "id" = ${jobId}`;
-        const released = await tx.$executeRaw`UPDATE "FactCheckArticle" SET "activeJobId" = NULL, "updatedAt" = NOW() WHERE "id" = ${articleRows[0].id} AND "activeJobId" = ${jobId}`;
+        await tx.$executeRaw`UPDATE "FactCheckReport" SET "status" = 'superseded', "updatedAt" = NOW()
+          WHERE "id" = (SELECT "publishedReportId" FROM "FactCheckArticle" WHERE "id" = ${articleRows[0].id}) AND "id" <> ${job.reportId}`;
+        await tx.$executeRaw`UPDATE "FactCheckReport" SET "status" = 'published', "publishedAt" = NOW(), "updatedAt" = NOW() WHERE "id" = ${job.reportId}`;
+        await tx.$executeRaw`UPDATE "FactCheckJob" SET "status" = 'published', "updatedAt" = NOW() WHERE "id" = ${jobId}`;
+        const released = await tx.$executeRaw`UPDATE "FactCheckArticle" SET "publishedReportId" = ${job.reportId}, "activeJobId" = NULL, "updatedAt" = NOW() WHERE "id" = ${articleRows[0].id} AND "activeJobId" = ${jobId}`;
         if (released !== 1) throw new Error('Job lock changed');
       });
     },

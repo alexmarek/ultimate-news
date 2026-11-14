@@ -34,6 +34,9 @@ const jobMessages = {
 
 const submissionMessages = {
   invalid: 'Enter a complete public article URL starting with https:// or http://.',
+  invalid_text: 'Enter text to check, up to 19,000 characters.',
+  invalid_image: 'Choose a PNG, JPEG or WebP image up to 3 MB.',
+  image_text: 'Could not read text from the image. Try a clearer image with visible text.',
   unreachable: 'Could not reach the article’s website. Check that the link opens in your browser, then try again.',
   busy: 'Another fact check is running. Open its report below to see its status, then try this link again when it finishes.',
   stalled: 'An earlier attempt to start this check needs manual recovery. Keep the queued report for troubleshooting.',

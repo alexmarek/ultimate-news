@@ -18,8 +18,8 @@ export default async function ReviewFactCheck({ params, searchParams }: { params
   if (process.env.FACT_CHECK_ENABLED !== 'true' || !await canAccess('manage-fact-checks')) notFound();
   const { id } = await params;
   const { submission } = await searchParams;
-  const reports = await prisma.$queryRaw<Array<{ title: string | null; canonicalUrl: string; status: string; jobStatus: string | null; errorCategory: string | null; score: number | null; verdict: string | null; confidence: string | null; executiveSummary: string | null }>>`
-    SELECT r."title", a."canonicalUrl", r."status", r."score", r."verdict", r."confidence", r."executiveSummary",
+  const reports = await prisma.$queryRaw<Array<{ title: string | null; canonicalUrl: string; inputType: string; status: string; jobStatus: string | null; errorCategory: string | null; score: number | null; verdict: string | null; confidence: string | null; executiveSummary: string | null }>>`
+    SELECT r."title", a."canonicalUrl", a."inputType", r."status", r."score", r."verdict", r."confidence", r."executiveSummary",
       job."status" AS "jobStatus", job."errorCategory"
     FROM "FactCheckReport" r JOIN "FactCheckArticle" a ON a."id" = r."articleId"
     LEFT JOIN LATERAL (
@@ -51,7 +51,7 @@ export default async function ReviewFactCheck({ params, searchParams }: { params
       <div className={`mt-3 ${assessed ? '' : 'rounded-lg border border-[var(--border-strong)] bg-[var(--surface-elevated)] p-4'}`}>
         <FactCheckStatus status={status} errorCategory={report.errorCategory} startPending={status === 'queued' && submission === 'pending'} showDetail />
         {isActiveJobState(status) && <FactCheckRefreshButton key={id} />}
-        {canRetry && <form action={requestFactCheck} className="mt-3">
+        {canRetry && report.inputType === 'url' && <form action={requestFactCheck} className="mt-3">
           <input type="hidden" name="url" value={report.canonicalUrl} />
           <input type="hidden" name="mode" value="refresh" />
           <FactCheckActionButton label="Retry check" pendingLabel="Starting recheck…" secondary />
@@ -60,7 +60,7 @@ export default async function ReviewFactCheck({ params, searchParams }: { params
       {assessed && <div className="mt-4"><FactCheckResult score={report.score} verdict={report.verdict} confidence={report.confidence} summary={report.executiveSummary} /></div>}
       {needsScoreReview && <div className="mt-4">
         <p className="text-body-sm text-[var(--text-muted)]">This report has scores that don’t fit the current rubric. Recheck the article to create a new report.</p>
-        {readFactCheckJobSettings() && <form action={requestFactCheck} className="mt-2">
+        {readFactCheckJobSettings() && report.inputType === 'url' && <form action={requestFactCheck} className="mt-2">
           <input type="hidden" name="url" value={report.canonicalUrl} />
           <input type="hidden" name="mode" value="refresh" />
           <FactCheckActionButton label="Recheck article" pendingLabel="Starting recheck…" secondary />

@@ -8,7 +8,7 @@ type Metadata = Omit<Article, 'content'>;
 type IdentificationLease =
   | { kind: 'complete'; claimIds: string[] }
   | { kind: 'busy' }
-  | { kind: 'acquired'; token: string; articleUrl: string };
+  | { kind: 'acquired'; token: string; articleUrl: string; inputType?: string; inputText?: string | null };
 
 /** The backing store must atomically lease, reserve and fence every write by token. */
 export interface IdentificationStore {
@@ -32,10 +32,15 @@ export async function identifyJob({ jobId, store, model, apiKey, maxClaims, extr
   if (lease.kind === 'busy') throw new Error('Identification is already being processed');
   try {
     if (!lease.token || !lease.articleUrl) throw new Error('Invalid identification lease');
-    const article = await extract(lease.articleUrl).catch((error: unknown) => {
+    if (lease.inputType && !['url', 'text', 'image'].includes(lease.inputType)) throw new Error('Invalid input type');
+    const article = lease.inputType && lease.inputType !== 'url' ? {
+      canonicalUrl: lease.articleUrl, title: lease.inputText?.slice(0, 140) || 'Submitted text', content: lease.inputText || '',
+      publisher: null, author: null, publishedAt: null, language: null,
+    } : await extract(lease.articleUrl).catch((error: unknown) => {
       if (error instanceof FactCheckFailure) throw error;
       throw new FactCheckFailure('article_access');
     });
+    if (!article.content.trim()) throw new FactCheckFailure('article_text');
     const claims = await identify({ article, model, apiKey, maxClaims, reserve: amount => store.reserve(jobId, lease.token, amount) });
     if (!claims.length || claims.length > maxClaims || claims.some(claim => !claim.id || !claim.statement.trim()) || new Set(claims.map(claim => claim.id)).size !== claims.length) throw new Error('Invalid claims');
     const { content: _content, ...metadata } = article;

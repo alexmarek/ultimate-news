@@ -8,9 +8,11 @@ import { validateAssessment, type ClaimVerdict } from '@/lib/fact-check/2026-11-
 import { factCheckWorkflow } from '@/lib/fact-check/2026-11-12-fact-check-workflow';
 import { readFactCheckJobSettings } from '@/lib/fact-check/2026-11-12-job-settings';
 import { createSubmissionStore } from '@/lib/fact-check/2026-11-12-submission-store';
-import { submitFactCheck } from '@/lib/fact-check/2026-11-12-submission';
+import { submitFactCheck, submitTextFactCheck } from '@/lib/fact-check/2026-11-12-submission';
+import { extractImageText } from '@/lib/fact-check/2026-11-14-image-text';
 import { loadWorkflowStartAdapter } from '@/lib/fact-check/2026-11-12-workflow-start-adapter';
 import { submissionFailureCode } from '@/lib/fact-check/2026-11-13-failure';
+import { FactCheckFailure } from '@/lib/fact-check/2026-11-13-failure';
 import { FACT_CHECK_METHODOLOGY_VERSION } from '@/lib/fact-check/2026-11-13-scoring-rubric';
 
 type ReviewReport = { id: string; articleId: string; status: string; canonicalUrl: string; score: number | null; verdict: ClaimVerdict | null; title: string | null; executiveSummary: string | null; verifiedAt: Date | null; confidence: string | null };
@@ -39,6 +41,34 @@ export async function requestFactCheck(form: FormData): Promise<void> {
     destination = `/admin/fact-check/${encodeURIComponent(result.reportId)}${pending}`;
   } catch (error) {
     destination = `/admin/fact-check?submission=${submissionFailureCode(error)}`;
+  }
+  redirect(destination);
+}
+
+export async function requestTextFactCheck(form: FormData): Promise<void> {
+  if (!await canAccess('manage-fact-checks')) throw new Error('Unauthorized');
+  const settings = readFactCheckJobSettings();
+  if (!settings) redirect('/admin/fact-check?submission=unavailable');
+  const type = form.get('inputType');
+  let destination: string;
+  try {
+    let text: string;
+    if (type === 'image') {
+      const image = form.get('image');
+      if (!(image instanceof File)) throw new Error('Invalid image');
+      text = await extractImageText(image, settings.apiKey);
+    } else if (type === 'text' && typeof form.get('text') === 'string') {
+      text = String(form.get('text'));
+    } else throw new Error('Invalid input');
+    const result = await submitTextFactCheck({ text, type: type as 'text' | 'image',
+      store: createSubmissionStore(prisma, { modelId: settings.model, methodologyVersion: FACT_CHECK_METHODOLOGY_VERSION }),
+      starter: await loadWorkflowStartAdapter(factCheckWorkflow) });
+    destination = `/admin/fact-check/${encodeURIComponent(result.reportId)}${result.status === 'start_pending' ? '?submission=pending' : ''}`;
+  } catch (error) {
+    const code = type === 'image' && error instanceof FactCheckFailure && error.code === 'invalid' ? 'invalid_image' :
+      type === 'image' && error instanceof FactCheckFailure && error.code === 'provider_output' ? 'image_text' :
+      type === 'text' && error instanceof FactCheckFailure && error.code === 'invalid' ? 'invalid_text' : submissionFailureCode(error);
+    destination = `/admin/fact-check?submission=${code}`;
   }
   redirect(destination);
 }

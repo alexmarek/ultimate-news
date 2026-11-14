@@ -6,7 +6,7 @@ import { prisma } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
-type Report = { id: string; title: string | null; publisher: string | null; author: string | null; canonicalUrl: string; articlePublishedAt: Date | null; score: number | null; verdict: string | null; confidence: string | null; executiveSummary: string | null; supportedFindings: unknown; unsupportedFindings: unknown; missingContext: unknown; accurateFormulation: string | null; verifiedAt: Date | null; methodologyVersion: string };
+type Report = { id: string; title: string | null; publisher: string | null; author: string | null; canonicalUrl: string; inputType: string; articlePublishedAt: Date | null; score: number | null; verdict: string | null; confidence: string | null; executiveSummary: string | null; supportedFindings: unknown; unsupportedFindings: unknown; missingContext: unknown; accurateFormulation: string | null; verifiedAt: Date | null; methodologyVersion: string };
 type Claim = { id: string; statement: string; score: number | null; verdict: string; confidence: string; explanation: string };
 type Evidence = { id: string; claimId: string; title: string; url: string; publisher: string | null; excerpt: string; relationship: string };
 
@@ -22,14 +22,14 @@ function Findings({ title, value }: { title: string; value: unknown }) {
 export default async function FactCheckReportPage({ params }: { params: Promise<{ id: string }> }) {
   if (process.env.FACT_CHECK_ENABLED !== 'true') notFound();
   const { id } = await params;
-  const reports = await prisma.$queryRaw<Report[]>`SELECT r."id", r."title", r."publisher", r."author", a."canonicalUrl", r."articlePublishedAt", r."score", r."verdict", r."confidence", r."executiveSummary", r."supportedFindings", r."unsupportedFindings", r."missingContext", r."accurateFormulation", r."verifiedAt", r."methodologyVersion"
+  const reports = await prisma.$queryRaw<Report[]>`SELECT r."id", r."title", r."publisher", r."author", a."canonicalUrl", a."inputType", r."articlePublishedAt", r."score", r."verdict", r."confidence", r."executiveSummary", r."supportedFindings", r."unsupportedFindings", r."missingContext", r."accurateFormulation", r."verifiedAt", r."methodologyVersion"
     FROM "FactCheckArticle" a JOIN "FactCheckReport" r ON a."publishedReportId" = r."id"
     WHERE a."id" = ${id} AND r."articleId" = a."id" AND r."status" = 'published' LIMIT 1`;
   const report = reports[0];
   if (!report) notFound();
   const claims = await prisma.$queryRaw<Claim[]>`SELECT "id", "statement", "score", "verdict", "confidence", "explanation" FROM "FactCheckClaim" WHERE "reportId" = ${report.id} ORDER BY "id"`;
   const evidence = await prisma.$queryRaw<Evidence[]>`SELECT "id", "claimId", "title", "url", "publisher", "excerpt", "relationship" FROM "FactCheckEvidence" WHERE "reportId" = ${report.id} ORDER BY "id"`;
-  const originalUrl = safeReportLink(report.canonicalUrl);
+  const originalUrl = report.inputType === 'url' ? safeReportLink(report.canonicalUrl) : null;
   const articleDetails = [report.publisher, report.author, report.articlePublishedAt?.toISOString().slice(0, 10)].filter(Boolean).join(' · ');
   const hasFindings = report.accurateFormulation || [report.supportedFindings, report.unsupportedFindings, report.missingContext]
     .some((value) => Array.isArray(value) && value.some((item) => typeof item === 'string'));
@@ -57,7 +57,7 @@ export default async function FactCheckReportPage({ params }: { params: Promise<
           <p className="mt-2">{report.accurateFormulation}</p>
         </section>}
       </details>}
-      <p className="mt-8 border-t border-[var(--border)] pt-4 text-body-sm text-[var(--text-muted)]">AI-generated analysis reviewed by an administrator. Claims are assessed against independently retrieved evidence. {report.verifiedAt ? `Verified ${report.verifiedAt.toISOString().slice(0, 10)}. ` : ''}Methodology {report.methodologyVersion}.</p>
+      <p className="mt-8 border-t border-[var(--border)] pt-4 text-body-sm text-[var(--text-muted)]">AI-generated analysis. Claims are assessed against independently retrieved evidence. {report.verifiedAt ? `Checked ${report.verifiedAt.toISOString().slice(0, 10)}. ` : ''}Methodology {report.methodologyVersion}.</p>
     </main>
   </>;
 }

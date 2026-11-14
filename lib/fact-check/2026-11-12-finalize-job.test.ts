@@ -55,3 +55,24 @@ test('persists the failure reason before releasing the article for a retry', asy
   assert.deepEqual(updates[1].values, ['provider_credits', 'job-1']);
   assert.match(updates[2].sql, /"activeJobId" = NULL/);
 });
+
+test('publishes a validated result and replaces the previous published version atomically', async () => {
+  const updates: string[] = [];
+  const tx = {
+    $queryRaw: async <T>(query: TemplateStringsArray): Promise<T> => {
+      const sql = query.join('');
+      if (sql.includes('FOR UPDATE OF a')) return [{ id: 'article-1', activeJobId: 'job-1' }] as T;
+      if (sql.includes('SELECT "status", "reportId"')) return [{ status: 'evaluating', reportId: 'report-1' }] as T;
+      if (sql.includes('FROM "FactCheckReport"')) return [report] as T;
+      if (sql.includes('FROM "FactCheckClaim"')) return claims as T;
+      if (sql.includes('FROM "FactCheckEvidence"')) return evidence as T;
+      throw new Error('unexpected query');
+    },
+    $executeRaw: async (query: TemplateStringsArray) => { updates.push(query.join('?')); return 1; },
+  };
+  await createJobFinalizer({ $transaction: async run => run(tx) }).finish('job-1');
+  assert.match(updates[0], /superseded/);
+  assert.match(updates[1], /published/);
+  assert.match(updates[2], /published/);
+  assert.match(updates[3], /"publishedReportId" = \?/);
+});

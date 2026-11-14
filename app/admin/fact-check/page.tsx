@@ -8,7 +8,7 @@ import { prisma } from '@/lib/db';
 import { auth, canAccess, signIn, signOut } from '@/lib/fact-check/2026-11-09-auth';
 import { readFactCheckJobSettings } from '@/lib/fact-check/2026-11-12-job-settings';
 import { submissionFailureMessage } from '@/lib/fact-check/2026-11-13-failure';
-import { requestFactCheck } from './actions';
+import { requestFactCheck, requestTextFactCheck } from './actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -49,6 +49,21 @@ export default async function AdminFactCheckPage({ searchParams }: { searchParam
             <FactCheckActionButton mode="refresh" label="Recheck article" pendingLabel="Starting recheck…" secondary />
           </div>
         </form>}
+        {canSubmit && <div className="mt-6 space-y-5">
+          <form action={requestTextFactCheck} className="space-y-3">
+            <input type="hidden" name="inputType" value="text" />
+            <label htmlFor="fact-check-text" className="block font-semibold">Text or claim</label>
+            <textarea id="fact-check-text" name="text" required maxLength={19000} rows={4} className="w-full rounded-lg border border-[var(--border-strong)] bg-[var(--bg)] px-3 py-2" />
+            <FactCheckActionButton label="Check text" pendingLabel="Starting check…" />
+          </form>
+          <form action={requestTextFactCheck} className="space-y-3">
+            <input type="hidden" name="inputType" value="image" />
+            <label htmlFor="fact-check-image" className="block font-semibold">Meme or image</label>
+            <input id="fact-check-image" name="image" type="file" accept="image/png,image/jpeg,image/webp" required className="block w-full text-body-sm" />
+            <p className="text-body-sm text-[var(--text-muted)]">PNG, JPEG or WebP, up to 3 MB. Text is extracted automatically.</p>
+            <FactCheckActionButton label="Check image" pendingLabel="Reading image and starting check…" />
+          </form>
+        </div>}
         <ul className="mt-6 divide-y divide-[var(--border)]">
           {reports.map((report) => <li key={report.id} className="py-4">
             <Link href={`/admin/fact-check/${encodeURIComponent(report.id)}`} className="font-serif text-lg font-semibold underline">{report.title ?? 'Untitled report'}</Link>

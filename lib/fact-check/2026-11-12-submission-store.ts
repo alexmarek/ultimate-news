@@ -13,14 +13,14 @@ export function createSubmissionStore(db: SqlDatabase, options: { modelId: strin
   const maxConcurrentJobs = options.maxConcurrentJobs ?? 1;
   if (!options.modelId.trim() || !options.methodologyVersion.trim() || !Number.isSafeInteger(maxConcurrentJobs) || maxConcurrentJobs < 1 || maxConcurrentJobs > 10) throw new Error('Invalid fact-check configuration');
   return {
-    async reserve(canonicalUrl, mode) {
+    async reserve(canonicalUrl, mode, input) {
       if (!canonicalUrl || (mode !== 'check' && mode !== 'refresh')) throw new Error('Invalid submission');
       return db.$transaction(async tx => {
         // Serialize admissions so the global limit also holds for different URLs.
         await tx.$queryRaw`SELECT 1 AS locked FROM pg_advisory_xact_lock(1690374772, 1178686251)`;
         const newArticleId = randomUUID();
-        await tx.$executeRaw`INSERT INTO "FactCheckArticle" ("id", "canonicalUrl", "updatedAt")
-          VALUES (${newArticleId}, ${canonicalUrl}, NOW()) ON CONFLICT ("canonicalUrl") DO NOTHING`;
+        await tx.$executeRaw`INSERT INTO "FactCheckArticle" ("id", "canonicalUrl", "inputType", "inputText", "updatedAt")
+          VALUES (${newArticleId}, ${canonicalUrl}, ${input?.type ?? 'url'}, ${input?.text ?? null}, NOW()) ON CONFLICT ("canonicalUrl") DO NOTHING`;
         const articles = await tx.$queryRaw<Array<{ id: string; activeJobId: string | null; publishedReportId: string | null }>>`
           SELECT "id", "activeJobId", "publishedReportId" FROM "FactCheckArticle" WHERE "canonicalUrl" = ${canonicalUrl} FOR UPDATE`;
         const article = articles[0];

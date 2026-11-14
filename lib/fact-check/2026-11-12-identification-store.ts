@@ -25,9 +25,9 @@ export function createIdentificationStore(db: SqlDatabase, limits: { costUsd: nu
           JOIN "FactCheckArticle" a ON a."id" = r."articleId"
           WHERE j."id" = ${jobId} AND a."activeJobId" = j."id" AND j."status" IN ('queued', 'extracting', 'identifying-claims')
           ON CONFLICT ("jobId") DO NOTHING`;
-        const rows = await tx.$queryRaw<Array<Checkpoint & { articleUrl: string; reportId: string; jobStatus: string; activeJobId: string | null }>>`
+        const rows = await tx.$queryRaw<Array<Checkpoint & { articleUrl: string; inputType: string; inputText: string | null; reportId: string; jobStatus: string; activeJobId: string | null }>>`
           SELECT cp."state", cp."leaseToken", cp."leaseExpiresAt", cp."attempts", a."canonicalUrl" AS "articleUrl",
-            j."reportId", j."status" AS "jobStatus", a."activeJobId"
+            a."inputType", a."inputText", j."reportId", j."status" AS "jobStatus", a."activeJobId"
           FROM "FactCheckIdentificationCheckpoint" cp JOIN "FactCheckJob" j ON j."id" = cp."jobId"
           JOIN "FactCheckReport" r ON r."id" = j."reportId" JOIN "FactCheckArticle" a ON a."id" = r."articleId"
           WHERE cp."jobId" = ${jobId} FOR UPDATE OF cp, j`;
@@ -48,7 +48,7 @@ export function createIdentificationStore(db: SqlDatabase, limits: { costUsd: nu
         await tx.$executeRaw`UPDATE "FactCheckIdentificationCheckpoint" SET "state" = 'leased', "leaseToken" = ${decision.token},
           "leaseExpiresAt" = ${new Date(decision.expiresAtMs)}, "attempts" = ${decision.attempts}, "updatedAt" = NOW() WHERE "jobId" = ${jobId}`;
         await tx.$executeRaw`UPDATE "FactCheckJob" SET "status" = 'identifying-claims', "updatedAt" = NOW() WHERE "id" = ${jobId}`;
-        return { kind: 'acquired', token: decision.token, articleUrl: row.articleUrl };
+        return { kind: 'acquired', token: decision.token, articleUrl: row.articleUrl, inputType: row.inputType, inputText: row.inputText };
       });
     },
     async reserve(jobId, token, maximumCostUsd) {

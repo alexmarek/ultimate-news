@@ -42,3 +42,13 @@ test('does not begin extraction when another worker holds the lease', async () =
   const noExtract: typeof extractArticle = async () => { throw new Error('unexpected'); };
   await assert.rejects(identifyJob({ ...options, store, extract: noExtract }), /already being processed/);
 });
+
+test('identifies a pasted claim without fetching an article URL', async () => {
+  const store: IdentificationStore = {
+    acquire: async () => ({ kind: 'acquired', token: 'lease', articleUrl: 'https://fact-check.invalid/submission/example', inputType: 'text', inputText: 'A synthetic claim to check.' }),
+    reserve: async () => {}, complete: async () => {}, release: async () => {},
+  };
+  const noExtract: typeof extractArticle = async () => { throw new Error('unexpected network fetch'); };
+  const identify: typeof identifyClaims = async ({ article: input }) => { assert.equal(input.content, 'A synthetic claim to check.'); return claims; };
+  assert.deepEqual(await identifyJob({ ...options, store, extract: noExtract, identify }), { claimIds: [claims[0].id] });
+});
