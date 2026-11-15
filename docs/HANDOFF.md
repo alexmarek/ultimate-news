@@ -100,3 +100,7 @@ The effects of the reclassification, re-embedding, source-sync, manual-ingest an
 ## Fact-check release preparation — 2026-11-15
 
 The fact-check preview was merged with main at `f0cc682` in release commit `0397cea` and pushed to `codex/fact-check-preview`. The combined branch passed 236 tests, typecheck and a direct Next.js production build with dummy database URLs. A read-only schema inventory of Neon main (`neondb`) returned no FactCheck tables or Prisma migration table. The proposed additive transaction is `docs/2026-11-15-fact-check-release-schema.sql`; it has not been run on production. Confirm the production target, schema and Google OAuth callback before release. The build script generates Prisma and builds Next.js without pushing the schema. The redesigned news pages do not yet link to published fact-check reports; UI integration remains follow-up work.
+
+## Fact-check styling — 2026-11-15
+
+The score pill uses the accent colour with a contrasting paper-coloured foreground and centred content. The image upload now has a bordered file field with a visible chooser button and accessible format guidance. The light theme was inspected in a local synthetic preview; dark-theme colours use the existing inverted tokens but were not visually verified. `scripts/check.sh` passed with dummy database URLs (236 tests and typecheck; lint skipped because no ESLint config exists). Release of this styling change is pending production approval.
