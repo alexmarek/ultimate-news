@@ -108,3 +108,7 @@ The score pill uses the accent colour with a contrasting paper-coloured foregrou
 ## Native image chooser — 2026-11-15
 
 Restored the browser-native appearance of the image file chooser button so it is visually distinct from the submit button. The upload field and accessible help text are unchanged. `scripts/check.sh` passed with dummy database URLs (236 tests and typecheck; lint skipped with no ESLint configuration). Browser appearance has not been visually verified. Production release remains pending approval.
+
+## Fact-check header link — 2026-11-15
+
+Added a feature-flagged Fact checker link to the desktop header and mobile Menu, pointing directly to `/admin/fact-check`. Project checks passed with dummy database URLs (236 tests and typecheck; lint skipped because no ESLint config exists). The deployed layout has not been visually verified. Production release is pending approval.

@@ -1,14 +1,15 @@
 'use client';
 
 import { useRef, type RefObject } from 'react';
+import Link from 'next/link';
 import { X } from 'lucide-react';
 import { useModalFocus } from '@/components/useModalFocus';
 import HideReadToggle from '@/components/HideReadToggle';
 import ThemeToggle from '@/components/ThemeToggle';
 
-export default function CategorySheet({ open, categories, selected, onSelect, onClose, returnFocusTo, showHideRead }: {
+export default function CategorySheet({ open, categories, selected, onSelect, onClose, returnFocusTo, showHideRead, factCheckEnabled }: {
   open: boolean; categories: string[]; selected: string | null; onSelect: (category: string | null) => void;
-  onClose: () => void; returnFocusTo?: RefObject<HTMLElement | null>; showHideRead: boolean;
+  onClose: () => void; returnFocusTo?: RefObject<HTMLElement | null>; showHideRead: boolean; factCheckEnabled: boolean;
 }) {
   const sheetRef = useRef<HTMLDivElement>(null);
   useModalFocus(open, sheetRef, onClose, returnFocusTo);
@@ -20,6 +21,7 @@ export default function CategorySheet({ open, categories, selected, onSelect, on
       <div className="flex items-center justify-between"><h2 id="menu-title" className="font-serif text-brief font-semibold">Menu</h2><button type="button" onClick={onClose} aria-label="Close menu" className="flex h-11 w-11 items-center justify-center"><X aria-hidden="true" className="h-5 w-5" /></button></div>
       <button type="button" className={row} aria-pressed={!selected || selected === 'all'} onClick={() => onSelect(null)}>Front page</button>
       {categories.map((category) => <button key={category} type="button" className={row} aria-pressed={selected === category} onClick={() => onSelect(category)}>{category}{selected === category && <span>Selected</span>}</button>)}
+      {factCheckEnabled && <Link href="/admin/fact-check" className={row} onClick={onClose}>Fact checker</Link>}
       <div className={`${row} gap-4`}><span>Hide read</span>{showHideRead && <HideReadToggle />}</div>
       <div className={`${row} gap-4`}><span>Dark mode</span><ThemeToggle /></div>
     </div>

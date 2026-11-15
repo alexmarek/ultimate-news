@@ -6,8 +6,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Search, X } from 'lucide-react';
 import CategorySheet from '@/components/CategorySheet';
 
-export default function MobileHeader({ homeHref, showHideRead, categories, date, updated, stale }: {
-  homeHref: string; showHideRead: boolean; categories?: string[]; date: string; updated?: string | null; stale?: boolean;
+export default function MobileHeader({ homeHref, showHideRead, categories, date, updated, stale, factCheckEnabled }: {
+  homeHref: string; showHideRead: boolean; categories?: string[]; date: string; updated?: string | null; stale?: boolean; factCheckEnabled: boolean;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -40,6 +40,6 @@ export default function MobileHeader({ homeHref, showHideRead, categories, date,
       </div>
     </div>}
     {showHideRead && <div className="flex min-h-10 items-center gap-1 border-b border-[var(--rule)] px-4 text-meta"><strong>{date}</strong>{updated && <span className={stale ? 'font-semibold text-[var(--verdict-false)]' : 'text-[var(--meta)]'}> · Updated {updated}</span>}</div>}
-    <CategorySheet open={menuOpen} categories={categories ?? []} selected={selected} onSelect={selectCategory} onClose={closeMenu} returnFocusTo={menuRef} showHideRead={showHideRead} />
+    <CategorySheet open={menuOpen} categories={categories ?? []} selected={selected} onSelect={selectCategory} onClose={closeMenu} returnFocusTo={menuRef} showHideRead={showHideRead} factCheckEnabled={factCheckEnabled} />
   </>;
 }
