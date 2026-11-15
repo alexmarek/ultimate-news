@@ -128,3 +128,153 @@ model ConsideredArticle {
 
   @@index([url])
 }
+
+// Fact checks are independent of the feed, which is refreshed by ingestion.
+model FactCheckUser {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  googleSubject String?  @unique
+  role          String   @default("editor")
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model FactCheckArticle {
+  id                String            @id @default(cuid())
+  canonicalUrl      String            @unique
+  inputType         String            @default("url")
+  inputText         String?
+  publishedReportId String?           @unique
+  activeJobId       String?           @unique
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  reports           FactCheckReport[] @relation("FactCheckArticleReports")
+  publishedReport   FactCheckReport?  @relation("PublishedFactCheck", fields: [publishedReportId], references: [id], onDelete: SetNull)
+}
+
+model FactCheckReport {
+  id                  String            @id @default(cuid())
+  articleId           String
+  article             FactCheckArticle  @relation("FactCheckArticleReports", fields: [articleId], references: [id], onDelete: Cascade)
+  publishedFor        FactCheckArticle? @relation("PublishedFactCheck")
+  version             Int
+  status              String            @default("queued")
+  title               String?
+  publisher           String?
+  author              String?
+  articlePublishedAt  DateTime?
+  language            String?
+  score               Float?
+  verdict             String?
+  confidence          String?
+  executiveSummary    String?
+  supportedFindings   Json?
+  unsupportedFindings Json?
+  missingContext      Json?
+  accurateFormulation String?
+  verifiedAt          DateTime?
+  publishedAt         DateTime?
+  modelId             String
+  methodologyVersion  String
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+  claims              FactCheckClaim[]
+  evidence            FactCheckEvidence[]
+  jobs                FactCheckJob[]
+
+  @@unique([articleId, version])
+  @@index([status, verifiedAt])
+}
+
+model FactCheckClaim {
+  id          String              @id @default(cuid())
+  reportId    String
+  report      FactCheckReport     @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  statement   String
+  importance  String
+  central     Boolean
+  score       Float?
+  verdict     String
+  confidence  String
+  explanation String
+  evidence    FactCheckEvidence[]
+  checkpoints FactCheckClaimCheckpoint[]
+
+  @@index([reportId])
+}
+
+model FactCheckEvidence {
+  id          String          @id @default(cuid())
+  reportId    String
+  report      FactCheckReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  claimId     String
+  claim       FactCheckClaim  @relation(fields: [claimId], references: [id], onDelete: Cascade)
+  title       String
+  publisher   String?
+  url         String
+  publishedAt DateTime?
+  retrievedAt DateTime
+  sourceType  String
+  provenance  String?
+  excerpt     String
+  relationship String
+
+  @@index([reportId, claimId])
+}
+
+model FactCheckJob {
+  id             String          @id @default(cuid())
+  reportId       String
+  report         FactCheckReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  workflowId     String?         @unique
+  status         String          @default("queued")
+  errorCategory  String?
+  attempts       Int             @default(0)
+  searchCount    Int             @default(0)
+  estimatedCost  Float           @default(0)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  checkpoints    FactCheckClaimCheckpoint[]
+  identificationCheckpoint FactCheckIdentificationCheckpoint?
+  evaluationCheckpoint FactCheckEvaluationCheckpoint?
+
+  @@index([reportId, status])
+}
+
+model FactCheckEvaluationCheckpoint {
+  jobId          String   @id
+  job            FactCheckJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  state          String   @default("pending")
+  leaseToken     String?
+  leaseExpiresAt DateTime?
+  attempts       Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model FactCheckIdentificationCheckpoint {
+  jobId          String   @id
+  job            FactCheckJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  state          String   @default("pending")
+  leaseToken     String?
+  leaseExpiresAt DateTime?
+  attempts       Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model FactCheckClaimCheckpoint {
+  jobId          String
+  job            FactCheckJob   @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  claimId        String
+  claim          FactCheckClaim @relation(fields: [claimId], references: [id], onDelete: Cascade)
+  state          String         @default("pending")
+  leaseToken     String?
+  leaseExpiresAt DateTime?
+  attempts       Int            @default(0)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@id([jobId, claimId])
+}

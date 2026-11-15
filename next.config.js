@@ -1,10 +1,11 @@
 const isProduction = process.env.NODE_ENV === 'production';
+const { withWorkflow } = require('workflow/next');
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   distDir: process.env.NEXT_DIST_DIR || '.next',
   output: process.env.NEXT_OUTPUT_MODE,
-  experimental: {},
+  experimental: { serverActions: { bodySizeLimit: '4mb' } },
   poweredByHeader: false,
   eslint: {
     ignoreDuringBuilds: true,
@@ -53,4 +54,4 @@ const nextConfig = {
   },
 };
 
-module.exports = nextConfig;
+module.exports = withWorkflow(nextConfig);
