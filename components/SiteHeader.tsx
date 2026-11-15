@@ -16,8 +16,9 @@ export default function SiteHeader({ homeHref = '/', showHideRead = false, categ
     ['Science', 'Science'], ['Environment', 'Environment'], ['Good news', 'Positive News'], ['Travel', 'Travel'],
   ];
   const current = 'shadow-[inset_0_-3px_0_var(--accent)]';
+  const factCheckEnabled = process.env.FACT_CHECK_ENABLED === 'true';
   return <header className="bg-[var(--paper)] text-[var(--ink)]">
-    <div className="md:hidden"><Suspense fallback={<div className="h-[52px] px-4 font-serif text-[22px]">Ultimate News</div>}><MobileHeader homeHref={homeHref} showHideRead={showHideRead} categories={categories} date={shortDate} updated={updated} stale={stale} /></Suspense></div>
+    <div className="md:hidden"><Suspense fallback={<div className="h-[52px] px-4 font-serif text-[22px]">Ultimate News</div>}><MobileHeader homeHref={homeHref} showHideRead={showHideRead} categories={categories} date={shortDate} updated={updated} stale={stale} factCheckEnabled={factCheckEnabled} /></Suspense></div>
     <div className="mx-auto hidden max-w-[1248px] px-6 md:block">
       <div className="flex min-h-[88px] items-center justify-between gap-6 py-4">
         <div className="min-w-0 flex-1 text-meta"><p className="font-semibold">{date}</p>{updated && <p className={stale ? 'font-semibold text-[var(--verdict-false)]' : 'text-[var(--meta)]'}>Updated {updated}</p>}</div>
@@ -27,6 +28,7 @@ export default function SiteHeader({ homeHref = '/', showHideRead = false, categ
       <nav aria-label="Sections" className="flex min-h-11 flex-wrap items-center gap-x-6 border-t border-b-[3px] border-[var(--ink)] border-b-double text-meta font-semibold">
         <Link className={`flex min-h-11 items-center hover:text-[var(--accent)] ${!activeCategory || activeCategory === 'all' ? current : ''}`} href={homeHref} aria-current={!activeCategory || activeCategory === 'all' ? 'page' : undefined}>Front page</Link>
         {sections.map(([label, value]) => { const params = new URLSearchParams({ category: value }); if (homeHref.includes('hideRead=1')) params.set('hideRead', '1'); if (selectedDay) params.set('day', selectedDay); return <Link key={value} className={`flex min-h-11 items-center hover:text-[var(--accent)] ${activeCategory === value ? current : ''}`} href={`/?${params}`} aria-current={activeCategory === value ? 'page' : undefined}>{label}</Link>; })}
+        {factCheckEnabled && <Link className="flex min-h-11 items-center hover:text-[var(--accent)]" href="/admin/fact-check">Fact checker</Link>}
       </nav>
     </div>
   </header>;
