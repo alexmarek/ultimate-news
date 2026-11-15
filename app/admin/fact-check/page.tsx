@@ -59,8 +59,9 @@ export default async function AdminFactCheckPage({ searchParams }: { searchParam
           <form action={requestTextFactCheck} className="space-y-3">
             <input type="hidden" name="inputType" value="image" />
             <label htmlFor="fact-check-image" className="block font-semibold">Meme or image</label>
-            <input id="fact-check-image" name="image" type="file" accept="image/png,image/jpeg,image/webp" required className="block w-full text-body-sm" />
-            <p className="text-body-sm text-[var(--text-muted)]">PNG, JPEG or WebP, up to 3 MB. Text is extracted automatically.</p>
+            <input id="fact-check-image" name="image" type="file" accept="image/png,image/jpeg,image/webp" required aria-describedby="fact-check-image-help"
+              className="block w-full cursor-pointer rounded-lg border border-[var(--border-strong)] bg-[var(--bg)] p-2 text-body-sm text-[var(--text-muted)] file:mr-3 file:cursor-pointer file:rounded-md file:border-0 file:bg-[var(--accent)] file:px-4 file:py-2 file:font-semibold file:text-[var(--paper)] hover:file:opacity-90" />
+            <p id="fact-check-image-help" className="text-body-sm text-[var(--text-muted)]">PNG, JPEG or WebP, up to 3 MB. Text is extracted automatically.</p>
             <FactCheckActionButton label="Check image" pendingLabel="Reading image and starting check…" />
           </form>
         </div>}

@@ -38,7 +38,9 @@ function PaletteLabel({ colour, children, large = false }: { colour: string; chi
 function Score({ score, verdict, prominent = false }: { score: number | null; verdict: string | null; prominent?: boolean }) {
   if (score === null && verdict === 'unverified') return null;
   if (!scoreMatchesVerdict(score, verdict)) return <span className="text-body-sm text-[var(--text-muted)]">Score needs review</span>;
-  return <PaletteLabel colour="highlight" large={prominent}><span className="tabular-nums">{score}/{SCORE_MAX}</span></PaletteLabel>;
+  return <span className={`inline-flex items-center justify-center rounded-full bg-[var(--accent)] px-3 py-1 text-center font-semibold leading-none text-[var(--paper)] tabular-nums ${prominent ? 'font-serif text-headline-lg' : 'text-body-sm'}`}>
+    {score}/{SCORE_MAX}
+  </span>;
 }
 
 export function FactCheckVerdict({ verdict, score, prominent = false }: { verdict: string | null; score?: number | null; prominent?: boolean }) {
