@@ -96,3 +96,7 @@ Fact-check styling and published-report integration are deferred. The summary co
 Follow `AGENTS.md` for database and Git safeguards. The `npm run build` script in this revision invokes `prisma db push`; use a direct Next.js build with dummy database variables unless a database operation has been explicitly approved for a confirmed non-production database.
 
 The effects of the reclassification, re-embedding, source-sync, manual-ingest and clustering scripts have not been reviewed. Inspect and obtain the required approval before running them.
+
+## Fact-check release preparation — 2026-11-15
+
+The fact-check preview was merged with main at `f0cc682` in release commit `0397cea` and pushed to `codex/fact-check-preview`. The combined branch passed 236 tests, typecheck and a direct Next.js production build with dummy database URLs. A read-only schema inventory of Neon main (`neondb`) returned no FactCheck tables or Prisma migration table. The proposed additive transaction is `docs/2026-11-15-fact-check-release-schema.sql`; it has not been run on production. Confirm the production target, schema and Google OAuth callback before release. The build script generates Prisma and builds Next.js without pushing the schema. The redesigned news pages do not yet link to published fact-check reports; UI integration remains follow-up work.
