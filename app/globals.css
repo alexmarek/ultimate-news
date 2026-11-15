@@ -63,6 +63,11 @@
   --verdict-supported: #7cc79a; --verdict-mixed: #e0b15a; --verdict-false: #f0857a;
 }
 body { background: var(--bg); color: var(--body); }
+.fact-check-file-input::file-selector-button {
+  all: revert;
+  cursor: pointer;
+  margin-inline-end: 0.75rem;
+}
 :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 .kb-focused { outline: 2px solid var(--ink); outline-offset: 2px; border-radius: 0; }
 mark { background: transparent; color: inherit; box-shadow: inset 0 -0.4em 0 color-mix(in srgb, var(--accent) 22%, transparent); }
