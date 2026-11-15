@@ -104,3 +104,7 @@ The fact-check preview was merged with main at `f0cc682` in release commit `0397
 ## Fact-check styling — 2026-11-15
 
 The score pill uses the accent colour with a contrasting paper-coloured foreground and centred content. The image upload now has a bordered file field with a visible chooser button and accessible format guidance. The light theme was inspected in a local synthetic preview; dark-theme colours use the existing inverted tokens but were not visually verified. `scripts/check.sh` passed with dummy database URLs (236 tests and typecheck; lint skipped because no ESLint config exists). Release of this styling change is pending production approval.
+
+## Native image chooser — 2026-11-15
+
+Restored the browser-native appearance of the image file chooser button so it is visually distinct from the submit button. The upload field and accessible help text are unchanged. `scripts/check.sh` passed with dummy database URLs (236 tests and typecheck; lint skipped with no ESLint configuration). Browser appearance has not been visually verified. Production release remains pending approval.
