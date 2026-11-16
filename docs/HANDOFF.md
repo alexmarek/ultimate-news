@@ -35,6 +35,7 @@ Next.js and Prisma news aggregator, deployed on Vercel. The evidence-based fact 
 
 ## Decisions and constraints
 - 2026-11-14: Alex verified both pasted-text and original-image checks on the preview. The Neon development branch has the input-type columns, applied manually without Prisma migration history. Production still needs a reviewed schema rollout before enabling the feature. The newsroom redesign and fact-check branches have been combined in an isolated release worktree for verification.
+- 2026-11-14: After commit `b545d4e` reached the preview, a synthetic PNG containing “The Earth orbits the Sun.” was transcribed, researched and automatically published on the development database with two cited sources. This verifies the image workflow for that PNG and model at the time of the test; the cause of Alex’s earlier image failure remains unknown because the older release hid the provider error. The synthetic preview report remains present. Production remains unmigrated.
 - 2026-11-14: Alex confirmed pasted-text checking and automatic publishing work on preview, but an image submission returned the generic `submission=failed` error before creating a report. The OCR model supports image input per OpenRouter; the precise failure remains unverified. Image-submission errors now distinguish provider access, credits, rejected requests, rate limits, timeouts, truncated results, unreadable output and invalid files, while avoiding a potentially brittle cross-realm `instanceof File` check. Verify with a synthetic image on preview.
 - 2026-11-14: Alex requested pasted text and image text extraction with automatic publication of completed fact checks. Changes add text/image input types, automatic OCR via OpenRouter vision, and atomic automatic publication. The two additive columns in `20261114_add_fact_check_text_input` were applied via Neon SQL Editor and verified on the `development` branch (`neondb`); this manual application did not record Prisma migration history. Production has not been migrated. End-to-end OCR, text submission and automatic publication remain unverified.
 - 2026-11-14: A further preview run again reported duplicate-source evidence. The real restriction was one passage per source, even when the model selected several valid passages. The evaluator now groups distinct passages from a source into one excerpt separated by an ellipsis, combines their support/contradiction relationships, and validates each passage against fetched source text. The summarizer accepts the grouped excerpts. The fix needs a live preview check.
@@ -112,3 +113,25 @@ Restored the browser-native appearance of the image file chooser button so it is
 ## Fact-check header link — 2026-11-15
 
 Added a feature-flagged Fact checker link to the desktop header and mobile Menu, pointing directly to `/admin/fact-check`. Project checks passed with dummy database URLs (236 tests and typecheck; lint skipped because no ESLint config exists). The deployed layout has not been visually verified. Production release is pending approval.
+
+## Production release — 2026-11-15
+
+Alex approved release after checks passed. The additive transaction in `docs/2026-11-15-fact-check-release-schema.sql` was applied on Neon project `ultimate-news`, main branch, `neondb`; read-only verification found all nine FactCheck tables and both input columns. GitHub PR #6 merged as `28cb1916425e11e39211d43a4706c369a6a87f03`. Monitor the Vercel production deployment and verify production Google sign-in, feature flag, and one real check; these have not yet been confirmed. Published report links on redesigned news pages remain follow-up work.
+
+Production deployment completed successfully. The live admin page is enabled, but Google sign-in returns `redirect_uri_mismatch`: the OAuth client needs `https://ultimate-news.vercel.app/api/auth/callback/google` in its authorized redirect URIs. A production fact-check run remains unverified until sign-in is fixed.
+
+## Fact-check styling deployment — 2026-11-15
+
+PR #7 merged as `1d48252793dc30eda88d92e59a7c4cc834ca2b73` and the Vercel production deployment succeeded. The score pill has contrasting centred text and the image input has a visible chooser. Project checks passed (236 tests and typecheck); light-theme styling was inspected locally. Dark-theme appearance remains visually unverified.
+
+## Native image chooser deployment — 2026-11-15
+
+PR #8 merged as `e3f95bf2369073a51dbdd929d2cb8b2853d6d862`; Vercel reported the production deployment succeeded. The file button uses browser-native styling. Preview and project checks passed; the exact rendered appearance remains visually unverified.
+
+## Fact-check header deployment — 2026-11-15
+
+PR #9 merged as `f39a86c38f20ea55268d0b599e35e0bb67034392`, and Vercel reported production ready. The live desktop navigation shows the Fact checker link to `/admin/fact-check`; the mobile menu link was not visually verified. The preview build and project checks passed (236 tests and typecheck).
+
+## Local storage cleanup — 2026-11-15
+
+Removed rebuildable project-local Yarn/npm download caches and Next.js/SWC build outputs from the main checkout and both worktrees. Preserved installed `node_modules`, local databases, environment files and worktree source changes. The project directory decreased from approximately 5.6 GB to 965 MB; `npm ls --depth=0` succeeded. Next.js outputs will be recreated when needed.

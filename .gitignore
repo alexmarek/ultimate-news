@@ -44,3 +44,6 @@ dist/
 # Claude Code
 .claude/
 /.swc
+.worktrees/
+design-reference/
+.local-archive/
