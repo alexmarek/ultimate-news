@@ -4,10 +4,17 @@ import { checkSources, runIngest, seedSources } from '@/lib/ingest/pipeline';
 import { freshCutoff } from '@/lib/config/dailyFeed';
 import { refreshMarkets } from '@/lib/markets/snapshot';
 import { similarPairs } from '@/lib/dedup/cluster';
+import { isAuthorizedCron } from '@/lib/2026-11-22-cron-auth';
 
 // Called by Vercel Cron at 08:00 UTC (10:00 CEST) daily.
 
 export async function GET(req: NextRequest) {
+  // Every mode below writes data, spends API credits or exposes licensed market data,
+  // so all of them require the secret Vercel sends with scheduled runs.
+  if (!isAuthorizedCron(req.headers.get('authorization'), process.env.CRON_SECRET)) {
+    return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+  }
+
   // Debug: the most similar cross-source article pairs (calibrates story grouping). Read-only.
   if (req.nextUrl.searchParams.get('debug') === 'pairs') {
     return NextResponse.json({ threshold: 'see SIMILARITY_THRESHOLD in lib/dedup/cluster.ts', pairs: await similarPairs() });

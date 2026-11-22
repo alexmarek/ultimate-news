@@ -19,6 +19,8 @@ import { visibleArticleFilter } from '@/lib/config/dailyFeed';
 import { prisma } from '@/lib/db';
 import { dayLabelParts } from '@/lib/groupByDay';
 import { readMarkets } from '@/lib/markets/snapshot';
+import { visibleMarkets } from '@/lib/markets/2026-11-22-visibility';
+import { canAccess } from '@/lib/fact-check/2026-11-09-auth';
 
 export const dynamic = 'force-dynamic';
 type Story = Article & { source: Source; cluster: Cluster | null };
@@ -84,7 +86,9 @@ export default async function Home({ searchParams }: {
   const stale = latest ? now.getTime() - latest.fetchedAt.getTime() > 24 * 60 * 60 * 1000 : false;
   const searchStories = searchResult[0];
   const totalPages = Math.ceil(searchResult[1] / PER_PAGE);
-  const hasMarkets = Boolean(markets.etfs || markets.petrol);
+  // ETF quotes (EODHD, personal licence) only for signed-in fact-check users; petrol stays public.
+  const marketsShown = visibleMarkets(markets, Boolean(markets.etfs) && await canAccess('manage-fact-checks').catch(() => false));
+  const hasMarkets = Boolean(marketsShown.etfs || marketsShown.petrol);
   const displayLabel = edition.selected ? (() => { const { weekday, day, month } = dayLabelParts(edition.selected.date); return `${weekday} ${day} ${month}`; })() : '';
   const card = (story: Story, variant: 'lead' | 'row' | 'off-duty' = 'row') => <NewsCard key={story.id} article={story} cluster={story.cluster} isRead={readIds.has(story.id)} dataKbId={story.id} variant={variant} />;
   const offDutyBlock = offDuty.length > 0 && <aside aria-label="Off duty" className="border-t-[3px] border-[var(--ink)] pt-3"><h2 className="text-label font-bold uppercase tracking-[1.2px]">Off duty</h2>{offDuty.map((story) => card(story, 'off-duty'))}</aside>;
@@ -97,7 +101,7 @@ export default async function Home({ searchParams }: {
         {searchStories.length ? <KeyboardNavWrapper articleIds={searchStories.map((story) => story.id)}>{searchStories.map((story) => card(story))}</KeyboardNavWrapper> : <p className="py-8 text-[var(--meta)]">No stories found.</p>}
         {totalPages > 1 && <div className="mt-8"><Suspense><Pagination currentPage={page} totalPages={totalPages} query={query} category={category} /></Suspense></div>}
       </> : <>
-        {hasMarkets && showBrief && <div className="-mx-4 mb-6 md:hidden"><MarketPanel etfs={markets.etfs} petrol={markets.petrol} /></div>}
+        {hasMarkets && showBrief && <div className="-mx-4 mb-6 md:hidden"><MarketPanel etfs={marketsShown.etfs} petrol={marketsShown.petrol} /></div>}
         <AffectsYou total={affectsStories.length} hideRead={hideRead} stories={affectsStories.slice(0, 5).map((story) => ({ id: story.id, title: story.title, forYou: story.forYou, sourceName: story.source.name }))} />
         {edition.selected ? <KeyboardNavWrapper articleIds={[...archive, ...offDuty].map((story) => story.id)}>
           <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-10">
@@ -108,7 +112,7 @@ export default async function Home({ searchParams }: {
                 <div className="mt-2">{archive.length ? archive.map((story, index) => card(story, index === 0 ? 'lead' : 'row')) : <p className="py-4 text-ui text-[var(--meta)]">No other stories in this edition.</p>}</div>
               </section>
             </div>
-            <div className="space-y-8">{showBrief && hasMarkets && <div className="hidden md:block"><MarketPanel etfs={markets.etfs} petrol={markets.petrol} /></div>}{offDutyBlock}</div>
+            <div className="space-y-8">{showBrief && hasMarkets && <div className="hidden md:block"><MarketPanel etfs={marketsShown.etfs} petrol={marketsShown.petrol} /></div>}{offDutyBlock}</div>
           </div>
           <EditionNavigation newer={edition.newer} older={edition.older} category={category} hideRead={hideRead} />
         </KeyboardNavWrapper> : <p className="py-8 text-[var(--meta)]">No stories in the last six days.</p>}
