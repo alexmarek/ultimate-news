@@ -21,6 +21,7 @@ const libreFranklin = localFont({
 export const metadata: Metadata = {
   title: 'Ultimate News',
   description: 'Curated news from sources you care about',
+  robots: { index: false, follow: false, noarchive: true },
   icons: {
     icon: '/favicon.svg',
   },
