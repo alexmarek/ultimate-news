@@ -36,6 +36,12 @@ const nextConfig = {
         key: 'X-DNS-Prefetch-Control',
         value: 'off',
       },
+      {
+        // Keep every host (ultimate-news.vercel.app and any custom domain)
+        // out of search engines and web archives.
+        key: 'X-Robots-Tag',
+        value: 'noindex, nofollow, noarchive',
+      },
     ];
 
     if (isProduction) {
