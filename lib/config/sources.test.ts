@@ -88,6 +88,12 @@ test('category targets equal the sum of source limits (curated travel: its pick 
   }
 });
 
+test('Cybersecurity Dive skips sponsored vendor posts (/spons/ URLs) but keeps its news', () => {
+  const skip = SOURCES_BY_ID.cybersecuritydive.excludeUrl;
+  assert.ok(skip?.test('https://www.cybersecuritydive.com/spons/truth-or-consequences-what-your-ai-strategy-is-standing-on/873999/'));
+  assert.ok(!skip?.test('https://www.cybersecuritydive.com/news/refrigeration-france-cyber/832858/'));
+});
+
 test('toSourceRecord produces a DB row', () => {
   const row = toSourceRecord(SOURCES_BY_ID.theverge);
   assert.equal(row.feedUrl, 'https://www.theverge.com/rss/tech/index.xml');

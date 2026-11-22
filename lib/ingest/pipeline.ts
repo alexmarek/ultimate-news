@@ -32,7 +32,8 @@ import { mapPool } from '@/lib/ingest/pool';
 import { stripHtml } from '@/lib/text';
 import { enrichArticle, enrichFallback, isSnippet, type EnrichOptions } from '@/lib/ai/enrich';
 import { embedMany } from '@/lib/ai/embed';
-import { summaryPreview, summaryToPlainText } from '@/lib/summary';
+import { articleEmbedText } from '@/lib/ai/embed-text';
+import { summaryPreview } from '@/lib/summary';
 import { recomputeClusters } from '@/lib/dedup/cluster';
 
 /** Below this much text the feed only gave a snippet: fetch the article page for the full body. */
@@ -378,7 +379,7 @@ async function prepareArticle(c: Candidate, deadline: number, enrichOpts: Enrich
   const excerpt = translated ? summaryPreview(enrichment.summary, 240) : raw.excerpt;
 
   // Embedded later in one batch for all articles (see runIngest).
-  const embedText = [title, summaryToPlainText(enrichment.summary).split(/\s+/).slice(0, 80).join(' ')].filter(Boolean).join('. ');
+  const embedText = articleEmbedText(title, enrichment.summary);
 
   return {
     engine: enrichment.engine,

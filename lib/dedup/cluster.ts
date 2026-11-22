@@ -48,6 +48,25 @@ export async function similarPairs(limit = 20): Promise<Array<{ score: number; a
   return pairs.sort((x, y) => y.score - x.score).slice(0, limit);
 }
 
+/** What resetClusters needs from the database client (so a test can supply a fake). */
+export interface ClusterResetDb {
+  $transaction(operations: unknown[]): Promise<unknown>;
+  article: { updateMany(args: { where: { clusterId: { not: null } }; data: { clusterId: null } }): unknown };
+  cluster: { deleteMany(): unknown };
+}
+
+/**
+ * Unassigns every article from its cluster and deletes all cluster rows, in one transaction.
+ * Before, the old Cluster rows were never deleted, so every recompute outside the ingest
+ * (scripts/cluster-articles.ts) left orphans behind. The ingest itself already empties the table.
+ */
+export async function resetClusters(db: ClusterResetDb = prisma as unknown as ClusterResetDb): Promise<void> {
+  await db.$transaction([
+    db.article.updateMany({ where: { clusterId: { not: null } }, data: { clusterId: null } }),
+    db.cluster.deleteMany(),
+  ]);
+}
+
 export async function recomputeClusters(): Promise<{
   clustered: number;
   newClusters: number;
@@ -77,16 +96,8 @@ export async function recomputeClusters(): Promise<{
     return { clustered: 0, newClusters: 0, multiSourceClusters: 0, totalClusters: 0 };
   }
 
-  // Load all existing clusters with their member article IDs
-  const existingClusters = await prisma.cluster.findMany({
-    include: { articles: { select: { id: true, sourceId: true, embedding: true } } },
-  });
-
-  // Clear all existing cluster assignments (fresh recompute)
-  await prisma.article.updateMany({
-    where: { clusterId: { not: null } },
-    data: { clusterId: null },
-  });
+  // Fresh recompute: unassign every article and drop the old cluster rows.
+  await resetClusters();
 
   // Load source info
   const sources = await prisma.source.findMany({

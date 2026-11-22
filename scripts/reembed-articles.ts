@@ -12,6 +12,7 @@
 
 import { prisma } from '@/lib/db';
 import { embed } from '@/lib/ai/embed';
+import { articleEmbedText } from '@/lib/ai/embed-text';
 
 const DRY_RUN = !process.argv.includes('--apply');
 
@@ -36,9 +37,8 @@ async function main() {
       } catch {}
     }
 
-    const embeddingText = [article.title, article.excerpt, article.summary]
-      .filter(Boolean)
-      .join(' ');
+    // The same text the ingest embeds (the clustering threshold was calibrated on it).
+    const embeddingText = articleEmbedText(article.title, article.summary);
 
     if (DRY_RUN) {
       console.log(

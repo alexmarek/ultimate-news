@@ -43,7 +43,7 @@
   - `npm run build` generates the Prisma client and builds Next.js. Check the current build script for schema operations before running it.
   - `npm run db:push`, `npm run db:migrate`, `npm run seed` (`prisma/seed.ts` calls `deleteMany` on clusters and articles).
   - `scripts/wipe-articles.ts` deletes reads, saves, clusters and articles.
-  - `scripts/reclassify-articles.ts`, `reembed-articles.ts`, `embed-missing-articles.ts`, `sync-sources.ts`, `manual-ingest.ts`, `cluster-articles.ts`: effects NOT reviewed. TO CONFIRM before running.
+  - `scripts/reembed-articles.ts`, `embed-missing-articles.ts`, `manual-ingest.ts`, `cluster-articles.ts`: effects NOT reviewed. TO CONFIRM before running. (`reclassify-articles.ts` and `sync-sources.ts` were deleted on 2026-11-22 as obsolete; see `docs/HANDOFF.md`.)
   - `npm run ingest:local` calls the ingest API with `INGEST_CRON_SECRET`.
 - **Database:** `.env` and `.env.local` point at the **production** database (Neon, per the README; confirmed by Alex 2026-11-08). The README describes a local Docker Postgres for development; use that or another dev database once set up, then update this line. Prisma also reads `DATABASE_URL_UNPOOLED` (`directUrl`), so override both variables.
 - **Local database file:** `prisma/dev.db` exists locally and is gitignored (`*.db`).

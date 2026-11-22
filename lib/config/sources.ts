@@ -59,7 +59,8 @@ export const SOURCES: SourceDef[] = [
   { id: 'tagesschau-wirtschaft', name: 'tagesschau Wirtschaft', url: 'https://www.tagesschau.de/wirtschaft/', feeds: ['https://www.tagesschau.de/wirtschaft/index~rss2.xml'], excludeUrl: /\/multimedia\//i, excludeTitle: TAGESSCHAU_PROGRAMMES, lang: 'de', category: 'Business', limit: 2, contentKind: 'business', tier: 'tier-1', weight: 0.95 },
   { id: 'euronews-business', name: 'Euronews Business', url: 'https://www.euronews.com/business', feeds: ['https://www.euronews.com/rss?level=vertical&name=business'], category: 'Business', limit: 2, contentKind: 'business', tier: 'tier-1', weight: 0.85 },
   // Business of cybersecurity (deals, earnings, regulation) rather than vulnerability alerts.
-  { id: 'cybersecuritydive', name: 'Cybersecurity Dive', url: 'https://www.cybersecuritydive.com/', feeds: ['https://www.cybersecuritydive.com/feeds/news/'], category: 'Business', limit: 2, contentKind: 'business', tier: 'tier-2', weight: 0.85 },
+  // /spons/ URLs are paid vendor posts that the feed mixes in with the news.
+  { id: 'cybersecuritydive', name: 'Cybersecurity Dive', url: 'https://www.cybersecuritydive.com/', feeds: ['https://www.cybersecuritydive.com/feeds/news/'], excludeUrl: /\/spons\//i, category: 'Business', limit: 2, contentKind: 'business', tier: 'tier-2', weight: 0.85 },
 
   // --- Technology ---
   { id: 'theverge', name: 'The Verge', url: 'https://www.theverge.com/tech', feeds: ['https://www.theverge.com/rss/tech/index.xml'], category: 'Technology', limit: 2, contentKind: 'technology', tier: 'tier-1', weight: 1.0 },

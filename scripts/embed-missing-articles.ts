@@ -15,6 +15,8 @@
 
 import { prisma } from '@/lib/db';
 import { embed } from '@/lib/ai/embed';
+import { articleEmbedText } from '@/lib/ai/embed-text';
+import { chunk } from '@/lib/batches';
 
 const BATCH_SIZE = 10;
 const DRY_RUN = !process.argv.includes('--apply');
@@ -44,20 +46,19 @@ async function main() {
   let embedded = 0;
   let failed = 0;
 
-  while (true) {
-    const batch = await prisma.article.findMany({
-      where: { embedding: null },
-      take: BATCH_SIZE,
-      orderBy: { publishedAt: 'desc' },
-      select: { id: true, title: true, excerpt: true, summary: true },
-    });
+  // Load the missing articles once and walk through them in batches. Asking the database for
+  // "embedding is null" again before every batch returned the same rows forever in a dry run
+  // (nothing is written), and in an apply run whenever an embedding failed (the row stays null).
+  const rows = await prisma.article.findMany({
+    where: { embedding: null },
+    orderBy: { publishedAt: 'desc' },
+    select: { id: true, title: true, summary: true },
+  });
 
-    if (batch.length === 0) break;
-
+  for (const batch of chunk(rows, BATCH_SIZE)) {
     for (const article of batch) {
-      const embeddingText = [article.title, article.excerpt, article.summary]
-        .filter(Boolean)
-        .join(' ');
+      // The same text the ingest embeds (the clustering threshold was calibrated on it).
+      const embeddingText = articleEmbedText(article.title, article.summary);
 
       if (DRY_RUN) {
         console.log(`  [dry] ${article.title.slice(0, 50)}...`);
@@ -83,11 +84,11 @@ async function main() {
 
     processed += batch.length;
     console.log(
-      `  Batch done: ${processed}/${missing} processed (${embedded} embedded, ${failed} failed)\n`,
+      `  Batch done: ${processed}/${rows.length} processed (${embedded} embedded, ${failed} failed)\n`,
     );
 
     // Small delay between batches to be kind to Voyage rate limits
-    if (!DRY_RUN && processed < missing) {
+    if (!DRY_RUN && processed < rows.length) {
       await new Promise((r) => setTimeout(r, 500));
     }
   }
