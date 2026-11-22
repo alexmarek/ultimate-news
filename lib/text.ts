@@ -18,10 +18,16 @@ const ENTITIES: Record<string, string> = {
   '&rdquo;': '\u201D',
 };
 
+// Numeric references outside the Unicode range are malformed; keep them as
+// literal text instead of letting String.fromCodePoint throw a RangeError.
+function codePointOr(code: number, original: string): string {
+  return Number.isInteger(code) && code >= 0 && code <= 0x10ffff ? String.fromCodePoint(code) : original;
+}
+
 export function decodeEntities(text: string): string {
   return text
-    .replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(Number(n)))
-    .replace(/&#x([0-9a-fA-F]+);/g, (_, h) => String.fromCodePoint(parseInt(h, 16)))
+    .replace(/&#(\d+);/g, (m, n) => codePointOr(Number(n), m))
+    .replace(/&#x([0-9a-fA-F]+);/g, (m, h) => codePointOr(parseInt(h, 16), m))
     .replace(/&[a-zA-Z]+;/g, (m) => ENTITIES[m] ?? m);
 }
 
